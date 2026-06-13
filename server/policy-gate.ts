@@ -1,9 +1,15 @@
+import { isAddress, zeroAddress } from 'viem';
 import { AGENT_POLICY } from './config.js';
 
 export type PolicyDecision = {
   allowed: boolean;
   reason: string;
-  code?: 'FLOW_NOT_ALLOWED' | 'TARGET_NOT_WHITELISTED' | 'TREASURY_NOT_CONFIGURED';
+  code?:
+    | 'FLOW_NOT_ALLOWED'
+    | 'TARGET_NOT_WHITELISTED'
+    | 'TREASURY_NOT_CONFIGURED'
+    | 'INVALID_RECIPIENT'
+    | 'INVALID_AMOUNT';
 };
 
 export function validateFlowId(flowId: string): PolicyDecision {
@@ -41,4 +47,35 @@ export function validateTreasuryConfigured(configured: boolean): PolicyDecision 
     };
   }
   return { allowed: true, reason: 'Treasury configured.' };
+}
+
+export function validatePaymentRecipient(recipient: string): PolicyDecision {
+  if (!isAddress(recipient)) {
+    return {
+      allowed: false,
+      code: 'INVALID_RECIPIENT',
+      reason: `Recipient "${recipient}" is not a valid Ethereum address.`,
+    };
+  }
+
+  if (recipient.toLowerCase() === zeroAddress) {
+    return {
+      allowed: false,
+      code: 'INVALID_RECIPIENT',
+      reason: 'Recipient cannot be the zero address.',
+    };
+  }
+
+  return { allowed: true, reason: 'Recipient address is valid.' };
+}
+
+export function validatePaymentAmount(amount: bigint): PolicyDecision {
+  if (amount <= 0n) {
+    return {
+      allowed: false,
+      code: 'INVALID_AMOUNT',
+      reason: 'Payment amount must be greater than zero.',
+    };
+  }
+  return { allowed: true, reason: 'Payment amount is valid.' };
 }

@@ -1,14 +1,16 @@
-import { AGENT_POLICY, isTreasuryConfigured, TREASURY_ADDRESS } from '../config.js';
+import { AGENT_POLICY, isTreasuryConfigured, SEPOLIA_USDC, TREASURY_ADDRESS } from '../config.js';
+import { requestVendorPaymentOnChain } from '../execution/payment.js';
+import { composeRebalanceFlow } from '../lifi/compose.js';
 import {
   validateFlowId,
+  validatePaymentAmount,
+  validatePaymentRecipient,
   validateRebalanceAmount,
   validateTreasuryConfigured,
   validateUnauthorizedTarget,
 } from '../policy-gate.js';
 import { sepoliaClient } from '../clients.js';
-import { composeRebalanceFlow } from '../lifi/compose.js';
 import { signRebalanceMetaTransaction } from '../signing/meta-tx.js';
-import { SEPOLIA_USDC } from '../config.js';
 
 export async function proposeRebalance(params: {
   flowId?: string;
@@ -108,25 +110,77 @@ export async function requestVendorPayment(params: {
     return { status: 'rejected', policy: treasuryCheck, request: null };
   }
 
+  const recipientCheck = validatePaymentRecipient(params.recipient);
+  if (!recipientCheck.allowed) {
+    return { status: 'rejected', policy: recipientCheck, request: null };
+  }
+
+  let amount: bigint;
+  try {
+    amount = BigInt(params.amountUsdc);
+  } catch {
+    return {
+      status: 'rejected',
+      policy: {
+        allowed: false,
+        code: 'INVALID_AMOUNT' as const,
+        reason: `amountUsdc "${params.amountUsdc}" is not a valid integer.`,
+      },
+      request: null,
+    };
+  }
+
+  const amountCheck = validatePaymentAmount(amount);
+  if (!amountCheck.allowed) {
+    return { status: 'rejected', policy: amountCheck, request: null };
+  }
+
+  const onChain = await requestVendorPaymentOnChain({
+    recipient: params.recipient as `0x${string}`,
+    amount,
+  });
+
   const request = {
     treasuryAddress: TREASURY_ADDRESS,
     recipient: params.recipient,
     amountUsdc: params.amountUsdc,
     memo: params.memo || 'Vendor payment',
+    token: 'USDC',
     lane: 'B — institutional timelock',
-    txRecordStatus: 'PENDING',
-    nextSteps: [
-      'Timelock window starts (Bloxchain timeLockPeriodSec)',
-      'Owner approves via Dynamic embedded wallet',
-      'Payment executes with full TxRecord audit trail',
-    ],
-    status: 'awaiting_owner_approval',
-    note: 'On-chain executeWithTimeLock — Phase 5 implementation.',
+    txRecordStatus: onChain.ok ? 'PENDING' : 'not_submitted',
+    onChain: onChain.ok
+      ? {
+          status: 'submitted' as const,
+          txId: onChain.txId,
+          hash: onChain.hash,
+          releaseTime: onChain.releaseTime,
+          releaseTimeIso: onChain.releaseTimeIso,
+          requester: onChain.requester,
+        }
+      : {
+          status: 'not_configured' as const,
+          code: onChain.code,
+          reason: onChain.reason,
+        },
+    nextSteps: onChain.ok
+      ? [
+          `Timelock active — approve after ${onChain.releaseTimeIso ?? 'releaseTime'}`,
+          'Connect Dynamic Owner wallet in the header',
+          'Click Approve as Owner in the payment card',
+          'Verify COMPLETED via /pending or Sepolia Etherscan',
+        ]
+      : [
+          onChain.reason,
+          'Provision ANALYST role on treasury (EXECUTE_TIME_DELAY_REQUEST on ERC20 transfer)',
+          'Whitelist Sepolia USDC for transfer(address,uint256)',
+          'Set ANALYST_PRIVATE_KEY in .env',
+        ],
+    status: onChain.ok ? 'awaiting_owner_approval' : 'awaiting_configuration',
   };
 
   return {
-    status: 'requested',
-    policy: { allowed: true, reason: 'Payment request created; requires Owner approval.' },
+    status: onChain.ok ? 'requested_on_chain' : 'requested_unsigned',
+    policy: { allowed: true, reason: 'Payment request passes off-chain policy gate.' },
     request,
   };
 }
@@ -154,4 +208,3 @@ export async function simulatePolicyViolation(params: { target?: string }) {
     allowedFlowIds: AGENT_POLICY.allowedFlowIds,
   };
 }
-

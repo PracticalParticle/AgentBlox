@@ -101,6 +101,13 @@ export function isAgentPolicySigningConfigured(): boolean {
   return AGENT_POLICY_PRIVATE_KEY.startsWith('0x') && AGENT_POLICY_PRIVATE_KEY.length >= 66;
 }
 
+/** ANALYST server key — submits executeWithTimeLock for vendor payments (Phase 5). */
+export const ANALYST_PRIVATE_KEY = (process.env.ANALYST_PRIVATE_KEY || '') as Hex;
+
+export function isAnalystConfigured(): boolean {
+  return ANALYST_PRIVATE_KEY.startsWith('0x') && ANALYST_PRIVATE_KEY.length >= 66;
+}
+
 /** External call target for rebalance meta-tx (e.g. LI.FI userProxy). Phase 4 fills via compose. */
 export const REBALANCE_EXECUTION_TARGET = (process.env.REBALANCE_EXECUTION_TARGET || '') as Address;
 

@@ -46,7 +46,7 @@ Before you start, gather:
 | **Node.js ≥ 18.20** | Run AgentBlox (`package.json` engines) |
 | **Sepolia ETH** | Gas for clone init, role config, and demo txs |
 | **Sepolia test USDC** | Rebalance demo ([Circle faucet](https://faucet.circle.com/) → Sepolia USDC `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`) |
-| **Dynamic account** | [app.dynamic.xyz](https://app.dynamic.xyz) — environment ID + API token |
+| **Dynamic account** | [app.dynamic.xyz](https://app.dynamic.xyz) — Environment ID ([§1.2](#12-get-vite_dynamic_environment_id)) + API token |
 | **LI.FI API key** | [portal.li.fi](https://portal.li.fi) — Composer compose for `/quote` and `/rebalance` |
 | **AGENT_POLICY keypair** | Generate once; address goes on-chain, private key goes in `.env` only |
 
@@ -64,7 +64,40 @@ cd AgentBlox
 npm install
 ```
 
-### 1.2 Create environment file
+### 1.2 Get `VITE_DYNAMIC_ENVIRONMENT_ID`
+
+AgentBlox uses one Dynamic **Environment ID** for both the browser widget and the server Broadcaster client. You need it before the Copilot login widget will work.
+
+#### Step 1: Create a Dynamic account and project
+
+1. Open [app.dynamic.xyz](https://app.dynamic.xyz) and sign in (or create an account).
+2. If prompted, create a **new project** for AgentBlox (name it e.g. `AgentBlox Sepolia`).
+
+#### Step 2: Copy the Environment ID
+
+1. In the left sidebar, go to **Developer** → **API**  
+   Direct link: [app.dynamic.xyz/dashboard/developer/api](https://app.dynamic.xyz/dashboard/developer/api)
+2. Find **Environment ID** (a UUID string, e.g. `a1b2c3d4-e5f6-7890-abcd-ef1234567890`).
+3. Click **Copy** and save it — you will paste this into `.env` as `VITE_DYNAMIC_ENVIRONMENT_ID`.
+
+The server reads the same variable from `.env` via `dotenv`; do **not** create a separate `DYNAMIC_ENVIRONMENT_ID`.
+
+#### Step 3: Configure the environment (before first login)
+
+In the Dynamic dashboard for this project, set:
+
+| Setting | Location | Value |
+|---------|----------|-------|
+| Sepolia | **Chains & Networks** | Enabled |
+| Sign-in | **Sign-in Methods** | Email OTP (recommended for demo) |
+| Embedded wallets | **Wallets** | Enabled (Owner role) |
+| Allowed origins | **Security** | `http://localhost:5173` |
+
+For a deployed demo, add your production URL to **Allowed origins** as well.
+
+More detail: [integrations/dynamic.md](./integrations/dynamic.md).
+
+### 1.3 Create environment file
 
 ```bash
 cp .env.example .env
@@ -74,10 +107,10 @@ Minimum to boot the app (reads only):
 
 ```env
 TREASURY_ADDRESS=0xYourCloneAddressAfterPart2
-VITE_DYNAMIC_ENVIRONMENT_ID=your-dynamic-environment-id
+VITE_DYNAMIC_ENVIRONMENT_ID=paste-environment-id-from-step-1.2
 ```
 
-### 1.3 Start dev servers
+### 1.4 Start dev servers
 
 ```bash
 npm run dev:all
@@ -88,7 +121,7 @@ npm run dev:all
 | Copilot UI | http://localhost:5173 |
 | API server | http://localhost:3001 |
 
-### 1.4 Quick health check
+### 1.5 Quick health check
 
 ```bash
 curl http://localhost:3001/api/health
@@ -133,10 +166,11 @@ You need two addresses **before** you finalize Owner and Broadcaster on-chain:
 
 **Owner (embedded wallet)**
 
-1. In [Dynamic dashboard](https://app.dynamic.xyz): enable **Sepolia**, **Embedded wallets**, Email OTP (or your preferred sign-in).
-2. Add CORS origin: `http://localhost:5173`.
-3. In AgentBlox UI, open http://localhost:5173 and sign in via **DynamicWidget** in the header.
-4. Note `primaryWallet.address` — this is your **Owner** candidate.
+1. Ensure `VITE_DYNAMIC_ENVIRONMENT_ID` is set (see [§1.2](#12-get-vite_dynamic_environment_id)).
+2. In [Dynamic dashboard](https://app.dynamic.xyz): confirm **Sepolia**, **Embedded wallets**, and Email OTP (or your preferred sign-in) are enabled.
+3. Add CORS origin: `http://localhost:5173`.
+4. In AgentBlox UI, open http://localhost:5173 and sign in via **DynamicWidget** in the header.
+5. Note `primaryWallet.address` — this is your **Owner** candidate.
 
 **Broadcaster (server wallet)**
 
@@ -200,7 +234,12 @@ Save:
 
 The execution selector comes from your first successful LI.FI compose (Part 3). You can whitelist a placeholder selector during provisioning and update after first `/quote` if your tooling requires it upfront.
 
-Optional: create **`ANALYST`** for future timelock `/pay` flows (Phase 5).
+Optional: create **`ANALYST`** for timelock `/pay` flows (Phase 5):
+
+1. Generate an off-chain key (`cast wallet new`).
+2. Create role **`ANALYST`** and assign the wallet address.
+3. Grant **`EXECUTE_TIME_DELAY_REQUEST`** on `transfer(address,uint256)` with handler `executeWithTimeLock`.
+4. Set **`ANALYST_PRIVATE_KEY`** in `.env`.
 
 ---
 
@@ -286,8 +325,8 @@ Full reference: [env-configuration.md](./env-configuration.md).
 ### 4.1 Required for full demo
 
 ```env
-# --- Client (browser) ---
-VITE_DYNAMIC_ENVIRONMENT_ID=your-dynamic-environment-id
+# --- Client (browser) — from Dynamic Developer → API (§1.2)
+VITE_DYNAMIC_ENVIRONMENT_ID=paste-environment-id-from-dynamic-dashboard
 
 # --- Server (treasury) ---
 TREASURY_ADDRESS=0xYourAccountBloxClone
@@ -301,6 +340,9 @@ AGENT_POLICY_PRIVATE_KEY=0x...must match on-chain AGENT_POLICY role...
 
 # --- LI.FI Composer ---
 LIFI_API_KEY=your-lifi-api-key
+
+# --- ANALYST timelock requests (/pay) ---
+ANALYST_PRIVATE_KEY=0x...must match on-chain ANALYST role...
 ```
 
 ### 4.2 Optional
@@ -337,6 +379,7 @@ Target flags for a fully configured demo:
 | `dynamicBroadcasterConfigured` | `true` |
 | `agentPolicySigningConfigured` | `true` |
 | `lifiComposeConfigured` | `true` |
+| `analystConfigured` | `true` (for `/pay`) |
 | `broadcaster.matchesOnChainBroadcaster` | `true` |
 
 ### 5.2 Copilot slash commands
@@ -391,7 +434,7 @@ Details: [integrations/ens.md](./integrations/ens.md).
 Use this sequence if you are configuring from scratch:
 
 ```text
-1. Dynamic dashboard (Sepolia, embedded + server wallet, API token)
+1. Dynamic dashboard: copy Environment ID (§1.2) + Sepolia, embedded wallet, server wallet, API token
 2. Generate AGENT_POLICY keypair
 3. Clone AccountBlox on Sepolia (Owner, Broadcaster, Recovery, timelock)
 4. RBAC: AGENT_POLICY role + sign permission on Composer selector
@@ -419,7 +462,7 @@ Checklist format: [provisioning-checklist.md](./provisioning-checklist.md).
 | `TargetNotWhitelisted` on execute | userProxy not whitelisted | Run `/quote`, whitelist returned `userProxy` for selector |
 | Broadcaster submit fails | Dynamic env | Check `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`, dashboard CORS |
 | `/ens` empty | No `ENS_NAME` or mainnet RPC | Set `ENS_NAME`; check `MAINNET_RPC_URL` |
-| Dynamic widget does not open | CORS | Add `http://localhost:5173` in Dynamic dashboard |
+| Dynamic widget does not open | CORS or missing env ID | Set `VITE_DYNAMIC_ENVIRONMENT_ID` (§1.2); add `http://localhost:5173` in Dynamic **Security → Allowed origins** |
 
 ---
 

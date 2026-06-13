@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   validateFlowId,
+  validatePaymentAmount,
+  validatePaymentRecipient,
   validateRebalanceAmount,
   validateTreasuryConfigured,
   validateUnauthorizedTarget,
@@ -43,5 +45,30 @@ describe('validateTreasuryConfigured', () => {
   it('requires treasury to be configured', () => {
     expect(validateTreasuryConfigured(false).code).toBe('TREASURY_NOT_CONFIGURED');
     expect(validateTreasuryConfigured(true).allowed).toBe(true);
+  });
+});
+
+describe('validatePaymentRecipient', () => {
+  it('rejects invalid and zero addresses', () => {
+    expect(validatePaymentRecipient('not-an-address').allowed).toBe(false);
+    expect(validatePaymentRecipient('0x0000000000000000000000000000000000000000').allowed).toBe(
+      false,
+    );
+  });
+
+  it('allows valid recipient', () => {
+    expect(
+      validatePaymentRecipient('0x0000000000000000000000000000000000000001').allowed,
+    ).toBe(true);
+  });
+});
+
+describe('validatePaymentAmount', () => {
+  it('rejects non-positive amounts', () => {
+    expect(validatePaymentAmount(0n).allowed).toBe(false);
+  });
+
+  it('allows positive amounts', () => {
+    expect(validatePaymentAmount(500_000n).allowed).toBe(true);
   });
 });

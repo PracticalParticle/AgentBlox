@@ -60,6 +60,16 @@ The server reads `VITE_DYNAMIC_ENVIRONMENT_ID` from `.env` via `dotenv` — **no
 
 ---
 
+## Phase 5 (ANALYST timelock `/pay` — server only)
+
+| Variable | Purpose |
+|----------|---------|
+| `ANALYST_PRIVATE_KEY` | Submits `executeWithTimeLock` for vendor payments — must match on-chain `ANALYST` role |
+
+Owner approval uses the Dynamic embedded wallet in the browser (no server env var).
+
+---
+
 ## What we removed (and why)
 
 | Removed | Reason |

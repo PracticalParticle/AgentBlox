@@ -36,6 +36,8 @@ describe('stripToolBlocks', () => {
 describe('statusColor', () => {
   it('maps tool statuses to UI color tokens', () => {
     expect(statusColor('proposed')).toBe('pending');
+    expect(statusColor('requested_on_chain')).toBe('pending');
+    expect(statusColor('requested_unsigned')).toBe('pending');
     expect(statusColor('blocked')).toBe('blocked');
     expect(statusColor('ok')).toBe('completed');
     expect(statusColor(undefined)).toBe('completed');

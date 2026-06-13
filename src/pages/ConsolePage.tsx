@@ -28,6 +28,10 @@ export default function ConsolePage() {
             <li>Treasury: {health?.treasuryConfigured ? 'configured' : 'set TREASURY_ADDRESS in .env'}</li>
             <li>Dynamic env: {health?.dynamicEnvironmentConfigured ? 'configured' : 'set VITE_DYNAMIC_ENVIRONMENT_ID'}</li>
             <li>
+              Analyst (/pay):{' '}
+              {health?.analystConfigured ? 'configured' : 'set ANALYST_PRIVATE_KEY (Phase 5)'}
+            </li>
+            <li>
               Broadcaster:{' '}
               {health?.dynamicBroadcasterConfigured
                 ? 'ready'

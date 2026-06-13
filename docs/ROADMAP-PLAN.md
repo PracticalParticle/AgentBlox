@@ -252,16 +252,18 @@ Week 3 (full story)
 
 ---
 
-### Phase 5 — Timelock payments
+### Phase 5 — Timelock payments ✅
 
 **Goal:** `/pay` → PENDING → Owner approves → COMPLETED.
 
-| Task | Deliverable | Acceptance |
-|------|-------------|------------|
-| `request_vendor_payment` on-chain | `executeWithTimeLock` | TxRecord created |
-| `/pending` countdown | releaseTime display | From Phase 1 reads |
-| Owner approve | Dynamic wallet | `approveTimeLockExecution` |
-| `PaymentRequestCard` | Approve as Owner | UI-5 |
+| Task | Deliverable | Status |
+|------|-------------|--------|
+| `request_vendor_payment` on-chain | `executeWithTimeLock` | ✅ |
+| `/pending` countdown | releaseTime display | ✅ (reads from Phase 1) |
+| Owner approve | Dynamic wallet | ✅ `ToolResultCard` |
+| `PaymentRequestCard` | Approve as Owner | Partial — typed card deferred |
+
+**Env to test end-to-end:** `ANALYST_PRIVATE_KEY`, USDC whitelisted, Owner connected via Dynamic.
 
 **Depends on:** Phase 2, USDC whitelisted  
 **Hours:** ~4h backend + 2h UI
@@ -308,7 +310,7 @@ See [ui-ux-guidelines.md](./ui-ux-guidelines.md) for full spec.
 | **UI-2** | Setup wizard `/setup` | Phase 2 | P1 |
 | **UI-3** | Intent Preview + Confirm | Phase 3 | P0 |
 | **UI-4** | LI.FI + PolicyBlocked cards | Phase 4 | P0 |
-| **UI-5** | Timelock approve + countdown | Phase 5 | P0 |
+| **UI-5** | Timelock approve + countdown | Phase 5 | **Partial** — Approve as Owner in `ToolResultCard` |
 | **UI-6** | Demo polish | Phase 7 | P2 |
 
 **UI strategy for hackathon:** Ship UI-0 + UI-1 early (legibility for judges), then UI-3/UI-4/UI-5 as backend phases complete. Copilot chat remains embedded in Action center — not removed.
@@ -385,9 +387,10 @@ flowchart LR
 
 **Sprint 3 (current focus):**
 
-8. **Phase 4** LI.FI compose + real quote preview
-9. Phase 5 timelock + UI-4, UI-5
-10. Phase 7 demo + submission
+8. ✅ Phase 4 LI.FI compose + real quote preview
+9. ✅ Phase 5 timelock + Owner approve in Copilot
+10. Phase 2 env: `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`
+11. Phase 7 demo + submission
 
 ---
 

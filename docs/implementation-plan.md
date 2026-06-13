@@ -90,12 +90,14 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 ---
 
-## Phase 5 — Timelock payments
+## Phase 5 — Timelock payments ✅
 
 **Goal:** `/pay` → timelock → Owner approves in Copilot.
 
-- [ ] `request_vendor_payment` calls `executeWithTimeLock`
-- [ ] Owner approves via Dynamic — `approveTimeLockExecution`
+- [x] `request_vendor_payment` calls `executeWithTimeLock` via ANALYST key
+- [x] Owner approves via Dynamic — `approveTimeLockExecution` in `ToolResultCard`
+- [x] Timelock countdown on Approve button
+- [ ] Operator: `ANALYST_PRIVATE_KEY` + RBAC + USDC whitelist
 
 ---
 
@@ -112,6 +114,7 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 ## Phase 7 — Polish
 
 - [x] Documentation pass — align `docs/` with implementation (June 2026)
+- [x] Vitest coverage — `npm run verify` (55 tests; Phases 2–5 paths)
 - [ ] Update [implementation-status.md](./implementation-status.md) per phase completion
 - [ ] Deploy to Vercel (optional)
 

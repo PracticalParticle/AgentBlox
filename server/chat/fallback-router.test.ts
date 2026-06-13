@@ -7,6 +7,8 @@ describe('routeUserMessage', () => {
     expect(routeUserMessage('/pending')?.tool).toBe('list_pending_approvals');
     expect(routeUserMessage('/whitelist')?.tool).toBe('get_whitelisted_targets');
     expect(routeUserMessage('/rebalance')?.tool).toBe('propose_rebalance');
+    expect(routeUserMessage('/quote')?.tool).toBe('get_lifi_quote_preview');
+    expect(routeUserMessage('/pay')?.tool).toBe('request_vendor_payment');
     expect(routeUserMessage('/attack')?.tool).toBe('simulate_policy_violation');
   });
 

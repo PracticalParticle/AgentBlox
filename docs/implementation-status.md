@@ -21,7 +21,7 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | Dynamic (Broadcaster) | **Partial** | SDK wired; needs API token + wallet in `.env` |
 | On-chain execution | **Partial** | Sign + `POST /api/execute/rebalance`; needs Broadcaster + execution target env |
 | Agent Bridge REST API | **Removed** | Superseded by Copilot tools |
-| Unit tests (Vitest) | **Done** | `npm run test` — policy-gate, fallback-router, tool-parser, serialize |
+| Unit tests (Vitest) | **Done** | `npm run verify` — 55 tests, typecheck clean |
 
 ---
 
@@ -35,7 +35,7 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | `get_whitelisted_targets` | Monitor | ✅ | ✅ SDK | — | — | — |
 | `get_lifi_quote_preview` | Monitor | ✅ | ⚠️ compose | — | — | — |
 | `propose_rebalance` | Treasury op | ✅ policy | — | ✅ | ⚠️ env | ✅ |
-| `request_vendor_payment` | Disbursement | ✅ stub | ❌ | ❌ | ❌ | ❌ Phase 5 |
+| `request_vendor_payment` | Disbursement | ✅ policy | ⚠️ timelock | ⚠️ env | ⚠️ Owner UI | ✅ partial |
 | `simulate_policy_violation` | Policy test | ✅ | ❌ | ❌ | ❌ | — |
 
 Legend: ✅ working · ⚠️ env-dependent / stub · ❌ not implemented
@@ -51,7 +51,7 @@ Legend: ✅ working · ⚠️ env-dependent / stub · ❌ not implemented
 | 2 | Dynamic Owner + Broadcaster | **In progress** (scaffold done; env pending) |
 | 3 | Meta-tx sign + Copilot confirm | **Done** (end-to-end needs env + Phase 4 calldata) |
 | 4 | LI.FI + whitelist demo | **Done** (code); env + on-chain whitelist pending |
-| 5 | Timelock payments + Owner approve | **Not started** |
+| 5 | Timelock payments + Owner approve | **Done** (code); ANALYST env + whitelist pending |
 | 6 | ENS write + Console persistence | **Partial** (read only) |
 | 7 | Polish + submission | **Not started** |
 
@@ -85,13 +85,18 @@ See [implementation-plan.md](./implementation-plan.md).
 | `server/lifi/flows.ts` | Done | rebalance-sepolia-v1 USDC→WETH |
 | `src/lib/execute-api.ts` | Done | Client → `POST /api/execute/rebalance` |
 | `src/lib/meta-tx-types.ts` | Done | Shared serialized meta-tx type |
-| `src/components/chat/ToolResultCard.tsx` | Done | Confirm execution button (UI-3 partial) |
+| `server/execution/payment.ts` | Done | ANALYST `executeWithTimeLock` for /pay |
+| `server/execution/payment-calldata.ts` | Done | USDC transfer params + operation type |
+| `server/execution/tx-id.ts` | Done | TransactionEvent txId decode |
+| `src/lib/owner-guard.ts` | Done | Dynamic Owner `approveTimeLockExecution` |
+| `src/components/chat/ToolResultCard.tsx` | Done | Rebalance Confirm + payment Approve as Owner (UI-3/UI-5 partial) |
 
 ---
 
 ## Next implementation priorities
 
 1. Set `LIFI_API_KEY` (portal.li.fi) + `AGENT_POLICY_PRIVATE_KEY`
-2. Set Dynamic env when ready: `VITE_DYNAMIC_ENVIRONMENT_ID`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`
-3. Whitelist composed `userProxy` + selector on treasury (provisioning Part A4)
-4. Phase 5 — timelock `/pay`
+2. Set Dynamic Broadcaster: `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS` (env ID ✅)
+3. Set `ANALYST_PRIVATE_KEY` + on-chain ANALYST role for `/pay`
+4. Whitelist composed `userProxy` + selector on treasury (provisioning Part A4)
+5. UI-0 Workspace shell (parallel)

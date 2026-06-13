@@ -27,6 +27,9 @@ export function statusColor(status: string | undefined): string {
   switch (status) {
     case 'proposed':
     case 'requested':
+    case 'requested_on_chain':
+    case 'requested_unsigned':
+    case 'proposed_unsigned':
     case 'preview':
       return 'pending';
     case 'blocked':
