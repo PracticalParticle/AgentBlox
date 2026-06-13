@@ -6,7 +6,7 @@
 
 ENS provides **treasury identity and discoverable policy metadata** for all AgentBlox treasuries. ENS is **not** part of bloxchain.app — setup and resolution live in AgentBlox.
 
-Built for **ETHGlobal NY 2026** ENS integration tracks. Event context: [event/ethglobal-2026.md](../event/ethglobal-2026.md).
+Built for **ETHGlobal NY 2026** ENS integration. Event context: [event/ethglobal-2026.md](../event/ethglobal-2026.md).
 
 Primary UX: Copilot `/ens` tool and Console reference fields.
 

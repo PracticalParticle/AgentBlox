@@ -18,17 +18,17 @@ AgentBlox uses three sponsor integrations (event maximum):
 
 ---
 
-## Prize tracks (reference)
+## Integration narrative
 
-See [ethglobal.com/events/newyork2026/prizes](https://ethglobal.com/events/newyork2026/prizes) for current amounts and criteria.
+How AgentBlox demonstrates each sponsor integration in the product:
 
-| Track | Sponsor | AgentBlox angle |
+| Focus | Sponsor | AgentBlox angle |
 |-------|---------|-----------------|
-| Agentic Workflows | LI.FI | Composer behind policy-gated treasury ops |
-| Most Innovative | LI.FI | Bloxchain-gated Composer pattern |
-| Best Agentic Build | Dynamic | Server wallet executes agent-signed meta-txs |
-| Best Money App | Dynamic | Embedded wallet approves timelock payments |
-| Best ENS Integration for AI Agents | ENS | Functional identity + `bloxchain.*` text records |
+| Agentic workflows | LI.FI | Composer behind policy-gated treasury ops |
+| Innovative execution | LI.FI | Bloxchain-gated Composer pattern |
+| Agentic automation | Dynamic | Server wallet executes agent-signed meta-txs |
+| Treasury UX | Dynamic | Embedded wallet approves timelock payments |
+| Agent identity | ENS | Functional identity + `bloxchain.*` text records |
 
 ---
 

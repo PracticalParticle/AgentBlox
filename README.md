@@ -21,7 +21,6 @@ AgentBlox is the ETHGlobal New York 2026 hackathon application built by [Particl
 ## Event & sponsors
 
 - **Event:** [ETHGlobal New York 2026](https://ethglobal.com/events/newyork2026)
-- **Prizes:** [ethglobal.com/events/newyork2026/prizes](https://ethglobal.com/events/newyork2026/prizes)
 - **Constraint:** Maximum **3 sponsor integrations**
 
 | Slot | Sponsor | Role in AgentBlox |
@@ -273,16 +272,16 @@ Packages: `@bloxchain/sdk` · Protocol repo: [Bloxchain-Protocol](https://github
 
 ---
 
-## Prize targets
+## Integration narrative
 
-| Track | Sponsor |
+| Focus | Sponsor |
 |-------|---------|
-| Agentic Workflows | LI.FI ($4,000) |
-| Best ENS Integration for AI Agents | ENS ($2,500 1st) |
-| Best Agentic Build | Dynamic ($2,000) |
-| Best Money App | Dynamic ($2,000) |
+| Agentic workflows | LI.FI |
+| Agent identity | ENS |
+| Agentic automation | Dynamic |
+| Treasury UX | Dynamic |
 
-**ENS booth presentation required Sunday morning** for ENS prizes.
+**ENS booth presentation required Sunday morning** — see [docs/event/ethglobal-2026.md](./docs/event/ethglobal-2026.md).
 
 ---
 

@@ -61,7 +61,7 @@ Master guide: [treasury-lifecycle.md](./treasury-lifecycle.md)
 
 | Document | Purpose |
 |----------|---------|
-| [event/ethglobal-2026.md](./event/ethglobal-2026.md) | ETHGlobal context, sponsors, submission |
+| [event/ethglobal-2026.md](./event/ethglobal-2026.md) | ETHGlobal context, sponsor integrations, submission |
 
 ### Integrations (sponsors)
 
