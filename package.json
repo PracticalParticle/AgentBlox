@@ -14,16 +14,21 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
+    "@ai-sdk/react": "^2.0.0",
     "@bloxchain/sdk": "^1.0.0",
     "@dynamic-labs/ethereum": "^4.88.0",
     "@dynamic-labs/sdk-react-core": "^4.88.0",
     "@lifi/sdk": "^4.0.0",
     "@lifi/sdk-provider-ethereum": "^4.0.0",
     "@tanstack/react-query": "^5.66.0",
+    "ai": "^5.0.0",
+    "dotenv": "^16.4.7",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.1.5",
-    "viem": "^2.50.4"
+    "viem": "^2.50.4",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",

@@ -8,10 +8,10 @@ AgentBlox is the ETHGlobal New York 2026 hackathon application built by [Particl
 |-------|---------|------|
 | **Protocol** | [Bloxchain Protocol](https://github.com/PracticalParticle/Bloxchain-Protocol) | On-chain policy engine (timelock, RBAC, GuardController whitelists) |
 | **Provisioning** | [bloxchain.app](https://bloxchain.app/) | Create and configure AccountBlox clones (roles, whitelist, timelock) |
-| **Operations** | **AgentBlox** (this repo) | Run treasuries — approvals, ENS identity, LI.FI execution, agent flows |
+| **Operations** | **AgentBlox** (this repo) | **Copilot** for day-to-day ops · **Console** for setup |
 
 **One-line pitch:**  
-*AgentBlox is a treasury workspace where AI agents and finance teams share the same AccountBlox policy engine — propose, review, approve, execute — with whitelisted on-chain actions only.*
+*AgentBlox is a conversational treasury platform — ask your Copilot to read balances, propose rebalances, or request payments, while Bloxchain AccountBlox constitutionally limits what can execute.*
 
 **Sponsor positioning:**  
 *Dynamic holds the keys, LI.FI runs the flows, ENS names the actors — Bloxchain decides what anyone is allowed to trigger.*
@@ -47,28 +47,40 @@ Each treasury is an **AccountBlox clone** on Sepolia. Bloxchain enforces:
 
 ---
 
-## Dual demo lanes (one product)
+## Two surfaces
+
+| Surface | Route | Purpose |
+|---------|-------|---------|
+| **Copilot** | `/` | Primary — chat with treasury tools (LLM or slash commands) |
+| **Console** | `/console` | Setup — import treasury, roles, env checklist |
+
+Day-to-day treasury operations happen in **Copilot**. Configuration happens in **Console** or on [bloxchain.app](https://bloxchain.app/).
+
+---
+
+## Dual demo lanes (via Copilot tools)
 
 | Lane | Persona | Bloxchain pattern | Sponsors |
 |------|---------|-------------------|----------|
 | **A — Agentic** | Policy agent | Meta-tx + GuardController whitelist | Dynamic + LI.FI |
 | **B — Fintech** | Analyst / CFO | Timelock + audit trail | Dynamic + ENS |
 
-### Lane A — Agentic workflow
+### Lane A — Agentic (in Copilot)
 
-1. Agent Bridge computes rebalance (deterministic rules, no LLM for demo).
-2. `AGENT_POLICY` role signs EIP-712 meta-tx off-chain.
-3. Dynamic server wallet (Broadcaster) submits execution.
-4. GuardController checks whitelist → LI.FI Composer flow runs.
-5. **Attack demo:** unauthorized transfer → `TargetNotWhitelisted` revert in UI.
+Say `/rebalance` or "Propose a treasury rebalance":
 
-### Lane B — Institutional workflow
+1. Copilot calls `propose_rebalance` tool → policy gate validates flow ID
+2. `AGENT_POLICY` signs EIP-712 meta-tx (Phase 3)
+3. Dynamic Broadcaster executes → LI.FI Composer runs
+4. `/attack` demonstrates `TargetNotWhitelisted` block
 
-1. Analyst requests vendor payment (USDC on Sepolia) → `TxRecord` enters `PENDING`.
-2. Timelock countdown in dashboard.
-3. Owner (CFO) approves via Dynamic embedded wallet.
-4. Payment executes; full audit trail visible.
-5. ENS `treasury.acme.eth` resolves to the AccountBlox clone.
+### Lane B — Institutional (in Copilot)
+
+Say `/pay` or "Request a vendor payment":
+
+1. Copilot calls `request_vendor_payment` → timelock `PENDING`
+2. Owner approves via Dynamic in chat card (Phase 5)
+3. `/ens` resolves treasury identity + policy text records
 
 ---
 
@@ -81,10 +93,10 @@ flowchart TB
     end
 
     subgraph AgentBlox["AgentBlox — this repo"]
-        UI["Vite/React dashboard"]
-        ENSBlock["ENS setup + resolution"]
+        Copilot["Copilot chat (primary)"]
+        Console["Console (setup)"]
+        Tools["Treasury tools + policy gate"]
         DynamicBlock["Dynamic Owner + Broadcaster"]
-        Bridge["Agent Bridge — hardcoded policy flows"]
     end
 
     subgraph Chain["Sepolia — Bloxchain as-is"]
@@ -92,11 +104,12 @@ flowchart TB
         LIFI["LI.FI Composer (whitelisted)"]
     end
 
-    Setup -->|"treasury address"| UI
-    UI --> AB
-    Bridge -->|"AGENT_POLICY EIP-712 sign"| AB
+    Setup -->|"treasury address"| Console
+    Copilot --> Tools
+    Tools --> AB
     DynamicBlock -->|"execute / approve"| AB
     AB --> LIFI
+    Copilot -.->|"resolve ENS"| ENSBlock["ENS"]
     ENSBlock -.-> AB
 ```
 
@@ -124,12 +137,13 @@ flowchart TB
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | Vite 5, React 18, TypeScript |
+| Frontend | Vite 5, React 18, TypeScript, `@ai-sdk/react` |
+| Copilot | Vercel AI SDK (`ai`, `@ai-sdk/openai`) + treasury tools |
 | Wallet / auth | [Dynamic React SDK](https://www.dynamic.xyz/docs/react/reference/quickstart) |
 | On-chain | [Bloxchain SDK](https://www.npmjs.com/package/@bloxchain/sdk) + [viem](https://viem.sh/) |
 | Execution | [LI.FI SDK](https://docs.li.fi/composer/guides/sdk-integration) |
 | Identity | ENS via viem (`getEnsAddress`, `getEnsText`) |
-| Agent Bridge | Node HTTP server (`server/index.ts`) |
+| Agent / tools | Treasury tool registry (`server/tools/`) + policy gate |
 
 > **Vite 5 required:** Dynamic SDK is incompatible with Vite 8. Use `vite@5` explicitly.
 
@@ -139,18 +153,17 @@ flowchart TB
 
 ```
 AgentBlox/
-├── docs/                    # Implementation plan (start here)
-├── public/
-├── server/                  # Agent Bridge API (policy + signing)
+├── docs/                    # Implementation plan — start at docs/copilot.md
+├── server/
+│   ├── tools/               # Treasury tool registry (MCP-style)
+│   ├── chat/                # Copilot handler (LLM + fallback)
+│   ├── policy-gate.ts
 │   └── index.ts
 ├── src/
-│   ├── lib/                 # config, ENS, agent API client
-│   ├── pages/               # Dashboard, Treasury, Agent Flows
-│   ├── App.tsx
-│   └── main.tsx
-├── .env.example
+│   ├── pages/CopilotPage.tsx
+│   ├── pages/ConsolePage.tsx
+│   └── components/chat/
 ├── package.json
-├── vite.config.ts
 └── README.md
 ```
 
@@ -171,7 +184,8 @@ git clone <this-repo>
 cd AgentBlox
 npm install
 cp .env.example .env
-# Fill in VITE_DYNAMIC_ENVIRONMENT_ID and treasury address
+# Fill in VITE_DYNAMIC_ENVIRONMENT_ID, TREASURY_ADDRESS
+# Optional: OPENAI_API_KEY for natural language Copilot
 ```
 
 ### Dynamic dashboard checklist
@@ -196,7 +210,9 @@ npm run dev:server
 npm run dev:all
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+Open [http://localhost:5173](http://localhost:5173) — Copilot is the home page.
+
+**Try in Copilot:** `/status` · `/rebalance` · `/attack` · `/pay` · `/help`
 
 ### Build
 
@@ -213,7 +229,8 @@ Implementation guides live in [`docs/`](./docs/):
 
 | Doc | Description |
 |-----|-------------|
-| [docs/index.md](./docs/index.md) | Documentation index |
+| [docs/copilot.md](./docs/copilot.md) | Conversational interface |
+| [docs/treasury-tools.md](./docs/treasury-tools.md) | Tool catalog |
 | [docs/architecture.md](./docs/architecture.md) | System architecture |
 | [docs/implementation-plan.md](./docs/implementation-plan.md) | Phased build plan |
 | [docs/bloxchain-integration.md](./docs/bloxchain-integration.md) | AccountBlox + SDK |
