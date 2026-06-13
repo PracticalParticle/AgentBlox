@@ -2,14 +2,13 @@
 
 ## Overview
 
-AgentBlox is a **treasury operations workspace** that consumes AccountBlox clones provisioned on [bloxchain.app](https://bloxchain.app/). It does not modify Bloxchain core contracts.
-
-Three products, one security model:
+AgentBlox is a **Copilot-first treasury platform**. Users operate treasuries through conversation; tools enforce Bloxchain policy before anything executes on-chain.
 
 ```
-bloxchain.app     →  birth certificate (clone + roles + whitelist)
-AgentBlox         →  control tower (ops, ENS, agents, approvals)
-Bloxchain Protocol →  constitution (enforced on-chain)
+bloxchain.app     →  provision AccountBlox (clone + roles + whitelist)
+AgentBlox Console →  import + inspect treasury
+AgentBlox Copilot →  day-to-day ops via treasury tools
+Bloxchain Protocol →  on-chain constitution
 ```
 
 ## Layer diagram

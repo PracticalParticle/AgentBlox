@@ -21,18 +21,21 @@ Phased build plan for ETHGlobal NY 2026. Tasks are ordered by demo value — eac
 
 ## Phase 0 — Scaffold & environment
 
-**Goal:** Dev environment running with all packages installed.
+**Goal:** Dev environment running with Copilot + Console.
 
 ### Tasks
 
 - [x] Vite 5 + React + TypeScript scaffold
-- [x] Install `@bloxchain/sdk`, `@dynamic-labs/*`, `@lifi/sdk`, `viem`
+- [x] Install `@bloxchain/sdk`, `@dynamic-labs/*`, `@lifi/sdk`, `viem`, `ai`, `@ai-sdk/*`
 - [x] `.env.example` with all required variables
-- [x] Agent Bridge server stub (`server/index.ts`)
-- [x] Vite proxy `/api` → `localhost:3001`
-- [ ] Copy `.env.example` → `.env` and fill values
-- [ ] Dynamic dashboard: enable Sepolia, embedded wallets, CORS `http://localhost:5173`
-- [ ] Provision first AccountBlox clone on Sepolia (bloxchain.app or `create-wallet-copyblox.js`)
+- [x] Server with `/api/chat` + `/api/health`
+- [x] Treasury tool registry (`server/tools/`)
+- [x] Policy gate (`server/policy-gate.ts`)
+- [x] Copilot page with `useChat` + slash-command fallback
+- [x] Console page for setup
+- [ ] Copy `.env.example` → `.env` and set `TREASURY_ADDRESS`
+- [ ] Dynamic dashboard: enable Sepolia, embedded wallets, CORS
+- [ ] Provision AccountBlox clone on Sepolia
 
 ### Verification
 
@@ -45,17 +48,17 @@ npm run dev:all
 
 ---
 
-## Phase 1 — Treasury import & Bloxchain reads
+## Phase 1 — Treasury reads in Copilot tools
 
-**Goal:** Import treasury address and display on-chain state.
+**Goal:** Copilot `/status` shows real Sepolia data.
 
 ### Tasks
 
-- [ ] Persist treasury address in localStorage or URL param (`?treasury=0x...`)
-- [ ] Create `src/lib/bloxchain.ts` — SDK wrappers for `SecureOwnable`, `RuntimeRBAC`, `GuardController`
-- [ ] Read Owner, Broadcaster, timelock period from clone
-- [ ] List `TxRecord` history — pending, completed, failed
-- [ ] Dashboard: show treasury address, role addresses, pending queue
+- [x] `get_treasury_status` tool (ETH balance via viem)
+- [x] `resolve_ens_treasury` tool
+- [ ] Wire `@bloxchain/sdk` for Owner/Broadcaster/timelock reads
+- [ ] `list_pending_approvals` via TxRecord polling
+- [ ] Console persistence for treasury address
 
 ### SDK references
 

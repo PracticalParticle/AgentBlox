@@ -1,48 +1,46 @@
 # AgentBlox Documentation
 
-Implementation plan and integration guides for the ETHGlobal NY 2026 hackathon build.
+Implementation plan for the **Copilot-first** treasury platform.
+
+## Product model
+
+| Surface | Route | Purpose |
+|---------|-------|---------|
+| **Copilot** | `/` | Primary — conversational treasury operations via tools |
+| **Console** | `/console` | Setup — import treasury, view roles, env checklist |
+
+**bloxchain.app** provisions AccountBlox. **AgentBlox** operates it via Copilot tools.
 
 ## Start here
 
-1. Read [architecture.md](./architecture.md) for the system overview.
-2. Follow [implementation-plan.md](./implementation-plan.md) for phased tasks.
-3. Implement integrations in this order:
-   - [bloxchain-integration.md](./bloxchain-integration.md)
-   - [dynamic-integration.md](./dynamic-integration.md)
-   - [lifi-integration.md](./lifi-integration.md)
-   - [ens-integration.md](./ens-integration.md)
-   - [agent-bridge.md](./agent-bridge.md)
-4. Rehearse using [demo-script.md](./demo-script.md).
+1. [architecture.md](./architecture.md) — Copilot + tools + policy gate
+2. [copilot.md](./copilot.md) — Chat UI, LLM modes, slash commands
+3. [treasury-tools.md](./treasury-tools.md) — MCP-style tool catalog
+4. [implementation-plan.md](./implementation-plan.md) — Phased build plan
+5. Integration guides: [bloxchain-integration.md](./bloxchain-integration.md), [dynamic-integration.md](./dynamic-integration.md), [lifi-integration.md](./lifi-integration.md), [ens-integration.md](./ens-integration.md)
+6. [demo-script.md](./demo-script.md) — 3-minute demo via Copilot
 
 ## Document index
 
 | Document | Purpose |
 |----------|---------|
-| [architecture.md](./architecture.md) | Layers, data flow, role model |
-| [implementation-plan.md](./implementation-plan.md) | Phased tasks, MVP cuts, timeline |
-| [bloxchain-integration.md](./bloxchain-integration.md) | AccountBlox, SDK, meta-tx, timelock |
-| [dynamic-integration.md](./dynamic-integration.md) | Embedded wallet + server wallet |
-| [lifi-integration.md](./lifi-integration.md) | Composer quotes, whitelist gating |
-| [ens-integration.md](./ens-integration.md) | Resolution, text records, setup UI |
-| [agent-bridge.md](./agent-bridge.md) | Deterministic flows, API, future MCP |
-| [demo-script.md](./demo-script.md) | 3-minute judging demo |
+| [architecture.md](./architecture.md) | System layers and data flow |
+| [copilot.md](./copilot.md) | Conversational interface |
+| [treasury-tools.md](./treasury-tools.md) | Tool registry and tiers |
+| [implementation-plan.md](./implementation-plan.md) | Phased tasks |
+| [agent-bridge.md](./agent-bridge.md) | Legacy agent bridge → merged into tools |
+| [bloxchain-integration.md](./bloxchain-integration.md) | AccountBlox SDK |
+| [dynamic-integration.md](./dynamic-integration.md) | Owner + Broadcaster |
+| [lifi-integration.md](./lifi-integration.md) | Composer quotes |
+| [ens-integration.md](./ens-integration.md) | ENS in AgentBlox |
+| [demo-script.md](./demo-script.md) | Hackathon demo |
 
 ## External references
 
 | Resource | URL |
 |----------|-----|
+| LI.FI MCP Server | https://docs.li.fi/mcp-server/overview |
+| LI.FI Agent Integration | https://docs.li.fi/agents/overview |
+| Vercel AI SDK Tools | https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage |
+| Modern Treasury MCP | https://www.moderntreasury.com/journal/introducing-the-modern-treasury-mcp-server |
 | Bloxchain Protocol | https://github.com/PracticalParticle/Bloxchain-Protocol |
-| bloxchain.app | https://bloxchain.app/ |
-| Dynamic React Quickstart | https://www.dynamic.xyz/docs/react/reference/quickstart |
-| Dynamic Server Wallets | https://www.dynamic.xyz/docs/node/wallets/server-wallets/overview |
-| LI.FI Composer SDK | https://docs.li.fi/composer/guides/sdk-integration |
-| LI.FI ETHGlobal guide | https://docs.li.fi/composer/ethglobal-ny-2026 |
-| ENS + viem | https://viem.sh/docs/ens/actions/getEnsText |
-| Bloxchain Account Pattern | https://github.com/PracticalParticle/Bloxchain-Protocol/blob/main/docs/account-pattern.md |
-
-## Hackathon constraints
-
-- **3 sponsors max:** Dynamic, LI.FI, ENS
-- **No core protocol changes**
-- **ENS lives in AgentBlox** (not bloxchain.app)
-- **No LLM for demo** — hardcoded agent flows with agent-ready API
