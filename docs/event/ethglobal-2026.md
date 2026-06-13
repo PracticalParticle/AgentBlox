@@ -36,6 +36,7 @@ How AgentBlox demonstrates each sponsor integration in the product:
 
 - **Setup:** [provisioning-checklist.md](../provisioning-checklist.md)
 - **Build status:** [implementation-status.md](../implementation-status.md)
+- **UI/UX spec:** [ui-ux-guidelines.md](../ui-ux-guidelines.md)
 - **LI.FI hackathon guide:** [docs.li.fi/composer/ethglobal-ny-2026](https://docs.li.fi/composer/ethglobal-ny-2026)
 
 ### ENS booth (Sunday AM)

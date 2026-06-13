@@ -10,7 +10,8 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Copilot UI + slash commands | **Done** | `/api/chat`, fallback router, tool cards |
+| Copilot UI + slash commands | **Done** | `/api/chat`, fallback router, tool cards (JSON) |
+| UI/UX Workspace (target) | **Pending** | Spec in [ui-ux-guidelines.md](./ui-ux-guidelines.md); UI-0–6 not started |
 | Treasury tools (read) | **Partial** | ETH balance + ENS work; SDK reads stubbed |
 | Treasury tools (propose) | **Partial** | Policy gate works; no on-chain execution |
 | Policy gate (off-chain) | **Done** | Flow ID, amount, target validation |
@@ -68,6 +69,7 @@ See [implementation-plan.md](./implementation-plan.md).
 | [guard-controller.md](./guard-controller.md) | ✅ Whitelist + TxRecord spec |
 | [event/ethglobal-2026.md](./event/ethglobal-2026.md) | ✅ ETHGlobal context |
 | [integrations/](./integrations/README.md) | ✅ Sponsor integrations |
+| [ui-ux-guidelines.md](./ui-ux-guidelines.md) | ✅ MVP UI/UX spec |
 | [treasury-tools.md](./treasury-tools.md) | ✅ Canonical tool spec |
 | [on-chain-execution-flow.md](./on-chain-execution-flow.md) | ✅ Execution model |
 | [agent-bridge.md](./agent-bridge.md) | ⚠️ Deprecated |

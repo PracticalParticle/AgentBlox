@@ -1,8 +1,8 @@
 # Copilot
 
-The **Treasury Copilot** (`/`) is the primary interface for AgentBlox. Users interact via natural language (when an LLM is configured) or slash commands (always available).
+The **Treasury Copilot** is the conversational input layer for AgentBlox. Users interact via natural language (when an LLM is configured) or slash commands (always available). In the target UI, Copilot is **embedded in the Treasury Workspace** action center — not a standalone chat page. See [ui-ux-guidelines.md](./ui-ux-guidelines.md).
 
-See also: [treasury-tools.md](./treasury-tools.md) · [on-chain-execution-flow.md](./on-chain-execution-flow.md)
+See also: [treasury-tools.md](./treasury-tools.md) · [on-chain-execution-flow.md](./on-chain-execution-flow.md) · [ui-ux-guidelines.md](./ui-ux-guidelines.md)
 
 ## Modes
 
@@ -73,12 +73,14 @@ On-chain execution (Phase 3+) via Dynamic + Bloxchain
 
 ## UI components
 
-| File | Role |
-|------|------|
-| `src/pages/CopilotPage.tsx` | Chat layout, `useChat` hook |
-| `src/components/chat/ChatInput.tsx` | Input + suggestion chips |
-| `src/components/chat/ChatMessageView.tsx` | Message rendering |
-| `src/components/chat/ToolResultCard.tsx` | Structured tool output |
+Current scaffold (migrating to [ui-ux-guidelines.md](./ui-ux-guidelines.md) Workspace model):
+
+| File | Role | Target |
+|------|------|--------|
+| `src/pages/CopilotPage.tsx` | Chat layout, `useChat` hook | → `WorkspacePage.tsx` |
+| `src/components/chat/ChatInput.tsx` | Input + suggestion chips | Retain in Action center |
+| `src/components/chat/ChatMessageView.tsx` | Message rendering | Retain |
+| `src/components/chat/ToolResultCard.tsx` | Structured tool output (JSON) | → `ToolCardRouter` + typed cards |
 
 ## LLM configuration
 

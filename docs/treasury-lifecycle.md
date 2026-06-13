@@ -79,6 +79,7 @@ Day-to-day actions via **Copilot treasury tools** (`POST /api/chat`).
 | [on-chain-execution-flow.md](./on-chain-execution-flow.md) | Tool → sign → execute |
 | [treasury-tools.md](./treasury-tools.md) | Tool catalog |
 | [copilot.md](./copilot.md) | Chat UI and slash commands |
+| [ui-ux-guidelines.md](./ui-ux-guidelines.md) | MVP interface spec |
 
 ### Authorization paths
 

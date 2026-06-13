@@ -12,8 +12,10 @@ Guides for creating, operating, governing, and extending on-chain treasuries wit
 
 | Surface | Route | Purpose |
 |---------|-------|---------|
-| **Copilot** | `/` | Conversational treasury operations via tools |
-| **Console** | `/console` | Setup — import treasury, view roles, env checklist |
+| **Treasury Workspace** | `/` | Day-to-day ops — status, actions, approvals, activity ([ui-ux-guidelines.md](./ui-ux-guidelines.md)) |
+| **Setup** | `/setup` | First-run wizard — connect Dynamic, import treasury, verify policy |
+| **Copilot** (current) | `/` | Conversational input embedded in Workspace |
+| **Console** (legacy) | `/console` | Static checklist — migrating to Setup wizard |
 
 **bloxchain.app** provisions AccountBlox. **AgentBlox** operates it via Copilot tools.
 
@@ -34,7 +36,8 @@ Master guide: [treasury-lifecycle.md](./treasury-lifecycle.md)
 9. [governance.md](./governance.md) — change policy on a live treasury
 10. [extending-use-cases.md](./extending-use-cases.md) — add new on-chain capabilities
 11. [integrations/README.md](./integrations/README.md) — Dynamic, LI.FI, ENS
-12. [copilot.md](./copilot.md) — chat UI and slash commands
+12. [ui-ux-guidelines.md](./ui-ux-guidelines.md) — MVP interface spec (control surface + agentic patterns)
+13. [copilot.md](./copilot.md) — chat UI and slash commands
 
 ---
 
@@ -55,6 +58,7 @@ Master guide: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | [env-configuration.md](./env-configuration.md) | `.env` reference |
 | [implementation-status.md](./implementation-status.md) | Build matrix |
 | [implementation-plan.md](./implementation-plan.md) | Build backlog |
+| [ui-ux-guidelines.md](./ui-ux-guidelines.md) | MVP UI/UX spec |
 | [copilot.md](./copilot.md) | Conversational interface |
 
 ### Event

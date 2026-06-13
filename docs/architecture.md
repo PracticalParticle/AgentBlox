@@ -107,9 +107,9 @@ Vendor payments: Copilot tool → `executeWithTimeLock` → PENDING → Owner `a
 
 | Path | Responsibility |
 |------|----------------|
-| `src/pages/CopilotPage.tsx` | Primary chat UI (`/`) |
-| `src/pages/ConsolePage.tsx` | Setup + env checklist (`/console`) |
-| `src/components/chat/` | Chat UI, tool result cards |
+| `src/pages/CopilotPage.tsx` | Primary UI (`/`) — migrating to Workspace per [ui-ux-guidelines.md](./ui-ux-guidelines.md) |
+| `src/pages/ConsolePage.tsx` | Setup + env checklist (`/console`) — migrating to `/setup` wizard |
+| `src/components/chat/` | Chat input + message thread; tool cards → typed card system |
 | `server/tools/` | Treasury tool registry |
 | `server/policy-gate.ts` | Off-chain validation |
 | `server/signing/` | Meta-tx signing (Phase 3) |
