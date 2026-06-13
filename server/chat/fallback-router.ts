@@ -1,11 +1,11 @@
 import type { TreasuryToolName } from '../tools/index.js';
 import {
-  getLifiQuotePreview,
   proposeRebalance,
   requestVendorPayment,
   simulatePolicyViolation,
 } from '../tools/propose.js';
 import {
+  getLifiQuotePreview,
   getTreasuryStatus,
   getWhitelistedTargets,
   listPendingApprovals,

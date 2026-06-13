@@ -2,16 +2,16 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import {
   getLifiQuotePreview,
-  proposeRebalance,
-  requestVendorPayment,
-  simulatePolicyViolation,
-} from './propose.js';
-import {
   getTreasuryStatus,
   getWhitelistedTargets,
   listPendingApprovals,
   resolveEnsTreasury,
 } from './read.js';
+import {
+  proposeRebalance,
+  requestVendorPayment,
+  simulatePolicyViolation,
+} from './propose.js';
 
 export const treasuryTools = {
   get_treasury_status: tool({

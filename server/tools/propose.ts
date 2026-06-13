@@ -6,10 +6,9 @@ import {
   validateUnauthorizedTarget,
 } from '../policy-gate.js';
 import { sepoliaClient } from '../clients.js';
+import { composeRebalanceFlow } from '../lifi/compose.js';
 import { signRebalanceMetaTransaction } from '../signing/meta-tx.js';
-
-/** Sepolia USDC placeholder — replace with deployed token for demo. */
-const SEPOLIA_USDC = '0x1c7D4B196Cb0C7B29D5D0a0D0a0D0a0D0a0D0a0D' as const;
+import { SEPOLIA_USDC } from '../config.js';
 
 export async function proposeRebalance(params: {
   flowId?: string;
@@ -34,16 +33,34 @@ export async function proposeRebalance(params: {
 
   const ethBalance = await sepoliaClient.getBalance({ address: TREASURY_ADDRESS });
 
-  const signing = await signRebalanceMetaTransaction({ flowId });
+  const compose = await composeRebalanceFlow({ flowId, fromAmount: amount });
+
+  const signing = await signRebalanceMetaTransaction({
+    flowId,
+    executionIntent: compose.ok ? compose.executionIntent : undefined,
+  });
 
   const proposal = {
     flowId,
     treasuryAddress: TREASURY_ADDRESS,
     action: 'rebalance',
     fromToken: SEPOLIA_USDC,
+    toToken: compose.ok ? compose.quote.toToken : undefined,
     fromAmount: amount.toString(),
     lifiIntegrator: 'AgentBlox',
     status: signing.ok ? 'awaiting_confirmation' : 'awaiting_configuration',
+    compose: compose.ok
+      ? {
+          status: 'composed',
+          userProxy: compose.userProxy,
+          quote: compose.quote,
+          executionSelector: compose.executionIntent.executionSelector,
+        }
+      : {
+          status: 'compose_failed',
+          code: compose.code,
+          reason: compose.reason,
+        },
     signing: signing.ok
       ? {
           status: 'signed',
@@ -67,10 +84,10 @@ export async function proposeRebalance(params: {
           'GuardController validates whitelist → external target executes',
         ]
       : [
+          compose.ok ? null : compose.reason,
           signing.reason,
-          'Configure AGENT_POLICY_PRIVATE_KEY and REBALANCE_EXECUTION_* env vars',
-          'Phase 4: LI.FI compose will populate calldata automatically',
-        ],
+          'Set LIFI_API_KEY + AGENT_POLICY_PRIVATE_KEY, or manual REBALANCE_EXECUTION_* env vars',
+        ].filter(Boolean),
   };
 
   return {
@@ -138,25 +155,3 @@ export async function simulatePolicyViolation(params: { target?: string }) {
   };
 }
 
-export async function getLifiQuotePreview(params: {
-  fromAmount?: string;
-}) {
-  const treasuryCheck = validateTreasuryConfigured(isTreasuryConfigured());
-  if (!treasuryCheck.allowed) {
-    return { status: 'rejected', policy: treasuryCheck };
-  }
-
-  return {
-    status: 'preview',
-    note: 'Read-only LI.FI quote preview. Execution requires propose_rebalance + Broadcaster.',
-    params: {
-      fromChain: 11155111,
-      toChain: 11155111,
-      fromAmount: params.fromAmount || '1000000',
-      fromAddress: TREASURY_ADDRESS,
-      integrator: 'AgentBlox',
-    },
-    docs: 'https://docs.li.fi/composer/guides/sdk-integration',
-    implementation: 'Phase 4 — getQuote via @lifi/sdk',
-  };
-}

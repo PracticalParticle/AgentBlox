@@ -9,6 +9,31 @@ export const TREASURY_ADDRESS = (process.env.TREASURY_ADDRESS || '') as Address;
 
 export const ENS_NAME = process.env.ENS_NAME || '';
 
+/** Sepolia testnet chain id. */
+export const SEPOLIA_CHAIN_ID = 11_155_111;
+
+/** Circle USDC on Sepolia — override via SEPOLIA_USDC in .env. */
+export const SEPOLIA_USDC = (process.env.SEPOLIA_USDC ||
+  '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238') as Address;
+
+/** Uniswap WETH on Sepolia — override via SEPOLIA_WETH in .env. */
+export const SEPOLIA_WETH = (process.env.SEPOLIA_WETH ||
+  '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14') as Address;
+
+/** LI.FI Composer API key — required for compose (portal.li.fi). */
+export const LIFI_API_KEY = process.env.LIFI_API_KEY || '';
+
+/** Composer base URL — hackathon default; production: https://composer.li.quest */
+export const LIFI_COMPOSER_BASE_URL =
+  process.env.LIFI_COMPOSER_BASE_URL || 'https://ethglobal-composer.li.quest';
+
+/** Default slippage for rebalance compose (3%). */
+export const LIFI_REBALANCE_SLIPPAGE = Number(process.env.LIFI_REBALANCE_SLIPPAGE || '0.03');
+
+export function isLifiComposeConfigured(): boolean {
+  return LIFI_API_KEY.length > 0;
+}
+
 export const LIFI_INTEGRATOR = process.env.LIFI_INTEGRATOR || 'AgentBlox';
 
 export const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';

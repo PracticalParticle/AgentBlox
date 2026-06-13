@@ -8,6 +8,7 @@ export type ServerHealth = {
   dynamicEnvironmentConfigured?: boolean;
   dynamicBroadcasterConfigured?: boolean;
   agentPolicySigningConfigured?: boolean;
+  lifiComposeConfigured?: boolean;
   broadcaster?: {
     configured: boolean;
     message: string;

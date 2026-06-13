@@ -16,7 +16,7 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | Treasury tools (propose) | **Partial** | Policy gate + meta-tx sign; on-chain execute needs env |
 | Policy gate (off-chain) | **Done** | Flow ID, amount, target validation |
 | `@bloxchain/sdk` | **Partial** | Reads + meta-tx signing; timelock writes Phase 5 |
-| `@lifi/sdk` | **Pending** | Quote preview stub; compose Phase 4 |
+| `@lifi/sdk` | **Partial** | Composer via `@lifi/composer-sdk`; quote + propose wired |
 | Dynamic (Owner UI) | **Partial** | `DynamicWidget` only |
 | Dynamic (Broadcaster) | **Partial** | SDK wired; needs API token + wallet in `.env` |
 | On-chain execution | **Partial** | Sign + `POST /api/execute/rebalance`; needs Broadcaster + execution target env |
@@ -33,7 +33,7 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | `resolve_ens_treasury` | Monitor | ✅ | ✅ ENS | — | — | — |
 | `list_pending_approvals` | Monitor | ✅ | ✅ SDK | — | — | — |
 | `get_whitelisted_targets` | Monitor | ✅ | ✅ SDK | — | — | — |
-| `get_lifi_quote_preview` | Monitor | ⚠️ stub | ❌ | — | — | — |
+| `get_lifi_quote_preview` | Monitor | ✅ | ⚠️ compose | — | — | — |
 | `propose_rebalance` | Treasury op | ✅ policy | — | ✅ | ⚠️ env | ✅ |
 | `request_vendor_payment` | Disbursement | ✅ stub | ❌ | ❌ | ❌ | ❌ Phase 5 |
 | `simulate_policy_violation` | Policy test | ✅ | ❌ | ❌ | ❌ | — |
@@ -50,7 +50,7 @@ Legend: ✅ working · ⚠️ env-dependent / stub · ❌ not implemented
 | 1 | Bloxchain SDK reads | **Done** |
 | 2 | Dynamic Owner + Broadcaster | **In progress** (scaffold done; env pending) |
 | 3 | Meta-tx sign + Copilot confirm | **Done** (end-to-end needs env + Phase 4 calldata) |
-| 4 | LI.FI + whitelist demo | **Not started** |
+| 4 | LI.FI + whitelist demo | **Done** (code); env + on-chain whitelist pending |
 | 5 | Timelock payments + Owner approve | **Not started** |
 | 6 | ENS write + Console persistence | **Partial** (read only) |
 | 7 | Polish + submission | **Not started** |
@@ -81,7 +81,8 @@ See [implementation-plan.md](./implementation-plan.md).
 | `server/execution/rebalance.ts` | Done | Broadcaster `requestAndApproveExecution` |
 | `server/dynamic/client.ts` | Done | Authenticated Dynamic client |
 | `server/dynamic/broadcaster.ts` | Done | Status + viem wallet client |
-| `server/lifi/compose.ts` | **Missing** | Phase 4 |
+| `server/lifi/compose.ts` | Done | Composer API + calldata split |
+| `server/lifi/flows.ts` | Done | rebalance-sepolia-v1 USDC→WETH |
 | `src/lib/execute-api.ts` | Done | Client → `POST /api/execute/rebalance` |
 | `src/lib/meta-tx-types.ts` | Done | Shared serialized meta-tx type |
 | `src/components/chat/ToolResultCard.tsx` | Done | Confirm execution button (UI-3 partial) |
@@ -90,7 +91,7 @@ See [implementation-plan.md](./implementation-plan.md).
 
 ## Next implementation priorities
 
-1. Set Dynamic env: `VITE_DYNAMIC_ENVIRONMENT_ID`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`
-2. Set signing env: `AGENT_POLICY_PRIVATE_KEY`, `REBALANCE_EXECUTION_TARGET`, `LIFI_EXECUTION_SELECTOR`
-3. Phase 4 — `server/lifi/compose.ts` + real `get_lifi_quote_preview`
-4. UI-0 — Workspace shell per [ui-ux-guidelines.md](./ui-ux-guidelines.md)
+1. Set `LIFI_API_KEY` (portal.li.fi) + `AGENT_POLICY_PRIVATE_KEY`
+2. Set Dynamic env when ready: `VITE_DYNAMIC_ENVIRONMENT_ID`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`
+3. Whitelist composed `userProxy` + selector on treasury (provisioning Part A4)
+4. Phase 5 — timelock `/pay`

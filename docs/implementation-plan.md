@@ -75,14 +75,16 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 ---
 
-## Phase 4 — LI.FI + whitelist guard
+## Phase 4 — LI.FI + whitelist guard ✅
 
 **Goal:** Composer flow as whitelisted target; on-chain policy revert.
 
-- [ ] Whitelist at provisioning — [guard-controller.md](./guard-controller.md)
-- [ ] `server/lifi/compose.ts`
-- [ ] Real `get_lifi_quote_preview`
+- [x] `server/lifi/compose.ts` — Composer API + calldata split
+- [x] `server/lifi/flows.ts` — `rebalance-sepolia-v1` USDC→WETH on Sepolia
+- [x] Real `get_lifi_quote_preview` (Composer + li.quest fallback)
+- [x] Wire compose into `propose_rebalance`
 - [ ] Optional on-chain attack revert
+- [ ] Whitelist at provisioning — operator
 
 **Docs:** [integrations/lifi.md](./integrations/lifi.md)
 
@@ -152,7 +154,8 @@ Frontend work tracked in [ui-ux-guidelines.md](./ui-ux-guidelines.md). Pair with
 | `server/signing/meta-tx.ts` | 3 | Done |
 | `server/signing/serialize.ts` | 3 | Done |
 | `server/execution/rebalance.ts` | 3 | Done |
-| `server/lifi/compose.ts` | 4 | Pending |
+| `server/lifi/compose.ts` | 4 | Done |
+| `server/lifi/flows.ts` | 4 | Done |
 | `server/dynamic/client.ts` | 2 | Done |
 | `server/dynamic/broadcaster.ts` | 2 | Done |
 | `src/lib/execute-api.ts` | 3 | Done |

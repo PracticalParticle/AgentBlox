@@ -29,8 +29,10 @@ Without `TREASURY_ADDRESS`, Copilot tools return `TREASURY_NOT_CONFIGURED`.
 | `PORT` | `3001` | AgentBlox server port |
 | `OPENAI_API_KEY` | — | Enables LLM Copilot mode |
 | `LLM_MODEL` | `gpt-4o-mini` | OpenAI model when key is set |
-| `LIFI_INTEGRATOR` | `AgentBlox` | LI.FI compose integrator string |
-| `LIFI_EXECUTION_SELECTOR` | — | 4-byte Composer selector for whitelist reads + signing fallback |
+| `LIFI_API_KEY` | Composer API key (portal.li.fi) — required for compose |
+| `LIFI_COMPOSER_BASE_URL` | Default: `https://ethglobal-composer.li.quest` |
+| `SEPOLIA_USDC` / `SEPOLIA_WETH` | Token addresses for rebalance flow |
+| `LIFI_REBALANCE_SLIPPAGE` | Default `0.03` (3%) |
 
 Without `OPENAI_API_KEY`, slash commands work (`mode: copilot-fallback`).
 
@@ -54,12 +56,7 @@ The server reads `VITE_DYNAMIC_ENVIRONMENT_ID` from `.env` via `dotenv` — **no
 | Variable | Purpose |
 |----------|---------|
 | `AGENT_POLICY_PRIVATE_KEY` | EIP-712 meta-tx signer — must match on-chain `AGENT_POLICY` role |
-| `REBALANCE_EXECUTION_TARGET` | External call target (e.g. LI.FI userProxy) |
-| `REBALANCE_EXECUTION_SELECTOR` | 4-byte selector — falls back to `LIFI_EXECUTION_SELECTOR` |
-| `REBALANCE_EXECUTION_PARAMS` | ABI-encoded calldata (`0x` until Phase 4 compose) |
-| `REBALANCE_OPERATION_TYPE` | Optional — defaults to `keccak256(flowId)` |
-
-Phase 4 (`server/lifi/compose.ts`) will populate target + calldata automatically; until then, set these manually for end-to-end rebalance testing.
+| `REBALANCE_EXECUTION_*` | Manual fallback only — compose auto-fills target + calldata when `LIFI_API_KEY` is set |
 
 ---
 

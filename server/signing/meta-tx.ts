@@ -27,7 +27,7 @@ export type RebalanceExecutionIntent = {
   target: Address;
   executionSelector: Hex;
   executionParams: Hex;
-  operationType: Hex;
+  operationType?: Hex;
   gasLimit?: bigint;
 };
 
@@ -81,6 +81,7 @@ export function getRebalanceExecutionIntent(flowId: string): RebalanceExecutionI
 export async function signRebalanceMetaTransaction(params: {
   flowId: string;
   requesterAddress?: Address;
+  executionIntent?: RebalanceExecutionIntent;
 }): Promise<SignRebalanceResult> {
   if (!isAgentPolicySigningConfigured()) {
     return {
@@ -90,13 +91,32 @@ export async function signRebalanceMetaTransaction(params: {
     };
   }
 
-  const intent = getRebalanceExecutionIntent(params.flowId);
+  const intent =
+    params.executionIntent ??
+    (() => {
+      const envIntent = getRebalanceExecutionIntent(params.flowId);
+      return envIntent;
+    })();
+
   if (!intent) {
     return {
       ok: false,
       code: 'MISSING_EXECUTION_CONFIG',
       reason:
-        'Set REBALANCE_EXECUTION_TARGET and REBALANCE_EXECUTION_SELECTOR (or LIFI_EXECUTION_SELECTOR) for meta-tx signing.',
+        'Configure LIFI_API_KEY for compose, or set REBALANCE_EXECUTION_TARGET and LIFI_EXECUTION_SELECTOR manually.',
+    };
+  }
+
+  const resolvedIntent: RebalanceExecutionIntent = {
+    ...intent,
+    operationType: intent.operationType ?? resolveRebalanceOperationType(params.flowId),
+  };
+
+  if (!resolvedIntent.operationType) {
+    return {
+      ok: false,
+      code: 'SIGNING_FAILED',
+      reason: 'Could not resolve rebalance operationType',
     };
   }
 
@@ -124,12 +144,12 @@ export async function signRebalanceMetaTransaction(params: {
 
     const txParams = {
       requester,
-      target: intent.target,
+      target: resolvedIntent.target,
       value: 0n,
-      gasLimit: intent.gasLimit ?? 1_000_000n,
-      operationType: intent.operationType,
-      executionSelector: intent.executionSelector,
-      executionParams: intent.executionParams,
+      gasLimit: resolvedIntent.gasLimit ?? 1_000_000n,
+      operationType: resolvedIntent.operationType as Hex,
+      executionSelector: resolvedIntent.executionSelector,
+      executionParams: resolvedIntent.executionParams,
     };
 
     const unsignedMetaTx = await metaTxSigner.createUnsignedMetaTransactionForNew(
@@ -147,7 +167,7 @@ export async function signRebalanceMetaTransaction(params: {
       ok: true,
       signedMetaTx: serializeMetaTransaction(signedMetaTx),
       signerAddress,
-      intent,
+      intent: resolvedIntent,
     };
   } catch (error) {
     return {

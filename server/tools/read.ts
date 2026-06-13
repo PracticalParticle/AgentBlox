@@ -9,6 +9,8 @@ import {
   isTreasuryConfigured,
   TREASURY_ADDRESS,
 } from '../config.js';
+import { composeRebalanceFlow, fetchLifiQuoteFallback } from '../lifi/compose.js';
+import { validateTreasuryConfigured } from '../policy-gate.js';
 
 const ENS_TEXT_KEYS = {
   policyVersion: 'bloxchain.policyVersion',
@@ -221,4 +223,49 @@ export async function getWhitelistedTargets() {
 
 export function validateRecipientAddress(recipient: string) {
   return isAddress(recipient) ? { valid: true, address: recipient as Address } : { valid: false };
+}
+
+export async function getLifiQuotePreview(params: { fromAmount?: string }) {
+  const treasuryCheck = validateTreasuryConfigured(isTreasuryConfigured());
+  if (!treasuryCheck.allowed) {
+    return { status: 'rejected', policy: treasuryCheck };
+  }
+
+  const fromAmount = params.fromAmount || '1000000';
+  const amount = BigInt(fromAmount);
+
+  const compose = await composeRebalanceFlow({
+    flowId: 'rebalance-sepolia-v1',
+    fromAmount: amount,
+  });
+
+  if (compose.ok) {
+    return {
+      status: 'preview',
+      source: 'composer',
+      flowId: compose.flowId,
+      userProxy: compose.userProxy,
+      quote: compose.quote,
+      executionSelector: compose.executionIntent.executionSelector,
+      note: 'Read-only LI.FI Composer preview. Use /rebalance to sign and confirm.',
+    };
+  }
+
+  const fallback = await fetchLifiQuoteFallback({ fromAmount });
+  if (fallback.ok) {
+    return {
+      status: 'preview',
+      source: 'li.quest-quote-fallback',
+      composeError: { code: compose.code, reason: compose.reason },
+      quote: fallback.quote,
+      note: 'Composer unavailable — showing standard LI.FI /v1/quote (Diamond route, not userProxy).',
+    };
+  }
+
+  return {
+    status: 'preview_unavailable',
+    composeError: { code: compose.code, reason: compose.reason },
+    quoteError: fallback.reason,
+    hint: 'Set LIFI_API_KEY for Composer preview, or verify Sepolia token liquidity.',
+  };
 }
