@@ -101,6 +101,23 @@ export async function getBroadcasterWalletClient(): Promise<WalletClient> {
   });
 }
 
+/** Lists Dynamic server wallets — use during Setup to pick BROADCASTER_WALLET_ADDRESS. */
+export async function listBroadcasterWallets(): Promise<Array<{ address: Address; name?: string }>> {
+  if (!DYNAMIC_API_TOKEN) {
+    throw new Error('Set DYNAMIC_API_TOKEN before listing server wallets.');
+  }
+  if (!isDynamicEnvironmentConfigured()) {
+    throw new Error('Set VITE_DYNAMIC_ENVIRONMENT_ID before listing server wallets.');
+  }
+
+  const dynamicClient = await getDynamicClient();
+  const wallets = await dynamicClient.getEvmWallets();
+  return wallets.map((wallet) => ({
+    address: wallet.accountAddress as Address,
+    name: wallet.walletId,
+  }));
+}
+
 /** Lightweight connectivity check — authenticates and returns configured wallet address. */
 export async function verifyBroadcasterConnection(): Promise<{
   ok: boolean;

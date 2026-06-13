@@ -4,6 +4,9 @@ import path from 'path';
 
 // Dynamic SDK requires Node globals that Vite does not provide by default.
 // See: https://www.dynamic.xyz/docs/react/reference/quickstart
+const apiProxyTarget = process.env.API_PROXY_TARGET || 'http://localhost:3001';
+const isDocker = process.env.DOCKER === '1';
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -17,9 +20,10 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    host: isDocker ? '0.0.0.0' : true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: apiProxyTarget,
         changeOrigin: true,
       },
     },

@@ -10,8 +10,17 @@ import {
   SERVER_PORT,
 } from './config.js';
 import { handleChatRequest } from './chat/handler.js';
-import { getBroadcasterStatus } from './dynamic/broadcaster.js';
+import {
+  getBroadcasterStatus,
+  listBroadcasterWallets,
+  verifyBroadcasterConnection,
+} from './dynamic/broadcaster.js';
 import { submitSignedRebalanceMetaTransaction } from './signing/meta-tx.js';
+import {
+  getTreasuryStatus,
+  getWhitelistedTargets,
+  listPendingApprovals,
+} from './tools/read.js';
 import type { SerializedMetaTransaction } from './signing/serialize.js';
 
 async function readJsonBody<T>(req: import('node:http').IncomingMessage): Promise<T> {
@@ -56,6 +65,64 @@ const server = createServer(async (req, res) => {
       }),
     );
     return;
+  }
+
+  if (req.method === 'GET') {
+    try {
+      if (url.pathname === '/api/treasury/status') {
+        const data = await getTreasuryStatus();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+        return;
+      }
+      if (url.pathname === '/api/treasury/pending') {
+        const data = await listPendingApprovals();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+        return;
+      }
+      if (url.pathname === '/api/treasury/whitelist') {
+        const data = await getWhitelistedTargets();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+        return;
+      }
+      if (url.pathname === '/api/broadcaster/verify') {
+        const status = await getBroadcasterStatus();
+        const connection = await verifyBroadcasterConnection();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(
+          JSON.stringify({
+            ok: connection.ok && status.configured && status.matchesOnChainBroadcaster !== false,
+            walletAddress: connection.ok ? connection.walletAddress : status.walletAddress,
+            error: connection.error,
+            status,
+          }),
+        );
+        return;
+      }
+      if (url.pathname === '/api/broadcaster/wallets') {
+        try {
+          const wallets = await listBroadcasterWallets();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ ok: true, wallets }));
+        } catch (error) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              ok: false,
+              wallets: [],
+              error: error instanceof Error ? error.message : 'Could not list wallets',
+            }),
+          );
+        }
+        return;
+      }
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Treasury read failed' }));
+      return;
+    }
   }
 
   if (url.pathname === '/api/chat' && req.method === 'POST') {

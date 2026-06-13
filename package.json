@@ -15,7 +15,15 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "verify": "npm run typecheck && npm run test"
+    "verify": "npm run typecheck && npm run test",
+    "verify:broadcaster": "tsx scripts/verify-broadcaster.ts",
+    "create:broadcaster-wallet": "tsx scripts/create-broadcaster-wallet.ts",
+    "docker:dev": "docker compose up --build",
+    "docker:dev:server": "docker compose up --build server",
+    "docker:down": "docker compose down",
+    "docker:ops:create-wallet": "docker compose --profile tools run --rm ops-create-wallet",
+    "docker:ops:verify": "docker compose --profile tools run --rm ops-verify-broadcaster",
+    "docker:verify": "docker compose --profile ci run --rm ci-verify"
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.0",

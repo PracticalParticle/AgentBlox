@@ -126,13 +126,13 @@ Frontend work tracked in [ui-ux-guidelines.md](./ui-ux-guidelines.md). Pair with
 
 | Phase | Focus | Hours | Backend dep. | Status |
 |-------|-------|-------|--------------|--------|
-| UI-0 | Workspace shell (3-column layout, status rail, activity) | 2–3h | Phase 0 | Pending |
-| UI-1 | Typed read cards (`ToolCardRouter` + monitor cards) | 2h | Phase 1 | Pending |
-| UI-2 | Setup wizard (`/setup`, Workspace gate) | 2h | Phase 2 Dynamic | Pending |
-| UI-3 | Intent Preview + Approvals (`RebalanceProposalCard`, Confirm) | 3h | Phase 3 | **Partial** — `ToolResultCard` Confirm; typed card deferred |
-| UI-4 | LI.FI quote + `PolicyBlockedCard` + Etherscan | 2h | Phase 4 | Pending |
-| UI-5 | Timelock payment card + Owner approve + countdown | 2h | Phase 5 | Pending |
-| UI-6 | Demo polish (`?demo=1`, loading states, keyboard focus) | 2h | Phase 7 | Pending |
+| UI-0 | Workspace shell (3-column layout, status rail, activity) | 2–3h | Phase 0 | **Done** |
+| UI-1 | Typed read cards (`ToolCardRouter` + monitor cards) | 2h | Phase 1 | **Done** |
+| UI-2 | Setup wizard (`/setup`, Workspace gate) | 2h | Phase 2 Dynamic | **Partial** |
+| UI-3 | Intent Preview + Approvals (`RebalanceProposalCard`, Confirm) | 3h | Phase 3 | **Done** |
+| UI-4 | LI.FI quote + `PolicyBlockedCard` + Etherscan | 2h | Phase 4 | **Partial** |
+| UI-5 | Timelock payment card + Owner approve + countdown | 2h | Phase 5 | **Done** |
+| UI-6 | Demo polish (`?demo=1`, loading states, keyboard focus) | 2h | Phase 7 | **Done** |
 
 **Total UI:** ~15h
 

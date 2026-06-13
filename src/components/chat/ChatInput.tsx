@@ -1,4 +1,8 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, forwardRef, useImperativeHandle, useRef, useState } from 'react';
+
+export type ChatInputHandle = {
+  focus: () => void;
+};
 
 type Props = {
   onSend: (text: string) => void;
@@ -15,8 +19,16 @@ const SUGGESTIONS = [
   '/help',
 ];
 
-export default function ChatInput({ onSend, disabled, placeholder }: Props) {
+const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
+  { onSend, disabled, placeholder },
+  ref,
+) {
   const [input, setInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => inputRef.current?.focus(),
+  }));
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -43,16 +55,21 @@ export default function ChatInput({ onSend, disabled, placeholder }: Props) {
       </div>
       <form className="chat-input-form" onSubmit={handleSubmit}>
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder={placeholder || 'Ask about your treasury or use /help'}
           disabled={disabled}
+          aria-label="Chat message"
         />
         <button type="submit" className="primary" disabled={disabled || !input.trim()}>
           Send
         </button>
       </form>
+      <p className="chat-input-hint muted">Press <kbd>/</kbd> to focus · slash commands always work</p>
     </div>
   );
-}
+});
+
+export default ChatInput;

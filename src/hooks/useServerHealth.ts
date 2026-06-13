@@ -14,6 +14,8 @@ export type ServerHealth = {
     configured: boolean;
     message: string;
     matchesOnChainBroadcaster: boolean | null;
+    walletAddress?: string | null;
+    onChainBroadcasters?: string[];
   };
   mode: string;
 };

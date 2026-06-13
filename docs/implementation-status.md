@@ -11,17 +11,18 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | Area | Status | Notes |
 |------|--------|-------|
 | Copilot UI + slash commands | **Done** | `/api/chat`, fallback router, tool cards |
-| UI/UX Workspace (target) | **Pending** | Spec in [ui-ux-guidelines.md](./ui-ux-guidelines.md); UI-0–6 not started |
+| UI/UX Workspace (target) | **Done** | UI-0–UI-6: workspace, typed cards, demo mode, polish |
 | Treasury tools (read) | **Done** | ETH + ENS + SDK pending/whitelist/roles |
 | Treasury tools (propose) | **Partial** | Policy gate + meta-tx sign; on-chain execute needs env |
 | Policy gate (off-chain) | **Done** | Flow ID, amount, target validation |
 | `@bloxchain/sdk` | **Partial** | Reads + meta-tx signing; timelock writes Phase 5 |
 | `@lifi/sdk` | **Partial** | Composer via `@lifi/composer-sdk`; quote + propose wired |
 | Dynamic (Owner UI) | **Partial** | `DynamicWidget` only |
-| Dynamic (Broadcaster) | **Partial** | SDK wired; needs API token + wallet in `.env` |
+| Dynamic (Broadcaster) | **Partial** | Docker + verify API; needs `DYNAMIC_API_TOKEN` + wallet in `.env` |
+| Docker dev stack | **Done** | `docker-compose.yml` — server + web + ops profiles (D0–D2) |
 | On-chain execution | **Partial** | Sign + `POST /api/execute/rebalance`; needs Broadcaster + execution target env |
 | Agent Bridge REST API | **Removed** | Superseded by Copilot tools |
-| Unit tests (Vitest) | **Done** | `npm run verify` — 55 tests, typecheck clean |
+| Unit tests (Vitest) | **Done** | `npm run verify` — typecheck + vitest |
 
 ---
 
@@ -65,6 +66,11 @@ See [implementation-plan.md](./implementation-plan.md).
 |----------|--------|--------|---------|
 | `/api/health` | GET | Done | Mode, treasury, Dynamic, Broadcaster, signing config |
 | `/api/chat` | POST | Done | Copilot + treasury tools |
+| `/api/treasury/status` | GET | Done | Status rail poll |
+| `/api/treasury/pending` | GET | Done | Approvals panel poll |
+| `/api/treasury/whitelist` | GET | Done | Optional whitelist read |
+| `/api/broadcaster/verify` | GET | Done | Live Dynamic auth + on-chain match |
+| `/api/broadcaster/wallets` | GET | Done | List server wallets for Setup |
 | `/api/execute/rebalance` | POST | Done | Broadcaster submits signed meta-tx |
 
 ---
@@ -89,14 +95,17 @@ See [implementation-plan.md](./implementation-plan.md).
 | `server/execution/payment-calldata.ts` | Done | USDC transfer params + operation type |
 | `server/execution/tx-id.ts` | Done | TransactionEvent txId decode |
 | `src/lib/owner-guard.ts` | Done | Dynamic Owner `approveTimeLockExecution` |
-| `src/components/chat/ToolResultCard.tsx` | Done | Rebalance Confirm + payment Approve as Owner (UI-3/UI-5 partial) |
+| `src/pages/WorkspacePage.tsx` | Done | UI-0 three-column workspace |
+| `src/pages/SetupPage.tsx` | Done | Checklist + Broadcaster verify UI |
+| `src/components/cards/ToolCardRouter.tsx` | Done | UI-1 typed tool cards |
+| `src/components/workspace/*` | Done | StatusRail, Approvals, Activity |
 
 ---
 
 ## Next implementation priorities
 
-1. Set `LIFI_API_KEY` (portal.li.fi) + `AGENT_POLICY_PRIVATE_KEY`
-2. Set Dynamic Broadcaster: `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS` (env ID ✅)
+1. Set Dynamic Broadcaster: `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS` — use Setup verify or `npm run verify:broadcaster`
+2. Set `LIFI_API_KEY` (portal.li.fi) + `AGENT_POLICY_PRIVATE_KEY`
 3. Set `ANALYST_PRIVATE_KEY` + on-chain ANALYST role for `/pay`
 4. Whitelist composed `userProxy` + selector on treasury (provisioning Part A4)
-5. UI-0 Workspace shell (parallel)
+5. Phase 7 — demo video + ETHGlobal submission

@@ -1,5 +1,5 @@
 import type { UIMessage } from 'ai';
-import ToolResultCard from './ToolResultCard';
+import ToolCardRouter from '../cards/ToolCardRouter';
 import { parseToolBlocks, stripToolBlocks } from '../../lib/tool-parser';
 
 type Props = {
@@ -23,7 +23,7 @@ export default function ChatMessageView({ message }: Props) {
       <div className="chat-message-label">{message.role === 'user' ? 'You' : 'Copilot'}</div>
       {plainText ? <div className="chat-message-text">{plainText}</div> : null}
       {toolBlocks.map((block, index) => (
-        <ToolResultCard key={`${message.id}-${index}`} payload={block} />
+        <ToolCardRouter key={`${message.id}-${index}`} payload={block} />
       ))}
       {message.parts
         .filter((part) => part.type.startsWith('tool-'))

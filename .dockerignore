@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-ssr
+coverage
+.git
+.gitignore
+*.md
+docs
+.env
+.env.*
+dynamic-server-wallet.json
+data/*.json
+.vscode
+.idea
+**/*.tsbuildinfo
+terminals

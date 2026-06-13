@@ -46,6 +46,7 @@ Before you start, gather:
 | **Node.js ≥ 18.20** | Run AgentBlox (`package.json` engines) |
 | **Sepolia ETH** | Gas for clone init, role config, and demo txs |
 | **Sepolia test USDC** | Rebalance demo ([Circle faucet](https://faucet.circle.com/) → Sepolia USDC `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`) |
+| **Docker Desktop** | Windows dev — Dynamic Node SDK requires Linux ([docker-plan.md](./docker-plan.md)) |
 | **Dynamic account** | [app.dynamic.xyz](https://app.dynamic.xyz) — Environment ID ([§1.2](#12-get-vite_dynamic_environment_id)) + API token |
 | **LI.FI API key** | [portal.li.fi](https://portal.li.fi) — Composer compose for `/quote` and `/rebalance` |
 | **AGENT_POLICY keypair** | Generate once; address goes on-chain, private key goes in `.env` only |
@@ -108,9 +109,20 @@ Minimum to boot the app (reads only):
 ```env
 TREASURY_ADDRESS=0xYourCloneAddressAfterPart2
 VITE_DYNAMIC_ENVIRONMENT_ID=paste-environment-id-from-step-1.2
+SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 ```
 
+> **RPC note:** the legacy default `https://rpc.sepolia.org` often returns 404. Set `SEPOLIA_RPC_URL` to a working endpoint (Alchemy, Infura, or [publicnode](https://ethereum-sepolia-rpc.publicnode.com)) or treasury reads and on-chain Broadcaster checks will fail.
+
 ### 1.4 Start dev servers
+
+**Windows (recommended — Dynamic Broadcaster in Linux container):**
+
+```bash
+npm run docker:dev
+```
+
+**macOS / Linux (native):**
 
 ```bash
 npm run dev:all
@@ -124,10 +136,139 @@ npm run dev:all
 ### 1.5 Quick health check
 
 ```bash
-curl http://localhost:3001/api/health
+curl.exe -s http://127.0.0.1:3001/api/health
 ```
 
+On Windows PowerShell, prefer `curl.exe` (not the `Invoke-WebRequest` alias) or call the API from inside Docker: `docker exec agentblox-server-1 curl -s http://127.0.0.1:3001/api/health`.
+
 With only `TREASURY_ADDRESS` set, expect `treasuryConfigured: true`. Other flags turn `true` as you complete Parts 2–4.
+
+### 1.6 Configure Dynamic Broadcaster (server wallet)
+
+After `VITE_DYNAMIC_ENVIRONMENT_ID` is set, configure the **Broadcaster** so meta-tx execution works (`/rebalance` → Confirm execution).
+
+Dynamic **server wallets** are MPC wallets created by the **Node SDK** (not the browser widget). AgentBlox stores key shares on Dynamic’s side (`backUpToDynamic: true`) and resolves the wallet via `getEvmWallets()` + `DYNAMIC_API_TOKEN`.
+
+> **Windows:** Dynamic’s Node SDK requires **Linux or macOS**. On Windows, run the API server and wallet scripts via **Docker** ([docker-plan.md](./docker-plan.md)): `npm run docker:dev` and `npm run docker:ops:create-wallet`. Native `npm run create:broadcaster-wallet` only works on macOS/Linux (or WSL).
+
+#### Step 1: Dashboard prerequisites
+
+In [app.dynamic.xyz](https://app.dynamic.xyz) for this project:
+
+| Setting | Location | Value |
+|---------|----------|-------|
+| Sepolia | **Chains & Networks** | Enabled |
+| Embedded wallets | **Wallets** | Enabled |
+| Multiple embedded wallets per chain | **Wallets** | Enabled (required for server wallets) |
+
+#### Step 2: Create `DYNAMIC_API_TOKEN` (before wallet creation)
+
+1. Go to **Developer → API** → **Create API token**.
+2. Select **minimum scopes** for AgentBlox Broadcaster:
+
+| Permission | Required when |
+|------------|-------------|
+| **WaaS Authenticate** | Always — `authenticateApiToken()` |
+| **Environment Users - Read** | List / verify server wallets |
+| **Environment Users - Write** | Creating a wallet via `npm run create:broadcaster-wallet` |
+
+Do **not** enable unrelated scopes (Analytics, Webhooks, Gasless, **WaaS Delegated Access - Sign Message** — that is for end-user delegation, not the Broadcaster server wallet).
+
+3. Copy the token once → add to `.env`:
+
+```env
+DYNAMIC_API_TOKEN=your-api-token-here
+```
+
+Never prefix with `VITE_` — this is server-only.
+
+#### Step 3: Create the server wallet (CLI)
+
+With `VITE_DYNAMIC_ENVIRONMENT_ID`, `DYNAMIC_API_TOKEN`, and **`DYNAMIC_WALLET_PASSWORD`** in `.env`:
+
+**Linux / macOS (native):**
+
+```bash
+npm run create:broadcaster-wallet
+```
+
+**Windows (Docker — recommended):**
+
+```bash
+npm run docker:ops:create-wallet
+```
+
+This calls Dynamic’s `createWalletAccount()` with `backUpToDynamic: true` and writes **`data/dynamic-server-wallet.json`** (gitignored). The file records the Broadcaster address and wallet metadata — **do not commit it**.
+
+`DYNAMIC_WALLET_PASSWORD` is **required** — Dynamic rejects backup without it.
+
+Then add the address to `.env` using the exact variable name **`BROADCASTER_WALLET_ADDRESS`** (not `BROADCASTER_WALLET_ID`):
+
+```env
+BROADCASTER_WALLET_ADDRESS=0x...from data/dynamic-server-wallet.json
+```
+
+**Order matters:**
+
+| Situation | What to do |
+|-----------|------------|
+| **New treasury (recommended)** | Create the Dynamic server wallet first (this section), then set that address as **Broadcaster** when provisioning in [Part 2](#part-2--create-and-configure-accountblox-on-chain). |
+| **Treasury already deployed** | After creating the wallet, update the on-chain Broadcaster role to match via [bloxchain.app](https://bloxchain.app/) or [governance.md](./governance.md). Until then, `matchesOnChainBroadcaster` stays `false` and meta-tx execution will revert. |
+
+To create another wallet and overwrite the JSON file:
+
+```bash
+npm run create:broadcaster-wallet -- --force
+# Windows Docker:
+docker compose --profile tools run --rm ops-create-wallet -- --force
+```
+
+#### Step 4: Verify from AgentBlox
+
+Restart the stack, then:
+
+**Docker (Windows / full Linux stack):**
+
+```bash
+npm run docker:dev          # server + web
+npm run docker:ops:verify   # Broadcaster check
+```
+
+**Native dev:**
+
+```bash
+npm run dev:all
+npm run verify:broadcaster
+```
+
+Then:
+
+- **Setup UI:** http://localhost:5173/setup → **List server wallets** + **Test Broadcaster connection**
+- **API:** `curl http://localhost:3001/api/health` or `curl http://localhost:3001/api/broadcaster/verify`
+
+Target: `ok: true`, wallet address matches env, and **`matchesOnChainBroadcaster: true`**.
+
+If verify shows Dynamic connected but `matchesOnChainBroadcaster: false`, compare `/api/treasury/status` → `roles.broadcasters` with your `BROADCASTER_WALLET_ADDRESS` and update on-chain ([governance.md](./governance.md)).
+
+More detail: [integrations/dynamic.md](./integrations/dynamic.md#broadcaster-role) · [docker-plan.md](./docker-plan.md).
+
+---
+
+## Part 1.7 — What to configure next (progress checklist)
+
+After Broadcaster env + on-chain role match, finish these in order:
+
+| Step | Env / on-chain | Validates with |
+|------|----------------|----------------|
+| 1 | `SEPOLIA_RPC_URL` (working RPC) | `/status` returns balance + roles |
+| 2 | On-chain **Broadcaster** = `BROADCASTER_WALLET_ADDRESS` | `npm run docker:ops:verify` → `matchesOnChainBroadcaster: true` |
+| 3 | `LIFI_API_KEY` | `/api/health` → `lifiComposeConfigured: true`; `/quote` works |
+| 4 | `AGENT_POLICY_PRIVATE_KEY` + on-chain **AGENT_POLICY** role + sign permission on Composer selector | `/rebalance` → `signing.status: signed` |
+| 5 | Whitelist LI.FI **userProxy** + selector from `/quote` | `/whitelist`; no `TargetNotWhitelisted` on execute |
+| 6 | (Optional) `ANALYST_PRIVATE_KEY` + role | `/pay` timelock request |
+| 7 | (Optional) `OPENAI_API_KEY` | Natural language Copilot (slash commands work without it) |
+
+**Full demo gate:** steps 1–5 complete, then `/rebalance` → **Confirm execution** in the Workspace UI.
 
 ---
 
@@ -174,9 +315,9 @@ You need two addresses **before** you finalize Owner and Broadcaster on-chain:
 
 **Broadcaster (server wallet)**
 
-1. In Dynamic dashboard, create a **server wallet** (Node / server wallets).
-2. Note the wallet address — this is your **Broadcaster** candidate.
-3. Create an **API token** with permission to use that server wallet.
+1. Create `DYNAMIC_API_TOKEN` with **WaaS Authenticate** + **Environment Users Read/Write** ([§1.6 Step 2](#step-2-create-dynamic_api_token-before-wallet-creation)).
+2. Run `npm run docker:ops:create-wallet` (Windows/Docker) or `npm run create:broadcaster-wallet` (macOS/Linux) — copy `accountAddress` from `data/dynamic-server-wallet.json` or script output.
+3. Set `BROADCASTER_WALLET_ADDRESS` in `.env` to that address before finalizing the clone.
 
 See [integrations/dynamic.md](./integrations/dynamic.md) for dashboard details.
 
@@ -306,7 +447,7 @@ LIFI_API_KEY=your-api-key
 
 With `TREASURY_ADDRESS` and `LIFI_API_KEY` set:
 
-1. Run `npm run dev:all`.
+1. Run `npm run docker:dev` (Windows) or `npm run dev:all` (macOS/Linux).
 2. In Copilot, run **`/quote`**.
 3. From the tool result, note:
    - **`userProxy`** → whitelist on GuardController (Part 2.5)
@@ -333,7 +474,11 @@ TREASURY_ADDRESS=0xYourAccountBloxClone
 
 # --- Dynamic Broadcaster ---
 DYNAMIC_API_TOKEN=your-dynamic-api-token
+DYNAMIC_WALLET_PASSWORD=your-wallet-backup-password
 BROADCASTER_WALLET_ADDRESS=0xYourDynamicServerWallet
+
+# --- Sepolia RPC (required for reliable reads) ---
+SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 
 # --- AGENT_POLICY signing ---
 AGENT_POLICY_PRIVATE_KEY=0x...must match on-chain AGENT_POLICY role...
@@ -351,7 +496,7 @@ ANALYST_PRIVATE_KEY=0x...must match on-chain ANALYST role...
 ENS_NAME=treasury.acme.eth
 OPENAI_API_KEY=sk-...          # natural language Copilot; slash commands work without it
 LIFI_EXECUTION_SELECTOR=0x.... # from /quote; helps /whitelist display
-SEPOLIA_RPC_URL=https://rpc.sepolia.org
+# MAINNET_RPC_URL=...          # for /ens only
 ```
 
 ### 4.3 What not to do
@@ -359,6 +504,7 @@ SEPOLIA_RPC_URL=https://rpc.sepolia.org
 - Do **not** put secrets in `VITE_*` variables (they ship to the browser).
 - Do **not** duplicate `TREASURY_ADDRESS` as `VITE_TREASURY_ADDRESS`.
 - Do **not** use the Broadcaster key as AGENT_POLICY (breaks signer ≠ executor).
+- Do **not** name the env var `BROADCASTER_WALLET_ID` — the server reads **`BROADCASTER_WALLET_ADDRESS`** only.
 
 ---
 
@@ -434,16 +580,18 @@ Details: [integrations/ens.md](./integrations/ens.md).
 Use this sequence if you are configuring from scratch:
 
 ```text
-1. Dynamic dashboard: copy Environment ID (§1.2) + Sepolia, embedded wallet, server wallet, API token
-2. Generate AGENT_POLICY keypair
-3. Clone AccountBlox on Sepolia (Owner, Broadcaster, Recovery, timelock)
-4. RBAC: AGENT_POLICY role + sign permission on Composer selector
-5. Fund clone (ETH + USDC)
-6. AgentBlox .env: TREASURY_ADDRESS, Dynamic, AGENT_POLICY, LIFI_API_KEY
-7. npm run dev:all → /quote → note userProxy + selector
-8. GuardController: whitelist userProxy + proxy factory
-9. /status, /whitelist, /rebalance → Confirm execution
-10. (Optional) ENS + /ens
+1. Dynamic dashboard: Environment ID, Sepolia, embedded wallets, API token (§1.2, §1.6)
+2. Create Dynamic server wallet → BROADCASTER_WALLET_ADDRESS + DYNAMIC_WALLET_PASSWORD
+3. Generate AGENT_POLICY keypair (address for on-chain role; key for .env later)
+4. Clone AccountBlox on Sepolia — Owner + Broadcaster (= step 2 address) + Recovery
+   OR update Broadcaster on existing clone via governance
+5. RBAC: AGENT_POLICY role + sign permission on Composer selector (after first /quote)
+6. Fund clone (ETH + USDC)
+7. AgentBlox .env: TREASURY_ADDRESS, Dynamic, SEPOLIA_RPC_URL, AGENT_POLICY, LIFI_API_KEY
+8. npm run docker:dev (Windows) or npm run dev:all → /quote → note userProxy + selector
+9. GuardController: whitelist userProxy + proxy factory
+10. docker:ops:verify → matchesOnChainBroadcaster; /status, /whitelist, /rebalance → Confirm
+11. (Optional) ENS + /ens
 ```
 
 Checklist format: [provisioning-checklist.md](./provisioning-checklist.md).
@@ -455,12 +603,16 @@ Checklist format: [provisioning-checklist.md](./provisioning-checklist.md).
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | `treasuryConfigured: false` | Missing/invalid `TREASURY_ADDRESS` | Set 42-char hex address in `.env`; restart server |
+| `/status` RPC 404 / HTML error | Bad `SEPOLIA_RPC_URL` | Use `https://ethereum-sepolia-rpc.publicnode.com` or your Alchemy/Infura URL |
+| `dynamicBroadcasterConfigured: false` | Wrong env var name or missing address | Use **`BROADCASTER_WALLET_ADDRESS`** (not `BROADCASTER_WALLET_ID`); recreate container after `.env` change |
+| Dynamic wallet create fails: password | Missing `DYNAMIC_WALLET_PASSWORD` | Add to `.env`; rerun `docker:ops:create-wallet` |
+| `matchesOnChainBroadcaster: false` | New Dynamic wallet ≠ on-chain Broadcaster | Update Broadcaster role on treasury ([governance.md](./governance.md)) or re-provision with correct address |
 | `/status` shows wrong Owner/Broadcaster | Addresses mismatch at init | Re-provision or governance update ([governance.md](./governance.md)) |
 | `compose_failed` / `COMPOSE_NOT_CONFIGURED` | No `LIFI_API_KEY` | Add key from portal.li.fi |
 | `proposed_unsigned` / missing agent key | No `AGENT_POLICY_PRIVATE_KEY` | Generate key; assign address to AGENT_POLICY role |
 | Meta-tx reverts: signer = executor | Same wallet for AGENT_POLICY and Broadcaster | Use separate keys; re-provision roles |
 | `TargetNotWhitelisted` on execute | userProxy not whitelisted | Run `/quote`, whitelist returned `userProxy` for selector |
-| Broadcaster submit fails | Dynamic env | Check `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`, dashboard CORS |
+| Dynamic Node SDK / Windows | Server + Broadcaster ops require Linux | `npm run docker:dev` + `docker:ops:*` — [docker-plan.md](./docker-plan.md) |
 | `/ens` empty | No `ENS_NAME` or mainnet RPC | Set `ENS_NAME`; check `MAINNET_RPC_URL` |
 | Dynamic widget does not open | CORS or missing env ID | Set `VITE_DYNAMIC_ENVIRONMENT_ID` (§1.2); add `http://localhost:5173` in Dynamic **Security → Allowed origins** |
 
@@ -468,8 +620,11 @@ Checklist format: [provisioning-checklist.md](./provisioning-checklist.md).
 
 ## Next steps
 
+**You are here if Broadcaster Dynamic auth works:** complete [Part 1.7](#part-17--what-to-configure-next-progress-checklist) — on-chain Broadcaster match → `LIFI_API_KEY` → `AGENT_POLICY` → whitelist → `/rebalance`.
+
 | Goal | Doc |
 |------|-----|
+| Docker dev on Windows | [docker-plan.md](./docker-plan.md) |
 | Understand tools and commands | [copilot.md](./copilot.md) · [treasury-tools.md](./treasury-tools.md) |
 | Change policy on a live treasury | [governance.md](./governance.md) |
 | Add new capabilities | [extending-use-cases.md](./extending-use-cases.md) |

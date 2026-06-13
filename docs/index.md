@@ -55,6 +55,7 @@ Master guide: [treasury-lifecycle.md](./treasury-lifecycle.md)
 |----------|---------|
 | [overview.md](./overview.md) | Executive snapshot — status, next steps, blockers |
 | [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) | Strategy, milestones, critical path |
+| [docker-plan.md](./docker-plan.md) | Docker-native dev/ops plan (Dynamic SDK / Windows) |
 | [implementation-status.md](./implementation-status.md) | Live build matrix |
 | [implementation-plan.md](./implementation-plan.md) | Phased task checklist |
 

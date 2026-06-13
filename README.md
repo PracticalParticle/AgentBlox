@@ -213,18 +213,30 @@ Before running locally, configure in [Dynamic Dashboard](https://app.dynamic.xyz
 
 ### Run
 
+**Docker (recommended on Windows — Dynamic Broadcaster requires Linux):**
+
 ```bash
-# Frontend only
-npm run dev
+# Full stack: Vite + API server in Linux containers
+npm run docker:dev
 
-# Agent Bridge server only
-npm run dev:server
+# API server only (run npm run dev on host for Vite)
+npm run docker:dev:server
 
+# Create Broadcaster wallet (Dynamic Node SDK)
+npm run docker:ops:create-wallet
+npm run docker:ops:verify
+```
+
+Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/) with Linux containers. See [docs/docker-plan.md](./docs/docker-plan.md).
+
+**Native (macOS / Linux):**
+
+```bash
 # Both (recommended for full demo)
 npm run dev:all
 ```
 
-Open [http://localhost:5173](http://localhost:5173) — Copilot is the home page.
+Open [http://localhost:5173](http://localhost:5173) — Workspace is the home page.
 
 **Try in Copilot:** `/status` · `/rebalance` · `/attack` · `/pay` · `/help`
 

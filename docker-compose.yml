@@ -1,0 +1,85 @@
+# AgentBlox dev stack — Linux containers for Dynamic Node SDK (Broadcaster).
+# Full stack:  npm run docker:dev
+# API only:    npm run docker:dev:server  (+ npm run dev on host for Vite)
+# Ops:         npm run docker:ops:create-wallet | docker:ops:verify
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+      target: server
+    platform: linux/amd64
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env
+    environment:
+      PORT: "3001"
+    volumes:
+      - ./server:/app/server
+      - ./scripts:/app/scripts
+      - ./data:/app/data
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+      target: web
+    platform: linux/amd64
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env
+    environment:
+      DOCKER: "1"
+      API_PROXY_TARGET: http://server:3001
+    volumes:
+      - ./src:/app/src
+      - ./index.html:/app/index.html
+      - ./public:/app/public
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.app.json:/app/tsconfig.app.json
+    depends_on:
+      - server
+
+  ops-create-wallet:
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+      target: server
+    platform: linux/amd64
+    env_file:
+      - .env
+    volumes:
+      - ./scripts:/app/scripts
+      - ./data:/app/data
+    entrypoint: ["npm", "run", "create:broadcaster-wallet"]
+
+  ops-verify-broadcaster:
+    profiles: [tools]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+      target: server
+    platform: linux/amd64
+    env_file:
+      - .env
+    volumes:
+      - ./scripts:/app/scripts
+      - ./server:/app/server
+      - ./data:/app/data
+    entrypoint: ["npm", "run", "verify:broadcaster"]
+
+  ci-verify:
+    profiles: [ci]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+      target: ci
+    platform: linux/amd64
+    env_file:
+      - .env

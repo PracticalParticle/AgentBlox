@@ -28,6 +28,11 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Dynamic server wallet metadata (npm run create:broadcaster-wallet)
+data/*.json
+!data/.gitkeep
+dynamic-server-wallet.json
+
 # TypeScript
 *.tsbuildinfo
 
