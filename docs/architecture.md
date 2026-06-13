@@ -2,12 +2,12 @@
 
 ## Overview
 
-AgentBlox is a **Copilot-first treasury platform**. Users operate treasuries through conversation; tools enforce Bloxchain policy before anything executes on-chain.
+AgentBlox is a **Copilot-first treasury platform**. Users operate treasuries through conversation; treasury tools and Bloxchain enforce policy before anything executes on-chain.
 
 ```
 bloxchain.app     →  provision AccountBlox (clone + roles + whitelist)
-AgentBlox Console →  import + inspect treasury
-AgentBlox Copilot →  day-to-day ops via treasury tools
+AgentBlox Console →  env checklist + treasury import reference
+AgentBlox Copilot →  day-to-day ops via treasury tools (/api/chat)
 Bloxchain Protocol →  on-chain constitution
 ```
 
@@ -18,12 +18,13 @@ flowchart TB
     subgraph Users["Users"]
         CFO["CFO / Owner"]
         Analyst["Analyst"]
-        Agent["Policy Agent (deterministic)"]
+        Policy["AGENT_POLICY (server key)"]
     end
 
     subgraph AgentBloxApp["AgentBlox Application"]
-        WebUI["Vite/React UI"]
-        AgentBridge["Agent Bridge (server/)"]
+        Copilot["Copilot UI (/)"]
+        Console["Console (/console)"]
+        ToolServer["Treasury Tool Server (server/)"]
     end
 
     subgraph Sponsors["Sponsor Layer"]
@@ -39,14 +40,16 @@ flowchart TB
         GC["GuardController"]
     end
 
-    CFO --> WebUI
-    Analyst --> WebUI
-    Agent --> AgentBridge
-    WebUI --> DYN
-    WebUI --> ENS
-    AgentBridge --> LIFI
-    AgentBridge -->|"EIP-712 sign"| AB
+    CFO --> Copilot
+    Analyst --> Copilot
+    Copilot --> ToolServer
+    Console --> ToolServer
+    ToolServer -->|"policy gate + sign"| Policy
+    ToolServer --> LIFI
+    Copilot --> DYN
+    ToolServer --> ENS
     DYN -->|"Owner approve / Broadcaster execute"| AB
+    Policy -->|"EIP-712 sign only"| AB
     AB --> SO
     AB --> RBAC
     AB --> GC
@@ -77,31 +80,33 @@ AccountBlox composes **SecureOwnable + RuntimeRBAC + GuardController**. Configur
 | **Owner** | Dynamic embedded wallet | Approve policy/whitelist changes | Approve vendor payments |
 | **Broadcaster** | Dynamic server wallet | Execute agent meta-txs | Execute approved ops |
 | **Recovery** | Cold backup address | Emergency rotation | Emergency rotation |
-| **AGENT_POLICY** | Agent Bridge key | Sign meta-tx only — never execute | — |
+| **AGENT_POLICY** | Server signing key | Sign meta-tx only — never execute | — |
 | **ANALYST** | Ops user (Dynamic or EOA) | — | Request timelock payments |
 
 ### Key invariant
 
-**Signer ≠ executor** for meta-tx flows. `AGENT_POLICY` can sign proposals but cannot submit `executeMetaTx`. Only Broadcaster executes. Enforced in EngineBlox, not application code.
+**Signer ≠ executor** for meta-tx flows. `AGENT_POLICY` can sign proposals but cannot submit `requestAndApproveExecution`. Only Broadcaster executes. Enforced in EngineBlox, not application code.
 
 ## Transaction patterns
+
+See [on-chain-execution-flow.md](./on-chain-execution-flow.md) for full sequences.
 
 ### Pattern 1 — Meta-tx (Lane A)
 
 ```
-Agent Bridge → EIP-712 sign (AGENT_POLICY)
+Copilot propose_rebalance → AGENT_POLICY EIP-712 sign
      ↓
-Dynamic Broadcaster → requestAndApproveExecution / executeMetaTx
+Dynamic Broadcaster → requestAndApproveExecution
      ↓
 GuardController → whitelist check
      ↓
-LI.FI Composer → atomic flow
+LI.FI Composer user proxy → atomic flow
 ```
 
 ### Pattern 2 — Timelock (Lane B)
 
 ```
-Analyst → executeWithTimeLock request
+Copilot request_vendor_payment → executeWithTimeLock
      ↓
 TxRecord status: PENDING (countdown)
      ↓
@@ -114,48 +119,64 @@ TxRecord status: COMPLETED
 
 | Path | Responsibility |
 |------|----------------|
-| `src/pages/` | UI routes: dashboard, treasury setup, agent flows |
-| `src/lib/config.ts` | Sepolia addresses, ENS text key constants |
-| `src/lib/ens.ts` | ENS resolution helpers (viem) |
-| `src/lib/agent-api.ts` | Client for Agent Bridge HTTP API |
-| `server/index.ts` | Agent Bridge: policy validation + EIP-712 signing |
+| `src/pages/CopilotPage.tsx` | Primary chat UI (`/`) |
+| `src/pages/ConsolePage.tsx` | Setup + env checklist (`/console`) |
+| `src/components/chat/` | Chat UI, tool result cards |
+| `src/lib/config.ts` | Sepolia addresses, ENS text keys |
+| `src/lib/ens.ts` | ENS read helpers (viem) |
+| `server/index.ts` | HTTP: `/api/health`, `/api/chat` |
+| `server/tools/` | Treasury tool registry (read + propose) |
+| `server/chat/` | LLM handler + fallback slash router |
+| `server/policy-gate.ts` | Off-chain validation |
+| `server/signing/` | Meta-tx signing (Phase 3 — planned) |
+| `server/dynamic/` | Broadcaster submit (Phase 2 — planned) |
 | `docs/` | Implementation guides |
+
+**Orphan pages** (not routed): `DashboardPage`, `AgentFlowsPage`, `TreasurySetupPage` — functionality moved to Copilot + Console.
 
 ## Data handoff: bloxchain.app → AgentBlox
 
-bloxchain.app provisions the treasury. AgentBlox imports by:
+bloxchain.app provisions the treasury. AgentBlox consumes it via:
 
-1. **Treasury address** — AccountBlox clone on Sepolia
-2. **Optional ENS name** — configured in AgentBlox (not bloxchain.app)
-3. **On-chain reads** — roles, whitelist, timelock via `@bloxchain/sdk`
+1. **Treasury address** — `TREASURY_ADDRESS` in `.env`
+2. **Optional ENS name** — `ENS_NAME` (configured in AgentBlox, not bloxchain.app)
+3. **On-chain reads** — roles, whitelist, timelock via `@bloxchain/sdk` (Phase 1+)
 
-Future: treasury manifest JSON exported from bloxchain.app with metadata (allowed flow IDs, policy version).
+See [provisioning-checklist.md](./provisioning-checklist.md).
 
 ## Security boundaries
 
 | Component | Can sign txs? | Can execute on-chain? | Holds private keys? |
 |-----------|---------------|----------------------|---------------------|
-| Web UI (Owner) | Via Dynamic embedded | Approve timelock only | No (Dynamic MPC) |
-| Agent Bridge | AGENT_POLICY meta-tx only | No | Yes (agent key only) |
+| Copilot UI (Owner) | Via Dynamic embedded | Approve timelock only | No (Dynamic MPC) |
+| Treasury tool server | AGENT_POLICY meta-tx only | No | Yes (agent key only) |
 | Dynamic Broadcaster | Yes | Yes (after Bloxchain checks) | Yes (server wallet) |
 | LI.FI | No | Via AccountBlox call | No |
+| LLM (optional) | No | No — calls tools only | No |
 
 ## Agent strategy
 
 | Phase | Approach |
 |-------|----------|
-| Hackathon | Hardcoded deterministic flows in `server/` |
-| Post-hackathon | Hermes/OpenClaw via MCP calling same Agent Bridge API |
-| Never | LLM directly holds Broadcaster key or bypasses whitelist |
+| Hackathon | Deterministic tools + slash commands; optional LLM |
+| Post-hackathon | Export same tools as MCP for Hermes/OpenClaw |
+| Never | LLM holds Broadcaster key or bypasses whitelist |
 
 ## Network
 
 - **Primary:** Sepolia testnet
+- **ENS resolution:** Ethereum mainnet (for `.eth` names)
 - **Bloxchain addresses:** See `src/lib/config.ts` and Bloxchain `deployed-addresses.json`
 
 ## What we do not build
 
 - Changes to `contracts/core/`
 - ENS provisioning in bloxchain.app
-- LLM reasoning layer for hackathon demo
-- Ledger integration (Phase 2 / enterprise hardening)
+- Ledger integration (enterprise stretch)
+- Legacy Agent Bridge REST API (`/api/agent/*`) — superseded by Copilot tools
+
+## Related docs
+
+- [implementation-status.md](./implementation-status.md) — what is built today
+- [treasury-tools.md](./treasury-tools.md) — tool catalog
+- [guard-controller-setup.md](./guard-controller-setup.md) — LI.FI + GuardController

@@ -1,6 +1,7 @@
 /**
- * Agent Bridge API client.
- * Calls the local server (server/index.ts) which holds AGENT_POLICY signing keys.
+ * @deprecated Copilot pivot — use Copilot tools via /api/chat instead of REST Agent Bridge.
+ * See docs/agent-bridge.md and docs/on-chain-execution-flow.md.
+ * Remove or rewrite when Phase 3 signing lands in server/tools/propose.ts.
  */
 const API_BASE = '/api';
 

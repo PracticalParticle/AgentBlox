@@ -1,30 +1,52 @@
 # LI.FI Integration
 
-LI.FI **Composer** provides atomic multi-step execution (swap, bridge, deposit). In AgentBlox, Composer is the **only whitelisted external execution target** for Lane A agent flows.
+LI.FI **Composer** provides atomic multi-step execution (swap, bridge, deposit). In AgentBlox, Composer runs **only** through GuardController-whitelisted calls triggered by Copilot tools.
+
+---
 
 ## Official documentation
 
 - Composer overview: https://docs.li.fi/composer/overview
-- SDK integration: https://docs.li.fi/composer/guides/sdk-integration
-- ETHGlobal NY 2026 guide: https://docs.li.fi/composer/ethglobal-ny-2026
-- SDK overview: https://docs.li.fi/sdk/overview
+- Composer API: https://docs.li.fi/composer/composer-api/overview
+- ETHGlobal NY 2026: https://docs.li.fi/composer/ethglobal-ny-2026
 - Agent / MCP: https://docs.li.fi/agents/
+
+---
 
 ## Architecture role
 
 ```
-Agent Bridge → builds Composer calldata
+Copilot /rebalance → propose_rebalance tool
      ↓
-AGENT_POLICY signs meta-tx (target = whitelisted LI.FI executor)
+LI.FI POST /compose → userProxy + calldata
      ↓
-Dynamic Broadcaster executes
+AGENT_POLICY signs meta-tx (target = userProxy)
+     ↓
+Dynamic Broadcaster → requestAndApproveExecution
      ↓
 GuardController whitelist check
      ↓
-LI.FI Composer runs atomic flow
+LI.FI user proxy → atomic Composer flow
 ```
 
-**LI.FI does not enforce policy.** Bloxchain GuardController does. LI.FI only executes what AccountBlox permits.
+**LI.FI does not enforce policy.** Bloxchain GuardController does.
+
+See [guard-controller-setup.md](./guard-controller-setup.md) and [on-chain-execution-flow.md](./on-chain-execution-flow.md).
+
+---
+
+## Composer user proxy model
+
+| Concept | AgentBlox value |
+|---------|-----------------|
+| Signer | AccountBlox clone (`TREASURY_ADDRESS`) |
+| Execution `to` | `userProxy` from compose response |
+| First tx | May target proxy factory (deploy + execute) |
+| Calldata | Full compiled Flow — split into `executionSelector` + `executionParams` for GuardController |
+
+Do **not** assume a generic router address — proxy is **per treasury signer**.
+
+---
 
 ## Packages
 
@@ -32,154 +54,144 @@ LI.FI Composer runs atomic flow
 npm i @lifi/sdk@^4.0.0 @lifi/sdk-provider-ethereum@^4.0.0
 ```
 
-Already in `package.json` (LI.FI SDK v4 as of June 2026).
+Already in `package.json`.
 
-## SDK setup
+For Composer authoring, also consider `@lifi/composer-sdk` when building Flows programmatically.
 
-Per current LI.FI docs, use `createClient` (v3 API):
+---
 
-```typescript
-import { createClient, getQuote, convertQuoteToRoute, executeRoute } from '@lifi/sdk';
-import { EthereumProvider } from '@lifi/sdk-provider-ethereum';
+## SDK usage in AgentBlox
 
-const client = createClient({
-  integrator: import.meta.env.VITE_LIFI_INTEGRATOR || 'AgentBlox',
-});
+### Read-only quote (Phase 4)
 
-client.setProviders([
-  EthereumProvider({
-    getWalletClient: () => Promise.resolve(walletClient),
-  }),
-]);
-```
-
-Create `src/lib/lifi.ts` for client initialization.
-
-> **Note:** For hackathon Lane A, execution goes through **AccountBlox meta-tx**, not direct `executeRoute` from user wallet. Use LI.FI SDK primarily to **get quotes and transaction calldata**, then embed calldata in Bloxchain meta-tx payload.
-
-## Getting a Composer quote
+Implement in `server/lifi/compose.ts`:
 
 ```typescript
-const quote = await getQuote(client, {
-  fromChain: 11155111,  // Sepolia chain ID
-  toChain: 11155111,
-  fromToken: '0x...',   // Sepolia USDC
-  toToken: '0x...',     // Target token / vault address
-  fromAmount: '1000000',
-  fromAddress: treasuryAddress, // AccountBlox clone holds funds
-});
+// Option A: Composer API POST /compose
+// Option B: @lifi/composer-sdk build Flow + compose
+
+// Returns: { userProxy, calldata, executionSelector, executionParams }
 ```
 
-The `toToken` address triggers Composer routing when it is a supported protocol token.
+Wire into:
 
-### Verify Composer route
+- `get_lifi_quote_preview` tool — read-only
+- `propose_rebalance` tool — embed in meta-tx
 
-Check quote response:
-- `tool` field should be `"composer"` for Composer routes
-- `transactionRequest` contains calldata to embed in meta-tx
+### Do not use direct `executeRoute` from browser
 
-## Execution via Bloxchain (not direct SDK execute)
+AccountBlox must mediate all external calls. Direct wallet execution bypasses GuardController.
 
-### Recommended hackathon path
+---
 
-1. `getQuote` → extract `transactionRequest.to` and `transactionRequest.data`
-2. Whitelist `transactionRequest.to` in GuardController at provisioning
-3. Build meta-tx with target = whitelisted LI.FI executor, calldata from quote
-4. AGENT_POLICY signs → Broadcaster executes
+## Execution via Bloxchain meta-tx
 
-### Why not direct `executeRoute`?
+1. Compose Flow with `sender: TREASURY_ADDRESS`
+2. Extract `userProxy` and calldata
+3. Split calldata:
+   - `executionSelector` = first 4 bytes
+   - `executionParams` = remainder (EngineBlox prepends selector via `encodePacked`)
+4. Whitelist `userProxy` + proxy factory at provisioning
+5. AGENT_POLICY signs meta-tx; Broadcaster submits
 
-AccountBlox must mediate all external calls. Direct wallet execution bypasses GuardController and breaks the demo narrative.
+Handler: `guardController.requestAndApproveExecution(signedMetaTx, ...)`
 
-### Alternative (simpler MVP)
+---
 
-If meta-tx + Composer calldata integration is blocked:
-- Pre-build one fixed Composer flow calldata offline
-- Hardcode in `server/flows/rebalance.ts`
-- Still whitelist the executor contract on-chain
+## Tool integration
 
-## Sepolia considerations
+| Tool | LI.FI usage |
+|------|-------------|
+| `get_lifi_quote_preview` | Compose / quote read-only |
+| `propose_rebalance` | Fixed Flow ID + compose → meta-tx payload |
 
-- Confirm Composer-supported tokens/contracts on Sepolia testnet
-- Pre-simulate quote before demo
-- Have fallback: single swap tx if Composer unavailable on Sepolia
-- Document tx hashes for submission either way
+Policy gate validates `flowId ∈ AGENT_POLICY.allowedFlowIds` before compose.
+
+Optional: cross-check ENS `bloxchain.allowedFlows` text record.
+
+---
 
 ## Whitelist configuration
 
-At treasury provisioning (bloxchain.app):
+At provisioning ([guard-controller-setup.md](./guard-controller-setup.md)):
 
-| Whitelist entry | Value |
-|-----------------|-------|
-| Target contract | LI.FI Composer executor address for Sepolia |
-| Function selector | Guard execution selector used in meta-tx |
-| Optional | Sepolia USDC for approvals in attached payments |
+| Entry | Value |
+|-------|-------|
+| Function schema | Composer proxy execute function |
+| Whitelist targets | `userProxy`, proxy factory |
+| Lane B | Sepolia USDC for payments |
 
-### Attack demo
+---
 
-Build meta-tx targeting **non-whitelisted** contract (e.g. direct `transfer` on USDC to attacker EOA). GuardController reverts `TargetNotWhitelisted`. UI shows blocked state.
+## Attack demo
 
-## Agent Bridge integration
+`/attack` → `simulate_policy_violation`:
 
-`server/flows/rebalance.ts`:
+- Off-chain: policy gate rejects non-whitelisted target
+- Phase 4: optional Broadcaster submit → `TargetNotWhitelisted` on-chain
 
-```typescript
-// 1. Read treasury balances (viem)
-// 2. If USDC > threshold → call LI.FI getQuote with fixed params
-// 3. Validate flow ID / tool === 'composer' against manifest allowed list
-// 4. Return { target, calldata, value } for meta-tx builder
+---
+
+## Hardcoded policy (hackathon)
+
+| Rule | Default |
+|------|---------|
+| Flow ID | `rebalance-sepolia-v1` |
+| Amount | 1 USDC (`1000000` units) |
+| Threshold | `AGENT_POLICY.rebalanceUsdcThreshold` in `server/config.ts` |
+
+Configure in `server/config.ts` — no LLM required.
+
+---
+
+## Sepolia considerations
+
+- Pre-simulate compose before demo
+- Confirm supported tokens on Sepolia
+- Fallback: document single pre-built calldata if compose API blocked
+- Save Etherscan links for submission
+
+---
+
+## Environment variables
+
+```env
+VITE_LIFI_INTEGRATOR=AgentBlox
+LIFI_INTEGRATOR=AgentBlox
 ```
 
-`server/flows/simulate-attack.ts`:
+See [env-configuration.md](./env-configuration.md).
 
-```typescript
-// Build calldata to non-whitelisted target
-// Return expected revert reason for UI
-```
+---
 
-## Hardcoded policy (no LLM)
+## Files to implement
 
-| Rule | Value (configure in env or constants) |
-|------|---------------------------------------|
-| Rebalance threshold | e.g. USDC > 10 USDC |
-| Allowed flow | One fixed `fromToken` → `toToken` pair |
-| Max amount | Cap per demo safety |
+| File | Phase | Purpose |
+|------|-------|---------|
+| `server/lifi/compose.ts` | 4 | Compose + calldata split |
+| `src/lib/lifi.ts` | 4 | Optional client wrapper |
+| `server/tools/propose.ts` | 3–4 | Wire compose into rebalance |
+| `server/tools/read.ts` | 4 | Real quote in preview tool |
+
+---
 
 ## Prize alignment
 
 | Track | Requirement |
 |-------|-------------|
 | Agentic Workflows ($4k) | Composer as execution layer behind agent treasury |
-| Most Innovative ($4k) | "Bloxchain-gated Composer" pattern |
-| Best UX ($3.5k) | Clear UI for flow status |
+| Most Innovative ($4k) | Bloxchain-gated Composer pattern |
 
-## UI requirements
-
-- Show quote summary before execution (from/to tokens, amount)
-- Show execution status from `TxRecord` + LI.FI `updateRouteHook` if using SDK polling
-- Distinguish success vs `TargetNotWhitelisted` failure
-
-## Environment variables
-
-```env
-VITE_LIFI_INTEGRATOR=AgentBlox
-```
-
-## Files to implement
-
-| File | Purpose |
-|------|---------|
-| `src/lib/lifi.ts` | LI.FI client + quote helpers |
-| `server/flows/rebalance.ts` | Deterministic rebalance logic |
-| `server/flows/simulate-attack.ts` | Non-whitelisted target for demo |
-| `src/components/LifiFlowStatus.tsx` | Quote + execution status UI |
+---
 
 ## Do not
 
-- Whitelist arbitrary contracts — only specific LI.FI executor + known flow
-- Let agent pick any `toToken` without off-chain policy validation
-- Execute LI.FI routes directly from browser wallet bypassing AccountBlox
+- Whitelist arbitrary contracts
+- Let tools pick any Flow without policy validation
+- Execute routes directly from Dynamic embedded wallet bypassing AccountBlox
+
+---
 
 ## Partnership pitch
 
-> "LI.FI handles execution complexity; Bloxchain handles authorization constitution. Official Bloxchain-gated Composer pattern with per-treasury allowed Flow IDs."
+> "LI.FI handles execution complexity; Bloxchain handles authorization constitution. Per-treasury allowed Flow IDs whitelisted in GuardController."

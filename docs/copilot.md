@@ -95,7 +95,7 @@ Chat tool cards will gain action buttons:
 | `propose_rebalance` | Confirm → Broadcaster executes |
 | `request_vendor_payment` | Owner approves via Dynamic |
 
-Phase 3–5 in [implementation-plan.md](./implementation-plan.md).
+Phase 3–5 in [implementation-plan.md](./implementation-plan.md). Flow details: [on-chain-execution-flow.md](./on-chain-execution-flow.md).
 
 ## Demo tips
 

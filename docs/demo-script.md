@@ -1,91 +1,118 @@
 # Demo Script
 
-3-minute demo script for ETHGlobal judges and ENS booth (Sunday AM).
+3-minute demo for ETHGlobal judges and ENS booth (Sunday AM). **All interactions run through Copilot** (`/`) using slash commands or natural language.
+
+See [provisioning-checklist.md](./provisioning-checklist.md) before rehearsing.
+
+---
 
 ## Pre-demo checklist
 
 - [ ] Treasury provisioned on bloxchain.app (AccountBlox clone on Sepolia)
-- [ ] ENS name linked in AgentBlox (`treasury.acme.eth` → clone)
-- [ ] Dynamic Owner logged in (embedded wallet)
-- [ ] Agent Bridge running (`npm run dev:all`)
-- [ ] LI.FI Composer flow pre-tested on Sepolia
+- [ ] `TREASURY_ADDRESS` set in `.env`; `/api/health` shows `treasuryConfigured: true`
+- [ ] ENS name linked (`/ens` resolves to clone)
+- [ ] Dynamic Owner logged in (`DynamicWidget` in header)
+- [ ] `npm run dev:all` running
+- [ ] LI.FI Composer flow pre-tested on Sepolia (Phase 4)
 - [ ] Sepolia Etherscan tabs open: success tx + revert tx
-- [ ] One pending timelock payment pre-staged (optional, or create live)
+- [ ] Optional: pre-stage Lane B timelock via `/pay`
+
+---
 
 ## Script (3 minutes)
 
-| Time | Scene | What to show | What to say |
-|------|-------|--------------|-------------|
-| **0:00** | Problem | Headline slide or verbal | "AI agents and finance teams both move money — both need the same controls. Keys alone aren't enough." |
-| **0:20** | Identity | AgentBlox dashboard, ENS name in header | "This is `treasury.acme.eth` — it resolves to our AccountBlox clone on Sepolia." |
-| **0:40** | Architecture flash | Layer diagram (ENS → Bloxchain → Dynamic → LI.FI) | "ENS names the actor. Bloxchain decides what's allowed. Dynamic holds keys. LI.FI runs approved flows." |
-| **0:55** | Lane A — success | Agent Flows → Run Rebalance | "Our policy agent proposes a rebalance. It signs a meta-tx — but cannot execute." |
-| **1:15** | Lane A — execute | Tx completes, Etherscan link | "Dynamic's server wallet broadcasts. GuardController checks the whitelist. LI.FI Composer runs." |
-| **1:35** | Lane A — blocked | Simulate Attack button | "Now the agent is prompt-injected to drain the wallet. Watch what happens." |
-| **1:50** | Lane A — revert | UI shows "Blocked by Bloxchain Guard" + Etherscan revert | "TargetNotWhitelisted — architecturally enforced, not prompt engineering." |
-| **2:05** | Lane B — request | Dashboard pending queue | "Finance lane: analyst requested a vendor payment. It's in timelock — PENDING." |
-| **2:20** | Lane B — approve | Dynamic Owner approves | "CFO approves via Dynamic embedded wallet after the waiting period." |
-| **2:35** | Lane B — audit | TxRecord timeline COMPLETED | "Full on-chain audit trail — same AccountBlox, same rules, different persona." |
-| **2:50** | Close | Architecture + logos | "AgentBlox by Particle CS. Powered by Nethermind-audited Bloxchain Protocol. Dynamic, LI.FI, ENS." |
+| Time | Scene | Copilot action | What to say |
+|------|-------|----------------|-------------|
+| **0:00** | Problem | — | "AI agents and finance teams both move money — both need the same controls. Keys alone aren't enough." |
+| **0:20** | Identity | `/ens` | "This is `treasury.acme.eth` — it resolves to our AccountBlox clone on Sepolia." |
+| **0:40** | Status | `/status` | "Copilot reads real on-chain state — treasury address, balance, policy engine." |
+| **0:55** | Architecture | Verbal / slide | "ENS names the actor. Bloxchain decides what's allowed. Dynamic holds keys. LI.FI runs approved flows." |
+| **1:05** | Lane A — propose | `/rebalance` | "Our policy agent proposes a rebalance. It signs a meta-tx — but cannot execute alone." |
+| **1:25** | Lane A — execute | Confirm in tool card (Phase 3) | "Dynamic's server wallet broadcasts. GuardController checks the whitelist. LI.FI Composer runs." |
+| **1:45** | Lane A — blocked | `/attack` | "Now the agent is prompt-injected to drain the wallet." |
+| **2:00** | Lane A — revert | Show tool card + Etherscan | "TargetNotWhitelisted — architecturally enforced, not prompt engineering." |
+| **2:10** | Lane B — request | `/pay` | "Finance lane: vendor payment enters timelock — PENDING." |
+| **2:25** | Lane B — approve | Owner approves via Dynamic (Phase 5) | "CFO approves after the waiting period." |
+| **2:40** | Audit | `/pending` or tx timeline | "Full on-chain audit trail — same AccountBlox, different persona." |
+| **2:50** | Close | — | "AgentBlox by Particle CS. Powered by Bloxchain Protocol. Dynamic, LI.FI, ENS." |
+
+---
+
+## Slash command cheat sheet (demo)
+
+| Command | Lane | Purpose |
+|---------|------|---------|
+| `/status` | — | Show treasury configured + ETH balance |
+| `/ens` | Identity | Resolve name + text records |
+| `/rebalance` | A | Propose LI.FI rebalance |
+| `/attack` | A | Show policy block |
+| `/pay` | B | Request timelock payment |
+| `/pending` | B | Pending approvals |
+| `/whitelist` | — | GuardController expectations |
+| `/help` | — | Command list |
+
+Natural language works when `OPENAI_API_KEY` is set.
+
+---
 
 ## Key beats judges must see
 
-1. **Bloxchain is load-bearing** — blocked attack proves it
-2. **Real txs** — Sepolia Etherscan links, not mocked UI
-3. **ENS is functional** — name resolves, text records visible
-4. **Three sponsor layers** — not three wallet vendors
-5. **Dual audience** — agent + fintech in one workspace
+1. **Bloxchain is load-bearing** — `/attack` proves policy enforcement story
+2. **Real txs** — Sepolia Etherscan links when Phase 3–4 complete (not mocked JSON only)
+3. **ENS is functional** — `/ens` with text records
+4. **Three sponsor layers** — Dynamic + LI.FI + ENS, not three wallet vendors
+5. **Dual audience** — agent + fintech in one Copilot workspace
+
+---
 
 ## ENS booth script (2 minutes)
 
-Focused on ENS prize tracks:
+| Time | Copilot action | Say |
+|------|----------------|-----|
+| 0:00 | `/ens` | "ENS gives treasuries persistent identity beyond addresses." |
+| 0:30 | Show text records in tool result | "Policy version and allowed flow IDs on ENS — agents discover policy without a centralized registry." |
+| 1:00 | `/rebalance` | "Named actor, policy-limited actions — trustworthy agent treasuries." |
+| 1:30 | Verbal | "ENS names the actor; Bloxchain limits the actor." |
 
-| Time | Show | Say |
-|------|------|-----|
-| 0:00 | Resolve `treasury.acme.eth` live | "ENS gives treasuries persistent identity beyond addresses." |
-| 0:30 | Text records panel | "Policy version and allowed flow IDs stored on ENS — agents discover policy without centralized registry." |
-| 0:60 | Agent flow triggered via named treasury | "Named actor, policy-limited actions — trustworthy agent treasuries." |
-| 1:30 | Architecture | "ENS names the actor; Bloxchain limits the actor." |
+---
 
 ## Submission assets
 
 - [ ] Public GitHub repo (AgentBlox)
 - [ ] Link to Bloxchain Protocol repo
-- [ ] Demo video (≤3–5 min)
+- [ ] Demo video (≤3–5 min) recorded from Copilot
 - [ ] Live URL (Vercel)
 - [ ] Sepolia tx hashes (success + revert)
 - [ ] Architecture diagram in README
 - [ ] Prize track statement per sponsor in README
 
-## Talking points by audience
-
-### Judges (security)
-
-> "Remove Bloxchain and the Broadcaster can call any contract. Add it and only whitelisted LI.FI flows execute — mandatory two-party authorization, Nethermind audited."
-
-### Dynamic (partnership)
-
-> "Dynamic provides keys; we provide constitutionally limited execution. Embed Bloxchain under your agent wallet product."
-
-### LI.FI (partnership)
-
-> "Official Bloxchain-gated Composer pattern — flow IDs whitelisted per treasury."
-
-### ENS (partnership)
-
-> "AccountBlox clone registry via ENS subnames and text records — reference implementation for secured agent treasuries."
+---
 
 ## Fallbacks if live demo fails
 
 | Failure | Fallback |
 |---------|----------|
 | Composer tx fails | Show pre-recorded Etherscan success tx |
-| ENS resolution slow | Show pre-resolved address + explain live resolve |
-| Dynamic login fails | Show pre-staged video clip of approval |
-| Agent Bridge down | Walk through architecture + recorded demo |
+| ENS resolution slow | Show pre-resolved `/ens` output screenshot |
+| Dynamic login fails | Walk architecture + recorded clip |
+| Server down | Show `implementation-status.md` + architecture |
+
+---
 
 ## What not to say
 
-- "We built a full AI agent" (say "policy agent with deterministic rules, agent-ready API")
-- "Bloxchain is a wallet" (it's policy middleware)
-- "ENS is just branding" (show text records + resolution)
+- "We built a full autonomous AI agent" → say **policy agent with deterministic tools, LLM optional**
+- "Bloxchain is a wallet" → say **policy middleware**
+- "ENS is branding" → show `/ens` text records
+
+---
+
+## Until Phase 3–4 is complete
+
+Current demo can still show:
+
+- `/status`, `/ens`, `/rebalance` (proposal cards with policy gate)
+- `/attack` (off-chain blocked state + expected on-chain error)
+- Console env checklist + Dynamic widget
+
+Note to judges: "On-chain execution wiring is Phase 3–4; policy and tool architecture are live today."

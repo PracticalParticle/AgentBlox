@@ -2,6 +2,9 @@
 
 AgentBlox exposes treasury operations as **MCP-style tools** — structured functions the Copilot LLM (or fallback router) can invoke. Tools **propose** actions; Bloxchain **permits** execution.
 
+> **Canonical spec** for agent operations. The legacy Agent Bridge REST API was never implemented — see [agent-bridge.md](./agent-bridge.md).  
+> Build status: [implementation-status.md](./implementation-status.md). Execution path: [on-chain-execution-flow.md](./on-chain-execution-flow.md).
+
 ## Tool tiers
 
 | Tier | Executes on-chain? | Human approval? | Examples |

@@ -122,14 +122,14 @@ flowchart TB
 | ENS | No | **Full integration** |
 | Dynamic wallets | No | **Full integration** |
 | LI.FI execution | No | **Full integration** |
-| Agent proposals | No | **Agent Bridge** |
-| Approval dashboard | No | **Yes** |
+| Agent proposals | No | **Copilot treasury tools** |
+| Approval UI | No | **Copilot tool cards** (Phase 3+) |
 
 ### Agent approach
 
-- **Hackathon:** Deterministic hardcoded flows (no LLM) for reliable demos.
-- **Future:** Same Agent Bridge API exposed via MCP for Hermes/OpenClaw.
-- **Security:** Agent proposes and signs only; Broadcaster executes; Bloxchain enforces.
+- **Hackathon:** Deterministic treasury tools + slash commands; optional LLM via Vercel AI SDK.
+- **Future:** Export same tools as MCP for Hermes/OpenClaw.
+- **Security:** AGENT_POLICY signs only; Broadcaster executes; Bloxchain enforces.
 
 ---
 
@@ -149,16 +149,32 @@ flowchart TB
 
 ---
 
+## Implementation status
+
+| Area | Status |
+|------|--------|
+| Copilot + slash commands | ✅ Working |
+| Treasury tools (read/propose) | ⚠️ Partial — policy gate works; on-chain pending |
+| `@bloxchain/sdk` / `@lifi/sdk` | 📦 Installed, not wired |
+| On-chain execution | ❌ Phase 2–5 |
+
+Full matrix: [`docs/implementation-status.md`](./docs/implementation-status.md)
+
+---
+
 ## Project structure
 
 ```
 AgentBlox/
-├── docs/                    # Implementation plan — start at docs/copilot.md
+├── docs/                    # Start at docs/index.md
 ├── server/
 │   ├── tools/               # Treasury tool registry (MCP-style)
 │   ├── chat/                # Copilot handler (LLM + fallback)
 │   ├── policy-gate.ts
-│   └── index.ts
+│   ├── signing/             # Phase 3 — meta-tx (planned)
+│   ├── dynamic/             # Phase 2 — Broadcaster (planned)
+│   ├── lifi/                # Phase 4 — compose (planned)
+│   └── index.ts             # /api/health, /api/chat
 ├── src/
 │   ├── pages/CopilotPage.tsx
 │   ├── pages/ConsolePage.tsx
@@ -225,20 +241,24 @@ npm run build
 
 ## Documentation
 
-Implementation guides live in [`docs/`](./docs/):
+Implementation guides live in [`docs/`](./docs/) — start at [`docs/index.md`](./docs/index.md).
 
 | Doc | Description |
 |-----|-------------|
-| [docs/copilot.md](./docs/copilot.md) | Conversational interface |
-| [docs/treasury-tools.md](./docs/treasury-tools.md) | Tool catalog |
-| [docs/architecture.md](./docs/architecture.md) | System architecture |
-| [docs/implementation-plan.md](./docs/implementation-plan.md) | Phased build plan |
-| [docs/bloxchain-integration.md](./docs/bloxchain-integration.md) | AccountBlox + SDK |
-| [docs/dynamic-integration.md](./docs/dynamic-integration.md) | Owner + Broadcaster |
-| [docs/lifi-integration.md](./docs/lifi-integration.md) | Composer + whitelist |
-| [docs/ens-integration.md](./docs/ens-integration.md) | Naming + text records |
-| [docs/agent-bridge.md](./docs/agent-bridge.md) | Deterministic agent flows |
-| [docs/demo-script.md](./docs/demo-script.md) | 3-minute demo script |
+| [implementation-status.md](./docs/implementation-status.md) | **What is built today** |
+| [provisioning-checklist.md](./docs/provisioning-checklist.md) | Setup before demo |
+| [guard-controller-setup.md](./docs/guard-controller-setup.md) | LI.FI + GuardController |
+| [on-chain-execution-flow.md](./docs/on-chain-execution-flow.md) | Tool → chain path |
+| [copilot.md](./docs/copilot.md) | Conversational interface |
+| [treasury-tools.md](./docs/treasury-tools.md) | Tool catalog (canonical) |
+| [implementation-plan.md](./docs/implementation-plan.md) | Phased build plan |
+| [demo-script.md](./docs/demo-script.md) | 3-minute Copilot demo |
+| [bloxchain-integration.md](./docs/bloxchain-integration.md) | AccountBlox + SDK |
+| [dynamic-integration.md](./docs/dynamic-integration.md) | Owner + Broadcaster |
+| [lifi-integration.md](./docs/lifi-integration.md) | Composer + whitelist |
+| [ens-integration.md](./docs/ens-integration.md) | Naming + text records |
+| [env-configuration.md](./docs/env-configuration.md) | Environment variables |
+| [agent-bridge.md](./docs/agent-bridge.md) | Deprecated — see treasury tools |
 
 ---
 

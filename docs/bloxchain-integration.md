@@ -2,12 +2,17 @@
 
 AgentBlox consumes the **AccountBlox pattern as-is** on Sepolia. No changes to `contracts/core/`.
 
+Integration happens through **Copilot treasury tools** and planned server modules — not a separate Agent Bridge REST API.
+
+---
+
 ## References
 
 - Protocol repo: https://github.com/PracticalParticle/Bloxchain-Protocol
 - Account pattern: `docs/account-pattern.md`
 - SDK: `@bloxchain/sdk` (viem-based)
-- Sepolia addresses in `deployed-addresses.json`
+- GuardController + LI.FI: [guard-controller-setup.md](./guard-controller-setup.md)
+- Execution flow: [on-chain-execution-flow.md](./on-chain-execution-flow.md)
 
 ## Sepolia deployment
 
@@ -19,20 +24,19 @@ AgentBlox consumes the **AccountBlox pattern as-is** on Sepolia. No changes to `
 
 ## Provisioning flow (bloxchain.app)
 
-1. Clone AccountBlox via CopyBlox pattern
-2. `initialize(owner, broadcaster, recovery, timeLockPeriodSec, eventForwarder)`
-3. Configure RBAC roles via `roleConfigBatch`:
-   - `AGENT_POLICY` — meta-tx sign permissions only
-   - `ANALYST` — time-delay request permissions
-4. Configure GuardController whitelist via `guardConfigBatch`:
-   - LI.FI Composer executor contract
-   - USDC token contract (Sepolia)
-   - Deny all other external targets
-5. Export treasury address → import into AgentBlox
+See [provisioning-checklist.md](./provisioning-checklist.md).
 
-Alternative: `CREATE_WALLET_USE_DEFAULTS=1 node scripts/deployment/create-wallet-copyblox.js` in Bloxchain Protocol repo.
+1. Clone AccountBlox via CopyBlox
+2. `initialize(owner, broadcaster, recovery, timeLockPeriodSec, eventForwarder)`
+3. RBAC: `AGENT_POLICY`, `ANALYST`
+4. GuardController whitelist via `guardConfigBatch` — LI.FI proxy + USDC
+5. Set `TREASURY_ADDRESS` in AgentBlox `.env`
+
+---
 
 ## SDK setup in AgentBlox
+
+Create `src/lib/bloxchain.ts` (Phase 1):
 
 ```typescript
 import {
@@ -45,119 +49,103 @@ import { sepolia } from 'viem/chains';
 
 const publicClient = createPublicClient({
   chain: sepolia,
-  transport: http(import.meta.env.VITE_SEPOLIA_RPC_URL),
+  transport: http(process.env.SEPOLIA_RPC_URL),
 });
 
-const treasuryAddress = '0x...' as const;
+const treasuryAddress = process.env.TREASURY_ADDRESS as `0x${string}`;
 
-// All three wrappers point to the same AccountBlox clone address
-const secureOwnable = new SecureOwnable(publicClient, walletClient, treasuryAddress, sepolia);
-const runtimeRbac = new RuntimeRBAC(publicClient, walletClient, treasuryAddress, sepolia);
-const guardController = new GuardController(publicClient, walletClient, treasuryAddress, sepolia);
+export function createBloxchainClients(walletClient?: ReturnType<typeof createWalletClient>) {
+  return {
+    secureOwnable: new SecureOwnable(publicClient, walletClient, treasuryAddress, sepolia),
+    runtimeRbac: new RuntimeRBAC(publicClient, walletClient, treasuryAddress, sepolia),
+    guardController: new GuardController(publicClient, walletClient, treasuryAddress, sepolia),
+  };
+}
 ```
 
-Create `src/lib/bloxchain.ts` wrapping these three clients.
+Use in **server tools** for reads; use with Dynamic `walletClient` for Owner/Broadcaster writes.
+
+---
 
 ## Role configuration
 
 | Role | Configured on | Used in AgentBlox |
 |------|---------------|-------------------|
-| Owner | bloxchain.app | Dynamic embedded wallet — timelock approve |
-| Broadcaster | bloxchain.app | Dynamic server wallet — meta-tx execute |
-| Recovery | bloxchain.app | Document only for demo |
-| AGENT_POLICY | bloxchain.app | Agent Bridge private key |
-| ANALYST | bloxchain.app | Request timelock payments |
+| Owner | bloxchain.app | Dynamic embedded — timelock approve |
+| Broadcaster | bloxchain.app | Dynamic server — `requestAndApproveExecution` |
+| Recovery | bloxchain.app | Document only |
+| AGENT_POLICY | bloxchain.app | `server/signing/meta-tx.ts` |
+| ANALYST | bloxchain.app | Lane B payment requests |
 
-Grant `AGENT_POLICY`:
-- Meta-tx sign permission for guard execution selectors
-- **Not** Broadcaster role
-- **Not** execute permission
+---
 
-## Lane A — Meta-transaction flow
+## Lane A — Meta-transaction (via Copilot tool)
 
 ### Sequence
 
-1. Agent Bridge builds `MetaTransaction` payload targeting whitelisted LI.FI contract
-2. `AGENT_POLICY` key signs EIP-712 off-chain (`@bloxchain/sdk` meta-tx utils)
-3. Dynamic Broadcaster calls `requestAndApproveExecution` or batch meta-tx flow
-4. EngineBlox validates: signer ≠ executor, role permissions, whitelist
-5. External call executes at `EXECUTING` status only
+1. User: `/rebalance` → `propose_rebalance` tool
+2. Tool builds meta-tx targeting whitelisted LI.FI user proxy
+3. `AGENT_POLICY` signs EIP-712 (`server/signing/meta-tx.ts`)
+4. User confirms in Copilot tool card
+5. Broadcaster calls `requestAndApproveExecution`
+6. EngineBlox: signer ≠ executor, RBAC, whitelist
+7. External call at `EXECUTING` only
 
-### SDK references (Bloxchain repo)
+### SDK references
 
 - `sdk/typescript/utils/metaTx/metaTransaction.tsx`
-- `test/foundry/integration/MetaTransaction.t.sol`
+- `scripts/sanity-sdk/guard-controller/erc20-mint-controller-tests.ts`
 - `test/foundry/integration/WhitelistWorkflow.t.sol`
 
-### Implementation (`server/signing/meta-tx.ts`)
+---
 
-```typescript
-// Pseudocode — align with @bloxchain/sdk exports
-// 1. createMetaTxParams(target, value, selector, params, ...)
-// 2. generateUnsignedMetaTransactionForNew(...)
-// 3. sign with AGENT_POLICY wallet
-// 4. return signed meta-tx to Broadcaster service
-```
+## Lane B — Timelock (via Copilot tool)
 
-## Lane B — Timelock flow
+1. User: `/pay` → `request_vendor_payment` tool
+2. `executeWithTimeLock` on GuardController (Phase 5)
+3. `/pending` polls `getTransaction(txId)`
+4. Owner approves via Dynamic — `approveTimeLockExecution`
 
-### Sequence
-
-1. Analyst (or UI button) calls `executeWithTimeLock` on GuardController
-2. `TxRecord` created with status `PENDING`, `releaseTime = now + timeLockPeriodSec`
-3. AgentBlox dashboard polls `getTransaction(txId)`
-4. After release time, Owner calls `approveTimeLockExecution(txId)` via Dynamic wallet
-5. Status progresses: `PENDING` → `EXECUTING` → `COMPLETED`
-
-### UI requirements
-
-- Countdown timer from `releaseTime`
-- Approve button enabled only for Owner wallet
-- Status badge per `TxStatus` enum
+---
 
 ## GuardController whitelist
 
-Critical security gate for LI.FI integration.
+Critical gate for LI.FI. See [guard-controller-setup.md](./guard-controller-setup.md).
 
 ```solidity
-// EngineBlox._validateTargetWhitelist — reverts if target not whitelisted
+// EngineBlox — reverts if target not whitelisted
 revert SharedValidation.TargetNotWhitelisted(target, functionSelector);
 ```
 
-### Whitelist at provisioning
-
-Use `guardConfigBatch` to add:
-- LI.FI Composer / executor contract address
-- Function selector for the execution path used in meta-tx
-- USDC contract for Lane B payments
-
 ### Attack demo
 
-Agent Bridge builds calldata targeting a **non-whitelisted** address (e.g. random EOA transfer). Broadcaster submits → revert → UI shows "Blocked by Bloxchain Guard".
+`/attack` → `simulate_policy_violation` tool. Phase 4: optional on-chain submit → revert.
 
-## TxRecord audit trail
+---
 
-Every operation returns a `txId`. Poll `getTransaction(txId)` for:
+## Tool integration map
 
-| Field | Use in UI |
-|-------|-----------|
-| `status` | Badge: PENDING, EXECUTING, COMPLETED, FAILED, CANCELLED |
-| `releaseTime` | Lane B countdown |
-| `requester` | Audit log |
-| `params.target` | Show whitelisted vs blocked target |
+| Tool | Bloxchain API |
+|------|---------------|
+| `get_whitelisted_targets` | `getFunctionWhitelistTargets(selector)` |
+| `list_pending_approvals` | `getTransactionHistory` / poll pending set |
+| `propose_rebalance` | `requestAndApproveExecution` (via signed meta-tx) |
+| `request_vendor_payment` | `executeWithTimeLock` |
+
+---
 
 ## Files to implement
 
 | File | Purpose |
 |------|---------|
 | `src/lib/bloxchain.ts` | SDK client factory |
-| `src/hooks/useTreasury.ts` | Read roles, timelock, address |
-| `src/hooks/useTxRecords.ts` | Poll transaction history |
 | `server/signing/meta-tx.ts` | AGENT_POLICY EIP-712 signing |
+| `server/tools/read.ts` | Wire SDK reads (Phase 1) |
+| `server/tools/propose.ts` | Wire sign + execute (Phase 3–5) |
+
+---
 
 ## Testing
-
-Reuse patterns from Bloxchain Protocol:
 
 ```bash
 # In Bloxchain Protocol repo
@@ -165,11 +153,11 @@ npm run test:foundry
 npm run test:sanity-sdk:core
 ```
 
-For AgentBlox: verify against live Sepolia clone with known config.
+---
 
 ## Do not
 
 - Modify `contracts/core/`
-- Bypass GuardController with direct contract calls from UI
-- Give AGENT_POLICY key Broadcaster permissions
-- Store Broadcaster key in frontend bundle
+- Bypass GuardController from UI
+- Give AGENT_POLICY Broadcaster permissions
+- Store Broadcaster key in `VITE_*` env vars

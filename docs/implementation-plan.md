@@ -1,183 +1,181 @@
 # Implementation Plan
 
-Phased build plan for ETHGlobal NY 2026. Tasks are ordered by demo value — each phase should produce something demo-able.
+Phased build plan for ETHGlobal NY 2026. Tasks are ordered by demo value — each phase should produce something demo-able in **Copilot**.
+
+Track live progress in [implementation-status.md](./implementation-status.md).
+
+---
 
 ## Timeline overview
 
 | Phase | Focus | Hours (est.) | Demo output |
 |-------|-------|--------------|-------------|
-| 0 | Scaffold + config | 2h | App runs locally |
-| 1 | Treasury import + Bloxchain reads | 4h | Show TxRecords in UI |
-| 2 | Dynamic wallets | 5h | Owner connects, Broadcaster executes |
-| 3 | Agent Bridge + Lane A | 6h | Rebalance meta-tx succeeds |
-| 4 | LI.FI + whitelist block | 4h | Composer flow + attack reverts |
-| 5 | Lane B timelock | 4h | Payment request → approve |
-| 6 | ENS integration | 3h | Name resolves in dashboard |
+| 0 | Scaffold + Copilot + Console | 2h | App runs; slash commands work |
+| 1 | Bloxchain SDK reads in tools | 4h | `/pending`, `/whitelist` show real data |
+| 2 | Dynamic wallets | 5h | Owner connects; Broadcaster configured |
+| 3 | Meta-tx sign + Copilot confirm | 6h | `/rebalance` signs; Broadcaster executes |
+| 4 | LI.FI + on-chain attack revert | 4h | Composer flow + Etherscan revert |
+| 5 | Lane B timelock | 4h | `/pay` → Owner approve |
+| 6 | ENS write + Console persistence | 3h | Link name from Console |
 | 7 | Polish + submission | 4h | Video, README, booth prep |
 
 **Total:** ~32h for 2–3 engineers
 
 ---
 
-## Phase 0 — Scaffold & environment
+## Phase 0 — Scaffold & environment ✅
 
-**Goal:** Dev environment running with Copilot + Console.
+**Goal:** Dev environment with Copilot + Console.
 
 ### Tasks
 
 - [x] Vite 5 + React + TypeScript scaffold
 - [x] Install `@bloxchain/sdk`, `@dynamic-labs/*`, `@lifi/sdk`, `viem`, `ai`, `@ai-sdk/*`
-- [x] `.env.example` with all required variables
-- [x] Server with `/api/chat` + `/api/health`
-- [x] Treasury tool registry (`server/tools/`)
+- [x] `.env.example` — see [env-configuration.md](./env-configuration.md)
+- [x] Server: `/api/health`, `/api/chat`
+- [x] Treasury tools (`server/tools/`)
 - [x] Policy gate (`server/policy-gate.ts`)
-- [x] Copilot page with `useChat` + slash-command fallback
-- [x] Console page for setup
-- [ ] Copy `.env.example` → `.env` and set `TREASURY_ADDRESS`
-- [ ] Dynamic dashboard: enable Sepolia, embedded wallets, CORS
-- [ ] Provision AccountBlox clone on Sepolia
+- [x] Copilot page + fallback slash router
+- [x] Console page
+- [ ] Copy `.env` and set `TREASURY_ADDRESS`
+- [ ] Dynamic dashboard: Sepolia, embedded wallets, CORS
+- [ ] Provision AccountBlox clone — [provisioning-checklist.md](./provisioning-checklist.md)
 
 ### Verification
 
 ```bash
-npm install
 npm run dev:all
-# Frontend: http://localhost:5173
-# Agent Bridge: http://localhost:3001/api/health
+# Copilot: /status, /help
+# Health: treasuryConfigured true after .env
 ```
 
 ---
 
-## Phase 1 — Treasury reads in Copilot tools
+## Phase 1 — Bloxchain reads in tools
 
-**Goal:** Copilot `/status` shows real Sepolia data.
+**Goal:** `/pending` and `/whitelist` return real Sepolia data.
 
 ### Tasks
 
-- [x] `get_treasury_status` tool (ETH balance via viem)
-- [x] `resolve_ens_treasury` tool
-- [ ] Wire `@bloxchain/sdk` for Owner/Broadcaster/timelock reads
-- [ ] `list_pending_approvals` via TxRecord polling
-- [ ] Console persistence for treasury address
+- [x] `get_treasury_status` — ETH balance via viem
+- [x] `resolve_ens_treasury` — mainnet ENS
+- [ ] Create `src/lib/bloxchain.ts` — SDK client factory
+- [ ] `list_pending_approvals` — poll TxRecords via `@bloxchain/sdk`
+- [ ] `get_whitelisted_targets` — `getFunctionWhitelistTargets` for Composer selector
+- [ ] Console: show on-chain Owner/Broadcaster addresses
 
-### SDK references
+### Docs
 
-- `@bloxchain/sdk` — `SecureOwnable`, `RuntimeRBAC`, `GuardController`
-- Bloxchain docs: `docs/account-pattern.md`, `docs/getting-started.md`
-- Sanity scripts: `scripts/sanity-sdk/` in Bloxchain Protocol repo
+- [bloxchain-integration.md](./bloxchain-integration.md)
+- Bloxchain: `scripts/sanity-sdk/`
 
 ### Verification
 
-- Dashboard shows real Sepolia data for imported treasury address
-- At least one `TxRecord` visible (create test tx if needed)
+- `/whitelist` lists actual whitelisted proxy address
+- `/pending` shows test timelock tx if one exists
 
 ---
 
 ## Phase 2 — Dynamic integration
 
-**Goal:** Owner connects via embedded wallet; Broadcaster configured for execution.
+**Goal:** Owner connects; Broadcaster ready for execution.
 
 ### Tasks
 
-- [ ] `DynamicWidget` in header (done in scaffold)
-- [ ] Verify Owner embedded wallet address matches treasury Owner (or document mismatch for demo)
-- [ ] Set up Dynamic server wallet for Broadcaster role
-  - Install `@dynamic-labs-wallet/node-evm` in server (optional separate dep)
-  - Store `walletMetadata` + key shares per Dynamic docs
-- [ ] Map `primaryWallet.address` to UI "Connected as Owner"
-- [ ] Server: Broadcaster signs and submits meta-tx execution
+- [x] `DynamicWidget` in header
+- [ ] Verify Owner address matches on-chain Owner
+- [ ] Dynamic server wallet for Broadcaster — `@dynamic-labs-wallet/node-evm`
+- [ ] `server/dynamic/client.ts` + `server/dynamic/broadcaster.ts`
+- [ ] Store `DYNAMIC_API_TOKEN` server-side only
 
 ### Docs
 
 - [dynamic-integration.md](./dynamic-integration.md)
-- https://www.dynamic.xyz/docs/node/wallets/server-wallets/overview
 
 ### Verification
 
 - User logs in via DynamicWidget
-- Server wallet can sign a test transaction on Sepolia
+- Server wallet signs test tx on Sepolia
 
 ---
 
-## Phase 3 — Agent Bridge + Lane A meta-tx
+## Phase 3 — Meta-tx sign + Copilot confirm
 
-**Goal:** Deterministic rebalance proposal → AGENT_POLICY signs → Broadcaster executes.
+**Goal:** `/rebalance` → AGENT_POLICY signs → user confirms → Broadcaster executes.
 
 ### Tasks
 
-- [ ] Implement `POST /api/agent/rebalance` in `server/index.ts`
-- [ ] Hardcoded policy: check balance threshold, fixed flow parameters
-- [ ] Use `@bloxchain/sdk` meta-tx helpers to build and sign EIP-712 payload
-- [ ] `AGENT_POLICY_PRIVATE_KEY` in server `.env` only
-- [ ] Wire "Run Rebalance" button on Agent Flows page
-- [ ] Broadcaster submits signed meta-tx after Agent Bridge returns signature
+- [ ] `server/signing/meta-tx.ts` — EIP-712 with `@bloxchain/sdk` helpers
+- [ ] Extend `propose_rebalance` in `server/tools/propose.ts` to return signed meta-tx
+- [ ] `AGENT_POLICY_PRIVATE_KEY` in server `.env`
+- [ ] Copilot `ToolResultCard` — **Confirm** button triggers Broadcaster
+- [ ] Remove or rewrite stale `src/lib/agent-api.ts`
 
 ### Docs
 
-- [agent-bridge.md](./agent-bridge.md)
-- [bloxchain-integration.md](./bloxchain-integration.md)
+- [on-chain-execution-flow.md](./on-chain-execution-flow.md)
+- [guard-controller-setup.md](./guard-controller-setup.md)
 
 ### Verification
 
-- Click "Run Rebalance" → meta-tx executes on Sepolia
-- Etherscan shows successful tx from AccountBlox clone
+- `/rebalance` → Confirm → meta-tx on Sepolia
+- Etherscan tx from AccountBlox clone
 
 ---
 
 ## Phase 4 — LI.FI + whitelist guard
 
-**Goal:** Composer flow as only allowed external target; attack demo blocked.
+**Goal:** Composer flow as whitelisted target; on-chain attack revert.
 
 ### Tasks
 
-- [ ] Configure GuardController whitelist at provisioning (LI.FI executor contract)
-- [ ] Integrate `@lifi/sdk` — `createClient`, `getQuote`, `convertQuoteToRoute`
-- [ ] Build calldata for whitelisted Composer flow on Sepolia
-- [ ] Embed calldata in meta-tx `TxRecord` targeting whitelisted contract
-- [ ] Implement `POST /api/agent/simulate-attack` — non-whitelisted target calldata
-- [ ] UI shows `TargetNotWhitelisted` revert with clear "Blocked by Bloxchain Guard" message
+- [ ] Whitelist Composer proxy at provisioning — [guard-controller-setup.md](./guard-controller-setup.md)
+- [ ] `server/lifi/compose.ts` — `@lifi/sdk` v4 or Composer API
+- [ ] `get_lifi_quote_preview` — real quote in tool
+- [ ] Embed compose calldata in meta-tx (target = userProxy)
+- [ ] Optional: Broadcaster submits attack payload → on-chain revert
+- [ ] UI distinguishes success vs `TargetNotWhitelisted`
 
 ### Docs
 
 - [lifi-integration.md](./lifi-integration.md)
-- https://docs.li.fi/composer/ethglobal-ny-2026
 
 ### Verification
 
-- Rebalance uses LI.FI Composer (check `tool: composer` in quote)
-- Simulate attack reverts on-chain; UI displays failure state
+- Rebalance uses LI.FI Composer (check compose response)
+- Attack demo: Etherscan revert tx
 
 ---
 
 ## Phase 5 — Lane B timelock payment
 
-**Goal:** Analyst requests payment → timelock → Owner approves.
+**Goal:** `/pay` → timelock → Owner approves in Copilot.
 
 ### Tasks
 
-- [ ] "Request Payment" flow — `executeWithTimeLock` to USDC contract on Sepolia
-- [ ] Dashboard countdown for `PENDING` TxRecord
-- [ ] Owner approves via Dynamic embedded wallet (`approveTimeLockExecution`)
-- [ ] Audit log table: txId, status, requester, timestamps
+- [ ] `request_vendor_payment` calls `executeWithTimeLock` on-chain
+- [ ] `/pending` shows countdown from `releaseTime`
+- [ ] Owner approves via Dynamic — `approveTimeLockExecution`
+- [ ] Tool card: Approve button for Owner wallet
 
 ### Verification
 
-- Full Lane B flow completes on Sepolia
-- TxRecord transitions: `PENDING` → `EXECUTING` → `COMPLETED`
+- Full Lane B: `PENDING` → `COMPLETED`
+- TxRecord in `/pending` output
 
 ---
 
 ## Phase 6 — ENS integration
 
-**Goal:** Functional ENS in AgentBlox (not bloxchain.app).
+**Goal:** Functional ENS in AgentBlox.
 
 ### Tasks
 
-- [ ] Treasury setup page: link ENS name to clone address
-- [ ] Set text records: `bloxchain.policyVersion`, `bloxchain.allowedFlows`, `bloxchain.app`
-- [ ] Dashboard: resolve ENS → display name in header
-- [ ] `src/lib/ens.ts` — extend with write helpers if Owner sets records via UI
-- [ ] Register demo ENS name before hackathon
+- [x] Read ENS in `resolve_ens_treasury` tool
+- [ ] Console: persist treasury + ENS (localStorage or backend)
+- [ ] Write helpers in `src/lib/ens.ts` — setAddr + setText via Owner
+- [ ] `propose_rebalance` reads `bloxchain.allowedFlows` from ENS
+- [ ] Register demo ENS name
 
 ### Docs
 
@@ -185,13 +183,8 @@ npm run dev:all
 
 ### Verification
 
-- `treasury.acme.eth` resolves to clone address in UI
-- Text records readable via `getEnsText`
-
-### ENS booth (Sunday AM)
-
-- [ ] Calendar ENS booth presentation
-- [ ] Prepare live demo: resolve name → show treasury → show agent flow
+- `/ens` matches `TREASURY_ADDRESS`
+- ENS booth: live resolve + text records
 
 ---
 
@@ -199,12 +192,12 @@ npm run dev:all
 
 ### Tasks
 
-- [ ] Architecture diagram in README
-- [ ] Demo video (≤3 min) — see [demo-script.md](./demo-script.md)
-- [ ] Sepolia Etherscan links for success + revert txs
-- [ ] README sponsor integration sections (Dynamic, LI.FI, ENS)
+- [ ] Update [implementation-status.md](./implementation-status.md)
+- [ ] Demo video from Copilot — [demo-script.md](./demo-script.md)
+- [ ] Sepolia Etherscan links in README
+- [ ] Sponsor sections in README
 - [ ] ETHGlobal submission
-- [ ] Deploy frontend to Vercel (optional)
+- [ ] Deploy to Vercel (optional)
 
 ---
 
@@ -213,38 +206,36 @@ npm run dev:all
 | Cut first | Never cut |
 |-----------|-----------|
 | ENS subnames | GuardController whitelist block demo |
-| Dynamic Flow funding | Meta-tx two-party success path |
-| Custom RBAC roles (Owner/Broadcaster only) | Lane B timelock approval |
+| LLM natural language | Meta-tx two-party success path |
+| Custom RBAC roles | Lane B timelock approval |
 | Multiple Composer flows | On-chain tx hashes |
-| Treasury factory UI polish | AccountBlox as load-bearing infra |
-| Hermes/OpenClaw integration | Agent Bridge deterministic rebalance |
+| Console persistence polish | AccountBlox as load-bearing infra |
+| Orphan page cleanup | Copilot slash command demo |
 
 ---
 
-## File creation checklist
+## File checklist
 
 | File | Phase | Status |
 |------|-------|--------|
 | `src/lib/bloxchain.ts` | 1 | Pending |
 | `src/lib/lifi.ts` | 4 | Pending |
-| `src/hooks/useTreasury.ts` | 1 | Pending |
-| `src/hooks/useTxRecords.ts` | 1 | Pending |
-| `src/components/TxTimeline.tsx` | 1 | Pending |
-| `src/components/ApprovalQueue.tsx` | 5 | Pending |
-| `server/flows/rebalance.ts` | 3 | Pending |
-| `server/flows/simulate-attack.ts` | 4 | Pending |
+| `server/lifi/compose.ts` | 4 | Pending |
 | `server/signing/meta-tx.ts` | 3 | Pending |
 | `server/dynamic/broadcaster.ts` | 2 | Pending |
+| `server/tools/propose.ts` | 3–4 | Partial |
+| `src/components/chat/ToolResultCard.tsx` | 3–5 | Partial (no actions) |
+| `src/lib/agent-api.ts` | — | Stale — remove/rewrite |
 
 ---
 
 ## Definition of done (hackathon)
 
-- [ ] Treasury imported from bloxchain.app provisioning
-- [ ] Lane A: rebalance succeeds via LI.FI + meta-tx
-- [ ] Lane A: attack blocked (`TargetNotWhitelisted`)
-- [ ] Lane B: timelock payment approved by Dynamic Owner
-- [ ] ENS name resolves in AgentBlox UI
-- [ ] 3 sponsor integrations documented and functional
+- [ ] Treasury provisioned — [provisioning-checklist.md](./provisioning-checklist.md)
+- [ ] Lane A: `/rebalance` succeeds via LI.FI + meta-tx
+- [ ] Lane A: `/attack` shows block (off-chain + on-chain revert)
+- [ ] Lane B: `/pay` approved by Dynamic Owner
+- [ ] `/ens` resolves in Copilot
+- [ ] Dynamic + LI.FI + ENS documented and functional
 - [ ] Demo video + live URL submitted
 - [ ] ENS booth presentation completed
