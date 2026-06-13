@@ -70,11 +70,11 @@ Full detail: [guard-controller.md](./guard-controller.md).
 ### B1. Environment
 
 - [ ] Copy `.env.example` → `.env`
-- [ ] Set `TREASURY_ADDRESS` and `VITE_TREASURY_ADDRESS`
+- [ ] Set `TREASURY_ADDRESS` in `.env`
 - [ ] Set `VITE_DYNAMIC_ENVIRONMENT_ID`
 - [ ] Set `AGENT_POLICY_PRIVATE_KEY` (must match on-chain `AGENT_POLICY` wallet)
 - [ ] Set `DYNAMIC_API_TOKEN` for Broadcaster (Phase 2+)
-- [ ] Optional: `ENS_NAME` / `VITE_ENS_NAME`
+- [ ] Optional: `ENS_NAME`
 
 ### B2. Dynamic dashboard
 

@@ -307,7 +307,6 @@ Implement write helpers in `src/lib/ens.ts` or a Console wizard. After on-chain 
 
 ```env
 ENS_NAME=treasury.acme.eth
-VITE_ENS_NAME=treasury.acme.eth
 MAINNET_RPC_URL=https://…
 TREASURY_ADDRESS=0x…
 ```

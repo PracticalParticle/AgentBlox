@@ -151,13 +151,12 @@ After `propose_rebalance` returns signed meta-tx and user confirms:
 ## Environment variables
 
 ```env
-# Frontend
+# Browser (required)
 VITE_DYNAMIC_ENVIRONMENT_ID=your-env-id
 
-# Server
+# Server — Phase 2+ (same env id is available via dotenv, no duplicate var)
 DYNAMIC_API_TOKEN=your-api-token
-DYNAMIC_ENVIRONMENT_ID=your-env-id
-BROADCASTER_WALLET_ID=optional-if-persisted
+BROADCASTER_WALLET_ADDRESS=optional-if-persisted
 ```
 
 Full reference: [env-configuration.md](../env-configuration.md).

@@ -1,10 +1,8 @@
 import { useState } from 'react';
 
 export default function TreasurySetupPage() {
-  const [treasuryAddress, setTreasuryAddress] = useState(
-    import.meta.env.VITE_TREASURY_ADDRESS || '',
-  );
-  const [ensName, setEnsName] = useState(import.meta.env.VITE_ENS_NAME || '');
+  const [treasuryAddress, setTreasuryAddress] = useState('');
+  const [ensName, setEnsName] = useState('');
 
   return (
     <section className="page">

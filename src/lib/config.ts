@@ -3,10 +3,12 @@ import { sepolia } from 'viem/chains';
 
 export const SEPOLIA_CHAIN: Chain = sepolia;
 
+const DEFAULT_SEPOLIA_RPC = 'https://rpc.sepolia.org';
+
 export function createSepoliaClient(rpcUrl?: string) {
   return createPublicClient({
     chain: SEPOLIA_CHAIN,
-    transport: http(rpcUrl || import.meta.env.VITE_SEPOLIA_RPC_URL),
+    transport: http(rpcUrl || DEFAULT_SEPOLIA_RPC),
   });
 }
 

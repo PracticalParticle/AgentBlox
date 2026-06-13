@@ -5,6 +5,14 @@ export type ServerHealth = {
   service: string;
   llmEnabled: boolean;
   treasuryConfigured: boolean;
+  dynamicEnvironmentConfigured?: boolean;
+  dynamicBroadcasterConfigured?: boolean;
+  agentPolicySigningConfigured?: boolean;
+  broadcaster?: {
+    configured: boolean;
+    message: string;
+    matchesOnChainBroadcaster: boolean | null;
+  };
   mode: string;
 };
 

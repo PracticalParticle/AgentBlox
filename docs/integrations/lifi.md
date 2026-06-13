@@ -116,8 +116,9 @@ No LLM required for deterministic demo flows.
 ## Environment variables
 
 ```env
-VITE_LIFI_INTEGRATOR=AgentBlox
+# Optional — default is AgentBlox
 LIFI_INTEGRATOR=AgentBlox
+LIFI_EXECUTION_SELECTOR=0x........ 
 ```
 
 See [env-configuration.md](../env-configuration.md).

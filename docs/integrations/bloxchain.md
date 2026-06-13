@@ -51,7 +51,7 @@ Whitelist detail: [guard-controller.md](../guard-controller.md).
 
 ## SDK setup in AgentBlox
 
-Create `src/lib/bloxchain.ts` (Phase 1):
+Create `server/bloxchain.ts` (Phase 1):
 
 ```typescript
 import {

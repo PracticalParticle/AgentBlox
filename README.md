@@ -228,10 +228,12 @@ Open [http://localhost:5173](http://localhost:5173) — Copilot is the home page
 
 **Try in Copilot:** `/status` · `/rebalance` · `/attack` · `/pay` · `/help`
 
-### Build
+### Build & test
 
 ```bash
 npm run typecheck
+npm run test          # unit tests (Vitest)
+npm run test:watch    # watch mode
 npm run build
 ```
 
@@ -251,6 +253,7 @@ Start at [`docs/treasury-lifecycle.md`](./docs/treasury-lifecycle.md) or [`docs/
 | [extending-use-cases.md](./docs/extending-use-cases.md) | Add new on-chain capabilities |
 | [on-chain-execution-flow.md](./docs/on-chain-execution-flow.md) | Tool → chain path |
 | [treasury-tools.md](./docs/treasury-tools.md) | Tool catalog (canonical) |
+| [ROADMAP-PLAN.md](./docs/ROADMAP-PLAN.md) | Strategy, milestones, critical path |
 | [implementation-status.md](./docs/implementation-status.md) | What is built today |
 | [integrations/](./docs/integrations/README.md) | Dynamic, LI.FI, ENS, Bloxchain SDK |
 | [env-configuration.md](./docs/env-configuration.md) | Environment variables |

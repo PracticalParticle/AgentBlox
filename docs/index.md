@@ -6,7 +6,7 @@ Guides for creating, operating, governing, and extending on-chain treasuries wit
 
 **AgentBlox** is built for **[ETHGlobal New York 2026](https://ethglobal.com/events/newyork2026)** by [Particle CS](https://particlecs.com). It demonstrates the [Bloxchain Protocol](https://github.com/PracticalParticle/Bloxchain-Protocol) AccountBlox pattern on Sepolia — Dynamic (keys), LI.FI (execution), ENS (identity), Bloxchain (policy).
 
-→ [event/ethglobal-2026.md](./event/ethglobal-2026.md) · [implementation-status.md](./implementation-status.md)
+→ [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) · [event/ethglobal-2026.md](./event/ethglobal-2026.md) · [implementation-status.md](./implementation-status.md)
 
 ## Product model
 
@@ -25,19 +25,21 @@ Master guide: [treasury-lifecycle.md](./treasury-lifecycle.md)
 
 ## Start here
 
-1. [treasury-lifecycle.md](./treasury-lifecycle.md) — **create, operate, govern, extend**
-2. [provisioning-checklist.md](./provisioning-checklist.md) — step-by-step on-chain + app setup
-3. [guard-controller.md](./guard-controller.md) — whitelist + execution mechanics
-4. [env-configuration.md](./env-configuration.md) — environment variables
-5. [on-chain-execution-flow.md](./on-chain-execution-flow.md) — tool → chain execution
-6. [treasury-tools.md](./treasury-tools.md) — canonical tool catalog
-7. [architecture.md](./architecture.md) — system layers
-8. [implementation-status.md](./implementation-status.md) — what is built today
-9. [governance.md](./governance.md) — change policy on a live treasury
-10. [extending-use-cases.md](./extending-use-cases.md) — add new on-chain capabilities
-11. [integrations/README.md](./integrations/README.md) — Dynamic, LI.FI, ENS
-12. [ui-ux-guidelines.md](./ui-ux-guidelines.md) — MVP interface spec (control surface + agentic patterns)
-13. [copilot.md](./copilot.md) — chat UI and slash commands
+1. [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) — **strategy, milestones, critical path**
+2. [treasury-lifecycle.md](./treasury-lifecycle.md) — **create, operate, govern, extend**
+3. [provisioning-checklist.md](./provisioning-checklist.md) — step-by-step on-chain + app setup
+4. [guard-controller.md](./guard-controller.md) — whitelist + execution mechanics
+5. [env-configuration.md](./env-configuration.md) — environment variables
+6. [on-chain-execution-flow.md](./on-chain-execution-flow.md) — tool → chain execution
+7. [treasury-tools.md](./treasury-tools.md) — canonical tool catalog
+8. [architecture.md](./architecture.md) — system layers
+9. [implementation-status.md](./implementation-status.md) — what is built today
+10. [implementation-plan.md](./implementation-plan.md) — phased task checklist
+11. [governance.md](./governance.md) — change policy on a live treasury
+12. [extending-use-cases.md](./extending-use-cases.md) — add new on-chain capabilities
+13. [integrations/README.md](./integrations/README.md) — Dynamic, LI.FI, ENS
+14. [ui-ux-guidelines.md](./ui-ux-guidelines.md) — MVP interface spec (control surface + agentic patterns)
+15. [copilot.md](./copilot.md) — chat UI and slash commands
 
 ---
 
@@ -57,6 +59,7 @@ Master guide: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | [extending-use-cases.md](./extending-use-cases.md) | New capabilities |
 | [env-configuration.md](./env-configuration.md) | `.env` reference |
 | [implementation-status.md](./implementation-status.md) | Build matrix |
+| [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) | Strategy, milestones, critical path |
 | [implementation-plan.md](./implementation-plan.md) | Build backlog |
 | [ui-ux-guidelines.md](./ui-ux-guidelines.md) | MVP UI/UX spec |
 | [copilot.md](./copilot.md) | Conversational interface |

@@ -6,6 +6,7 @@ import {
   validateUnauthorizedTarget,
 } from '../policy-gate.js';
 import { sepoliaClient } from '../clients.js';
+import { signRebalanceMetaTransaction } from '../signing/meta-tx.js';
 
 /** Sepolia USDC placeholder — replace with deployed token for demo. */
 const SEPOLIA_USDC = '0x1c7D4B196Cb0C7B29D5D0a0D0a0D0a0D0a0D0a0D' as const;
@@ -33,6 +34,8 @@ export async function proposeRebalance(params: {
 
   const ethBalance = await sepoliaClient.getBalance({ address: TREASURY_ADDRESS });
 
+  const signing = await signRebalanceMetaTransaction({ flowId });
+
   const proposal = {
     flowId,
     treasuryAddress: TREASURY_ADDRESS,
@@ -40,17 +43,38 @@ export async function proposeRebalance(params: {
     fromToken: SEPOLIA_USDC,
     fromAmount: amount.toString(),
     lifiIntegrator: 'AgentBlox',
-    nextSteps: [
-      'AGENT_POLICY signs EIP-712 meta-tx (server-side)',
-      'Dynamic Broadcaster submits executeMetaTx',
-      'GuardController validates whitelist → LI.FI Composer executes',
-    ],
-    status: 'awaiting_confirmation',
-    note: 'Full LI.FI quote + meta-tx signing — Phase 3 implementation.',
+    status: signing.ok ? 'awaiting_confirmation' : 'awaiting_configuration',
+    signing: signing.ok
+      ? {
+          status: 'signed',
+          signerAddress: signing.signerAddress,
+          signedMetaTx: signing.signedMetaTx,
+          execution: {
+            target: signing.intent.target,
+            executionSelector: signing.intent.executionSelector,
+            operationType: signing.intent.operationType,
+          },
+        }
+      : {
+          status: 'unsigned',
+          code: signing.code,
+          reason: signing.reason,
+        },
+    nextSteps: signing.ok
+      ? [
+          'Review Intent Preview in Copilot',
+          'Click Confirm execution — Dynamic Broadcaster submits requestAndApproveExecution',
+          'GuardController validates whitelist → external target executes',
+        ]
+      : [
+          signing.reason,
+          'Configure AGENT_POLICY_PRIVATE_KEY and REBALANCE_EXECUTION_* env vars',
+          'Phase 4: LI.FI compose will populate calldata automatically',
+        ],
   };
 
   return {
-    status: 'proposed',
+    status: signing.ok ? 'proposed' : 'proposed_unsigned',
     policy: { allowed: true, reason: 'Proposal passes off-chain policy gate.' },
     treasuryEthBalance: ethBalance.toString(),
     proposal,

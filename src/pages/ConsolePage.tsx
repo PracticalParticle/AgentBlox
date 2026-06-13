@@ -4,10 +4,8 @@ import { useServerHealth } from '../hooks/useServerHealth';
 
 export default function ConsolePage() {
   const { health } = useServerHealth();
-  const [treasuryAddress, setTreasuryAddress] = useState(
-    import.meta.env.VITE_TREASURY_ADDRESS || '',
-  );
-  const [ensName, setEnsName] = useState(import.meta.env.VITE_ENS_NAME || '');
+  const [treasuryAddress, setTreasuryAddress] = useState('');
+  const [ensName, setEnsName] = useState('');
 
   return (
     <section className="page">
@@ -28,6 +26,13 @@ export default function ConsolePage() {
             <li>Mode: {health?.mode ?? '…'}</li>
             <li>LLM: {health?.llmEnabled ? 'enabled' : 'fallback slash commands'}</li>
             <li>Treasury: {health?.treasuryConfigured ? 'configured' : 'set TREASURY_ADDRESS in .env'}</li>
+            <li>Dynamic env: {health?.dynamicEnvironmentConfigured ? 'configured' : 'set VITE_DYNAMIC_ENVIRONMENT_ID'}</li>
+            <li>
+              Broadcaster:{' '}
+              {health?.dynamicBroadcasterConfigured
+                ? 'ready'
+                : health?.broadcaster?.message ?? 'Phase 2 — see .env.example'}
+            </li>
           </ul>
         </article>
 
@@ -54,8 +59,9 @@ export default function ConsolePage() {
       <div className="card" style={{ marginTop: '1.5rem' }}>
         <h2>Treasury import (display)</h2>
         <p>
-          Set <code>TREASURY_ADDRESS</code> and <code>ENS_NAME</code> in <code>.env</code> for the
-          server. Client fields below are for reference only until Phase 2 persistence.
+          Set <code>TREASURY_ADDRESS</code> and optional <code>ENS_NAME</code> in{' '}
+          <code>.env</code> for the server. Fields below are local-only until Setup persistence
+          (Phase 2).
         </p>
         <label>
           Treasury address

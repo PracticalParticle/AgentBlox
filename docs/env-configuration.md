@@ -1,6 +1,6 @@
 # Environment Configuration
 
-All environment variables for AgentBlox. Server reads from `.env` via `dotenv`; Vite exposes only `VITE_*` to the browser.
+AgentBlox uses a **server-first** env model: treasury and Copilot tools read from unprefixed server vars. The browser only needs `VITE_*` for the Dynamic widget.
 
 Copy `.env.example` → `.env` before running.
 
@@ -8,85 +8,66 @@ Copy `.env.example` → `.env` before running.
 
 ## Required minimum
 
-| Variable | Where | Purpose |
-|----------|-------|---------|
+| Variable | Runtime | Purpose |
+|----------|---------|---------|
+| `VITE_DYNAMIC_ENVIRONMENT_ID` | Browser | Dynamic embedded wallet widget |
 | `TREASURY_ADDRESS` | Server | AccountBlox clone on Sepolia |
-| `VITE_TREASURY_ADDRESS` | Client | Display in Console (optional if server-only) |
-| `VITE_DYNAMIC_ENVIRONMENT_ID` | Client | Dynamic widget |
 
 Without `TREASURY_ADDRESS`, Copilot tools return `TREASURY_NOT_CONFIGURED`.
 
----
-
-## Phase 2+ (Dynamic Broadcaster)
-
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `DYNAMIC_API_TOKEN` | Server only | Authenticate Node SDK |
-| `DYNAMIC_ENVIRONMENT_ID` | Server | Same env as frontend |
-| `BROADCASTER_WALLET_ID` | Server | Persisted server wallet ref |
-
-**Never** prefix with `VITE_` — tokens must not reach the browser bundle.
+**Do not duplicate treasury/ENS as `VITE_*` vars** — the server owns configuration; Console/Setup will load from `/api/health` and tools in later UI phases.
 
 ---
 
-## Phase 3+ (AGENT_POLICY signing)
-
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `AGENT_POLICY_PRIVATE_KEY` | Server only | EIP-712 meta-tx signer |
-
-Must match the wallet assigned to `AGENT_POLICY` role on-chain at provisioning.
-
----
-
-## RPC URLs
+## Optional (server)
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
+| `ENS_NAME` | — | Default name for `/ens` tool |
 | `SEPOLIA_RPC_URL` | `https://rpc.sepolia.org` | Server Sepolia reads |
-| `VITE_SEPOLIA_RPC_URL` | same | Client (if needed) |
-| `MAINNET_RPC_URL` | public node | ENS resolution (mainnet) |
+| `MAINNET_RPC_URL` | publicnode | ENS resolution (mainnet) |
+| `PORT` | `3001` | AgentBlox server port |
+| `OPENAI_API_KEY` | — | Enables LLM Copilot mode |
+| `LLM_MODEL` | `gpt-4o-mini` | OpenAI model when key is set |
+| `LIFI_INTEGRATOR` | `AgentBlox` | LI.FI compose integrator string |
+| `LIFI_EXECUTION_SELECTOR` | — | 4-byte Composer selector for whitelist reads |
+
+Without `OPENAI_API_KEY`, slash commands work (`mode: copilot-fallback`).
 
 ---
 
-## ENS
+## Phase 2+ (Dynamic Broadcaster — server only)
 
 | Variable | Purpose |
 |----------|---------|
-| `ENS_NAME` / `VITE_ENS_NAME` | Default treasury ENS for `/ens` tool |
+| `DYNAMIC_API_TOKEN` | Authenticate Dynamic Node SDK |
+| `BROADCASTER_WALLET_ADDRESS` | Dynamic server wallet — must match on-chain Broadcaster |
 
-ENS `.eth` resolution uses **mainnet** resolver even when treasury is on Sepolia.
+The server reads `VITE_DYNAMIC_ENVIRONMENT_ID` from `.env` via `dotenv` — **no separate `DYNAMIC_ENVIRONMENT_ID` needed**.
+
+**Never** prefix secrets with `VITE_` — they must not reach the browser bundle.
 
 ---
 
-## Copilot LLM (optional)
+## Phase 3+ (AGENT_POLICY signing — server only)
 
 | Variable | Purpose |
 |----------|---------|
-| `OPENAI_API_KEY` | Enables LLM mode in Copilot |
-| `LLM_MODEL` | Default `gpt-4o-mini` |
+| `AGENT_POLICY_PRIVATE_KEY` | EIP-712 meta-tx signer |
 
-Without `OPENAI_API_KEY`, slash commands and keyword fallback work (`mode: copilot-fallback`).
-
----
-
-## LI.FI
-
-| Variable | Purpose |
-|----------|---------|
-| `VITE_LIFI_INTEGRATOR` | Integrator string (`AgentBlox`) |
-| `LIFI_INTEGRATOR` | Server-side quote requests |
+Must match the wallet assigned to `AGENT_POLICY` on-chain at provisioning.
 
 ---
 
-## Server port
+## What we removed (and why)
 
-| Variable | Default |
-|----------|---------|
-| `PORT` | `3001` |
-
-Vite proxies `/api` → `http://localhost:3001` (see `vite.config.ts`).
+| Removed | Reason |
+|---------|--------|
+| `VITE_TREASURY_ADDRESS` | Redundant — server `TREASURY_ADDRESS` is canonical |
+| `VITE_ENS_NAME` | Redundant — server `ENS_NAME` is canonical |
+| `VITE_SEPOLIA_RPC_URL` | No client-side chain reads in MVP; server uses `SEPOLIA_RPC_URL` |
+| `VITE_LIFI_INTEGRATOR` | Never used in browser; server uses `LIFI_INTEGRATOR` |
+| `DYNAMIC_ENVIRONMENT_ID` | Duplicate of `VITE_DYNAMIC_ENVIRONMENT_ID` (available to server via dotenv) |
 
 ---
 
@@ -94,24 +75,20 @@ Vite proxies `/api` → `http://localhost:3001` (see `vite.config.ts`).
 
 ```env
 VITE_DYNAMIC_ENVIRONMENT_ID=your-dynamic-env-id
-VITE_SEPOLIA_RPC_URL=https://rpc.sepolia.org
-VITE_TREASURY_ADDRESS=0xYourCloneAddress
-VITE_ENS_NAME=treasury.acme.eth
-VITE_LIFI_INTEGRATOR=AgentBlox
 
-PORT=3001
-SEPOLIA_RPC_URL=https://rpc.sepolia.org
-MAINNET_RPC_URL=https://ethereum-rpc.publicnode.com
 TREASURY_ADDRESS=0xYourCloneAddress
 ENS_NAME=treasury.acme.eth
 
-# Phase 2+
-DYNAMIC_API_TOKEN=
-AGENT_POLICY_PRIVATE_KEY=
+# Optional
+# OPENAI_API_KEY=
+# LIFI_EXECUTION_SELECTOR=0x........ 
 
-# Optional LLM
-OPENAI_API_KEY=
-LLM_MODEL=gpt-4o-mini
+# Phase 2+
+# DYNAMIC_API_TOKEN=
+# BROADCASTER_WALLET_ADDRESS=0x...
+
+# Phase 3+
+# AGENT_POLICY_PRIVATE_KEY=
 ```
 
 ---
@@ -123,7 +100,7 @@ npm run dev:all
 curl http://localhost:3001/api/health
 ```
 
-Expected:
+Expected when configured:
 
 ```json
 {

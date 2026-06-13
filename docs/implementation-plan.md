@@ -1,6 +1,6 @@
 # Implementation Plan
 
-Phased build plan for AgentBlox. Track live progress in [implementation-status.md](./implementation-status.md).
+Phased build plan for AgentBlox. **Strategy and milestones:** [ROADMAP-PLAN.md](./ROADMAP-PLAN.md). Track live progress in [implementation-status.md](./implementation-status.md).
 
 Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [treasury-lifecycle.md](./treasury-lifecycle.md) · Event: [event/ethglobal-2026.md](./event/ethglobal-2026.md)
 
@@ -36,8 +36,9 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 **Goal:** `/pending` and `/whitelist` return real Sepolia data.
 
-- [ ] Create `src/lib/bloxchain.ts`
-- [ ] Wire `list_pending_approvals`, `get_whitelisted_targets`
+- [x] Create `server/bloxchain.ts` — SDK client factory
+- [x] Wire `list_pending_approvals`, `get_whitelisted_targets`
+- [x] On-chain Owner/Broadcaster in `get_treasury_status`
 
 **Docs:** [integrations/bloxchain.md](./integrations/bloxchain.md)
 
@@ -47,8 +48,12 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 **Goal:** Owner connects; Broadcaster ready for execution.
 
-- [ ] Dynamic server wallet — `@dynamic-labs-wallet/node-evm`
-- [ ] `server/dynamic/client.ts` + `server/dynamic/broadcaster.ts`
+- [x] `DynamicWidget` in header
+- [x] `server/dynamic/client.ts` — authenticated `DynamicEvmWalletClient`
+- [x] `server/dynamic/broadcaster.ts` — status + viem wallet client factory
+- [x] `/api/health` — broadcaster status + on-chain match check
+- [ ] Set `VITE_DYNAMIC_ENVIRONMENT_ID`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`
+- [ ] Verify Broadcaster address matches treasury at provisioning
 
 **Docs:** [integrations/dynamic.md](./integrations/dynamic.md)
 
@@ -58,9 +63,13 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 **Goal:** `/rebalance` → AGENT_POLICY signs → user confirms → Broadcaster executes.
 
-- [ ] `server/signing/meta-tx.ts`
-- [ ] Extend `propose_rebalance` with signed meta-tx
-- [ ] Copilot `ToolResultCard` Confirm button
+- [x] `server/signing/meta-tx.ts`
+- [x] `server/signing/serialize.ts` + unit test
+- [x] `server/execution/rebalance.ts`
+- [x] `POST /api/execute/rebalance`
+- [x] Extend `propose_rebalance` with signed meta-tx
+- [x] Copilot `ToolResultCard` Confirm button
+- [x] Remove stale `src/lib/agent-api.ts` → `src/lib/execute-api.ts`
 
 **Docs:** [on-chain-execution-flow.md](./on-chain-execution-flow.md) · [guard-controller.md](./guard-controller.md)
 
@@ -139,8 +148,9 @@ Frontend work tracked in [ui-ux-guidelines.md](./ui-ux-guidelines.md). Pair with
 
 | File | Phase | Status |
 |------|-------|--------|
-| `src/lib/bloxchain.ts` | 1 | Pending |
+| `server/bloxchain.ts` | 1 | Done |
 | `server/lifi/compose.ts` | 4 | Pending |
 | `server/signing/meta-tx.ts` | 3 | Pending |
-| `server/dynamic/broadcaster.ts` | 2 | Pending |
-| `src/lib/agent-api.ts` | — | Stale — remove/rewrite |
+| `server/dynamic/client.ts` | 2 | Done |
+| `server/dynamic/broadcaster.ts` | 2 | Done |
+| `src/lib/execute-api.ts` | Phase 3 | Done — `POST /api/execute/rebalance` |

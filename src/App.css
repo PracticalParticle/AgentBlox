@@ -255,6 +255,41 @@
   color: #c5cad6;
 }
 
+.tool-card-actions {
+  padding: 0.5rem 0.75rem 0.75rem;
+  border-top: 1px solid #2a3142;
+}
+
+.tool-card-actions button {
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e8eaef;
+  background: #2563eb;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tool-card-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tool-card-feedback {
+  margin: 0;
+  padding: 0 0.75rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.tool-card-feedback.ok {
+  color: #4ade80;
+}
+
+.tool-card-feedback.error {
+  color: #f87171;
+}
+
 .chat-input-area {
   border-top: 1px solid #242b3d;
   padding: 0.75rem;

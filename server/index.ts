@@ -1,6 +1,16 @@
 import { createServer } from 'node:http';
-import { isLlmEnabled, isTreasuryConfigured, SERVER_PORT } from './config.js';
+import {
+  isDynamicBroadcasterConfigured,
+  isDynamicEnvironmentConfigured,
+  isAgentPolicySigningConfigured,
+  isLlmEnabled,
+  isTreasuryConfigured,
+  SERVER_PORT,
+} from './config.js';
 import { handleChatRequest } from './chat/handler.js';
+import { getBroadcasterStatus } from './dynamic/broadcaster.js';
+import { submitSignedRebalanceMetaTransaction } from './signing/meta-tx.js';
+import type { SerializedMetaTransaction } from './signing/serialize.js';
 
 async function readJsonBody<T>(req: import('node:http').IncomingMessage): Promise<T> {
   const chunks: Buffer[] = [];
@@ -26,6 +36,7 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://localhost:${SERVER_PORT}`);
 
   if (url.pathname === '/api/health' || url.pathname === '/health') {
+    const broadcaster = await getBroadcasterStatus();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(
       JSON.stringify({
@@ -33,6 +44,10 @@ const server = createServer(async (req, res) => {
         service: 'agentblox-server',
         llmEnabled: isLlmEnabled(),
         treasuryConfigured: isTreasuryConfigured(),
+        dynamicEnvironmentConfigured: isDynamicEnvironmentConfigured(),
+        dynamicBroadcasterConfigured: isDynamicBroadcasterConfigured(),
+        agentPolicySigningConfigured: isAgentPolicySigningConfigured(),
+        broadcaster,
         mode: isLlmEnabled() ? 'copilot-llm' : 'copilot-fallback',
       }),
     );
@@ -51,6 +66,30 @@ const server = createServer(async (req, res) => {
     } catch (error) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: error instanceof Error ? error.message : 'Chat failed' }));
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/execute/rebalance' && req.method === 'POST') {
+    try {
+      const body = await readJsonBody<{ signedMetaTx: SerializedMetaTransaction }>(req);
+      if (!body.signedMetaTx) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, reason: 'signedMetaTx is required' }));
+        return;
+      }
+
+      const result = await submitSignedRebalanceMetaTransaction(body.signedMetaTx);
+      res.writeHead(result.ok ? 200 : 400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          ok: false,
+          reason: error instanceof Error ? error.message : 'Execute rebalance failed',
+        }),
+      );
     }
     return;
   }
