@@ -2,6 +2,8 @@
 
 The **Treasury Copilot** (`/`) is the primary interface for AgentBlox. Users interact via natural language (when an LLM is configured) or slash commands (always available).
 
+See also: [treasury-tools.md](./treasury-tools.md) · [on-chain-execution-flow.md](./on-chain-execution-flow.md)
+
 ## Modes
 
 | Mode | Trigger | Behavior |
@@ -11,19 +13,38 @@ The **Treasury Copilot** (`/`) is the primary interface for AgentBlox. Users int
 
 Check mode: `GET /api/health` → `{ mode: "copilot-llm" | "copilot-fallback" }`
 
-## Slash commands (fallback + demo reliability)
+## Slash commands
 
-| Command | Tool | Lane |
-|---------|------|------|
-| `/status` | `get_treasury_status` | Read |
-| `/ens` | `resolve_ens_treasury` | Read |
-| `/pending` | `list_pending_approvals` | Read |
-| `/whitelist` | `get_whitelisted_targets` | Read |
-| `/quote` | `get_lifi_quote_preview` | Read |
-| `/rebalance` | `propose_rebalance` | A — agentic |
-| `/pay` | `request_vendor_payment` | B — fintech |
-| `/attack` | `simulate_policy_violation` | Demo |
-| `/help` | — | Help text |
+Grouped by intent:
+
+### Monitor
+
+| Command | Tool |
+|---------|------|
+| `/status` | `get_treasury_status` |
+| `/ens` | `resolve_ens_treasury` |
+| `/pending` | `list_pending_approvals` |
+| `/whitelist` | `get_whitelisted_targets` |
+| `/quote` | `get_lifi_quote_preview` |
+
+### Operate
+
+| Command | Tool | Auth path |
+|---------|------|-----------|
+| `/rebalance` | `propose_rebalance` | Policy execution |
+| `/pay` | `request_vendor_payment` | Timelock |
+
+### Validate
+
+| Command | Tool |
+|---------|------|
+| `/attack` | `simulate_policy_violation` |
+
+### Help
+
+| Command | Tool |
+|---------|------|
+| `/help` | — |
 
 Natural language examples (LLM mode):
 
@@ -59,14 +80,6 @@ On-chain execution (Phase 3+) via Dynamic + Bloxchain
 | `src/components/chat/ChatMessageView.tsx` | Message rendering |
 | `src/components/chat/ToolResultCard.tsx` | Structured tool output |
 
-Tool results in fallback mode use markdown blocks:
-
-````markdown
-```agentblox-tool
-{ "tool": "get_treasury_status", "result": { ... } }
-```
-````
-
 ## LLM configuration
 
 ```env
@@ -74,21 +87,9 @@ OPENAI_API_KEY=sk-...
 LLM_MODEL=gpt-4o-mini
 ```
 
-Uses `@ai-sdk/openai` + `ai` package on the server.
-
-## Future: local LLM (Ollama)
-
-The tool server (`server/tools/`) is LLM-agnostic. To add Ollama:
-
-1. Add `@ai-sdk/openai` compatible Ollama provider or custom provider
-2. Swap model in `server/chat/handler.ts`
-3. Optionally expose `server/mcp/` for Hermes/OpenClaw
-
-Same tools, different brain.
+See [env-configuration.md](./env-configuration.md).
 
 ## Human-in-the-loop (planned)
-
-Chat tool cards will gain action buttons:
 
 | Tool output | User action |
 |-------------|-------------|
@@ -97,12 +98,11 @@ Chat tool cards will gain action buttons:
 
 Phase 3–5 in [implementation-plan.md](./implementation-plan.md). Flow details: [on-chain-execution-flow.md](./on-chain-execution-flow.md).
 
-## Demo tips
+## Suggested Copilot flow
 
-1. Start with `/status` — shows configured vs not
-2. `/rebalance` — Lane A proposal card
-3. `/attack` — Bloxchain policy block story
-4. `/pay` — Lane B timelock story
-5. If LLM enabled, repeat in natural language
+1. `/status` — configured vs not
+2. `/rebalance` — treasury operation proposal
+3. `/attack` — policy validation (blocked target)
+4. `/pay` — timelock disbursement
 
-See [demo-script.md](./demo-script.md).
+Event context: [event/ethglobal-2026.md](./event/ethglobal-2026.md).

@@ -37,8 +37,8 @@ export default function CopilotPage() {
           {messages.length === 0 ? (
             <div className="chat-empty">
               <p>
-                Try <code>/status</code> for treasury state, <code>/rebalance</code> for Lane A, or{' '}
-                <code>/pay</code> for Lane B vendor payments.
+                Try <code>/status</code> for treasury state, <code>/rebalance</code> for a treasury
+                operation, or <code>/pay</code> for a timelock vendor payment.
               </p>
               {!health?.llmEnabled ? (
                 <p className="chat-hint">

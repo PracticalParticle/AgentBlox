@@ -1,6 +1,19 @@
 # On-Chain Execution Flow
 
-End-to-end path from **Copilot tool** to **Sepolia transaction**. This is the canonical execution model after the Copilot pivot (not the legacy Agent Bridge REST API).
+End-to-end path from **Copilot tool** to **Sepolia transaction**. Canonical execution model after the Copilot pivot.
+
+See also: [treasury-lifecycle.md](./treasury-lifecycle.md) · [treasury-tools.md](./treasury-tools.md) · [guard-controller.md](./guard-controller.md)
+
+---
+
+## Authorization paths
+
+Same treasury, same TxRecord model — two paths:
+
+| Path | Best for | Key methods |
+|------|----------|-------------|
+| **Policy execution** | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
+| **Timelock** | Human-gated disbursements | `executeWithTimeLock` → `approveTimeLockExecution` |
 
 ---
 
@@ -12,11 +25,11 @@ End-to-end path from **Copilot tool** to **Sepolia transaction**. This is the ca
 | **ENS (optional)** | `bloxchain.allowedFlows` text record | Discoverable policy metadata |
 | **On-chain** | GuardController + EngineBlox | Whitelist, RBAC, signer ≠ executor, timelock |
 
-All three should align for production; hackathon MVP requires on-chain layer for demo credibility.
+On-chain enforcement is authoritative. Off-chain and ENS layers should align for production.
 
 ---
 
-## Lane A — Rebalance (meta-tx)
+## Treasury operation: Rebalance (policy execution)
 
 ```mermaid
 sequenceDiagram
@@ -59,11 +72,9 @@ sequenceDiagram
 guardController.requestAndApproveExecution(signedMetaTx, { from: broadcasterAddress });
 ```
 
-Handler selector in signed meta-tx must be `requestAndApproveExecution` on the treasury clone.
-
 ---
 
-## Lane A — Attack demo (blocked)
+## Policy validation: Blocked target
 
 ```mermaid
 sequenceDiagram
@@ -79,11 +90,11 @@ sequenceDiagram
     AB-->>User: revert TargetNotWhitelisted
 ```
 
-Off-chain tool already returns `status: blocked`. Phase 4 adds optional Broadcaster submit to show **on-chain revert** with Etherscan link.
+Off-chain tool returns `status: blocked`. Phase 4 adds optional Broadcaster submit for on-chain revert proof.
 
 ---
 
-## Lane B — Vendor payment (timelock)
+## Controlled disbursement: Vendor payment (timelock)
 
 ```mermaid
 sequenceDiagram
@@ -103,18 +114,35 @@ sequenceDiagram
 ### Bloxchain methods
 
 ```typescript
-// Request (Analyst or server)
 guardController.executeWithTimeLock(target, value, selector, params, gasLimit, operationType);
-
-// Approve (Owner via Dynamic walletClient)
 guardController.approveTimeLockExecution(txId, { from: ownerAddress });
 ```
+
+**Whitelist required:** Sepolia USDC contract + `transfer(address,uint256)` selector (and attached-payment keys if applicable). See [guard-controller.md](./guard-controller.md) § Timelock disbursement.
+
+---
+
+## TxRecord lifecycle
+
+Poll after any execution:
+
+```typescript
+const record = await guardController.getTransaction(txId);
+```
+
+| Status | Meaning | User action |
+|--------|---------|-------------|
+| `PENDING` | Awaiting timelock release or approval | Owner approve when ready |
+| `EXECUTING` | On-chain in progress | Wait |
+| `COMPLETED` | Success | Audit |
+| `FAILED` | Reverted | Inspect |
+| `CANCELLED` | Cancelled | — |
+
+Fields: `releaseTime` (timelock countdown), `params.target` (whitelisted contract), `requester` (audit).
 
 ---
 
 ## Read path (no execution)
-
-Tools that only read chain state:
 
 | Tool | Client |
 |------|--------|
@@ -124,21 +152,6 @@ Tools that only read chain state:
 | `get_whitelisted_targets` | `@bloxchain/sdk` `getFunctionWhitelistTargets` |
 
 Planned wrapper: `src/lib/bloxchain.ts`.
-
----
-
-## TxRecord audit trail
-
-Poll after any execution:
-
-```typescript
-const record = await guardController.getTransaction(txId);
-// status: PENDING | EXECUTING | COMPLETED | FAILED | CANCELLED
-// releaseTime — Lane B countdown
-// params.target — whitelisted contract
-```
-
-Display in Copilot tool cards and future Console timeline.
 
 ---
 

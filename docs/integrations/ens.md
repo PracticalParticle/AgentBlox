@@ -1,6 +1,12 @@
 # ENS Integration
 
-ENS provides **treasury and agent identity** in AgentBlox. ENS is **not** part of bloxchain.app — all ENS setup and resolution lives in this repo.
+**Audience:** Operators linking human-readable treasury identity and policy metadata.  
+**Prerequisites:** AccountBlox clone address — [provisioning-checklist.md](../provisioning-checklist.md).  
+**See also:** [treasury-lifecycle.md](../treasury-lifecycle.md) · [event/ethglobal-2026.md](../event/ethglobal-2026.md)
+
+ENS provides **treasury identity and discoverable policy metadata** for all AgentBlox treasuries. ENS is **not** part of bloxchain.app — setup and resolution live in AgentBlox.
+
+Built for **ETHGlobal NY 2026** ENS integration tracks. Event context: [event/ethglobal-2026.md](../event/ethglobal-2026.md).
 
 Primary UX: Copilot `/ens` tool and Console reference fields.
 
@@ -26,6 +32,8 @@ Policy metadata (version, allowed flows)
 
 ENS answers **who is this treasury?** Bloxchain answers **what may it do?**
 
+ENS applies to **all** treasuries and operation types — not only timelock payments.
+
 ---
 
 ## Text record schema
@@ -33,12 +41,14 @@ ENS answers **who is this treasury?** Bloxchain answers **what may it do?**
 | Key | Example | Purpose |
 |-----|---------|---------|
 | `bloxchain.policyVersion` | `1.0.0` | Policy schema version |
-| `bloxchain.allowedFlows` | `rebalance-sepolia-v1` | Allowed LI.FI flow IDs |
+| `bloxchain.allowedFlows` | `rebalance-sepolia-v1` | Comma-separated allowed flow IDs |
 | `bloxchain.app` | `agentblox` | Managing application |
 | `description` | `Acme Corp treasury` | Standard ENS key |
 | `url` | Dashboard link | Optional |
 
 Constants in `src/lib/config.ts` as `ENS_TEXT_KEYS`.
+
+When on-chain policy changes, update ENS records to match — see [governance.md](../governance.md).
 
 ---
 
@@ -66,12 +76,12 @@ Constants in `src/lib/config.ts` as `ENS_TEXT_KEYS`.
 
 Owner wallet (Dynamic embedded) must own the ENS name.
 
-Implement write helpers in `src/lib/ens.ts` or Console wizard:
-
 ```typescript
 await resolver.write.setAddr([namehash(normalize(name)), treasuryAddress]);
 await resolver.write.setText([node, 'bloxchain.allowedFlows', 'rebalance-sepolia-v1']);
 ```
+
+Implement write helpers in `src/lib/ens.ts` or Console wizard.
 
 ---
 
@@ -93,6 +103,18 @@ await resolver.write.setText([node, 'bloxchain.allowedFlows', 'rebalance-sepolia
 
 ---
 
+## Subnames (optional)
+
+| Name | Purpose |
+|------|---------|
+| `treasury.acme.eth` | Main operating treasury |
+| `payroll.acme.eth` | Disbursement-focused clone |
+| `agent.acme.eth` | Agent identity metadata |
+
+Each subname can point to the same or different AccountBlox clones.
+
+---
+
 ## Environment
 
 ```env
@@ -100,17 +122,18 @@ ENS_NAME=treasury.acme.eth
 VITE_ENS_NAME=treasury.acme.eth
 ```
 
-See [env-configuration.md](./env-configuration.md).
+See [env-configuration.md](../env-configuration.md).
 
 ---
 
-## Pre-hackathon checklist
+## Setup checklist
 
 - [ ] Register ENS name
-- [ ] Set address → Sepolia clone
+- [ ] Set address record → Sepolia clone
 - [ ] Set `bloxchain.*` text records
 - [ ] Verify Copilot `/ens`
-- [ ] Calendar ENS booth Sunday AM — [demo-script.md](./demo-script.md)
+
+Part of [provisioning-checklist.md](../provisioning-checklist.md) Part C.
 
 ---
 
@@ -126,16 +149,6 @@ See [env-configuration.md](./env-configuration.md).
 
 ---
 
-## Prize alignment
-
-| Track | Requirement |
-|-------|-------------|
-| Best ENS Integration for AI Agents | Functional identity in Copilot |
-| Integrate ENS pool | Meaningful resolution + text records |
-| ENS Continuity (stretch) | Extended Bloxchain OSS with ENS in AgentBlox |
-
----
-
 ## Do not
 
 - Hard-code fake resolution without on-chain lookup
@@ -144,8 +157,8 @@ See [env-configuration.md](./env-configuration.md).
 
 ---
 
-## Demo talking points
+## Talking points
 
 > "ENS names the actor; Bloxchain limits the actor. Text records carry allowed flow IDs so agents discover treasuries without centralized registries."
 
-Run live in Copilot: `/ens` then `/rebalance`.
+Run in Copilot: `/ens` then `/rebalance`.

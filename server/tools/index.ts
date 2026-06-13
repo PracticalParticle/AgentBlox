@@ -60,7 +60,7 @@ export const treasuryTools = {
 
   request_vendor_payment: tool({
     description:
-      'Request a vendor payment that enters Bloxchain timelock (Lane B). Requires Owner approval.',
+      'Request a vendor payment that enters Bloxchain timelock. Requires Owner approval.',
     inputSchema: z.object({
       recipient: z.string().describe('Recipient address'),
       amountUsdc: z.string().describe('USDC amount in smallest units'),

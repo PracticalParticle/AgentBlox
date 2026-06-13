@@ -1,11 +1,17 @@
 # Dynamic Integration
 
+**Audience:** Developers configuring Owner and Broadcaster wallets.  
+**Prerequisites:** Dynamic dashboard + Sepolia — [env-configuration.md](../env-configuration.md).  
+**See also:** [provisioning-checklist.md](../provisioning-checklist.md) Part A2 · [env-configuration.md](../env-configuration.md) · [on-chain-execution-flow.md](../on-chain-execution-flow.md) · [event/ethglobal-2026.md](../event/ethglobal-2026.md)
+
 Dynamic provides **two wallet surfaces** in AgentBlox:
 
-| Wallet | Role | Usage |
-|--------|------|-------|
-| **Embedded wallet** | Owner (human) | Lane B timelock approvals, policy changes |
-| **Server wallet** | Broadcaster | Lane A meta-tx execution |
+| Wallet | AccountBlox role | Usage |
+|--------|------------------|-------|
+| **Embedded wallet** | Owner (human) | Timelock approvals, governance changes |
+| **Server wallet** | Broadcaster | Policy execution (meta-tx submit) |
+
+---
 
 ## Official documentation
 
@@ -13,6 +19,8 @@ Dynamic provides **two wallet surfaces** in AgentBlox:
 - Embedded wallets setup: https://www.dynamic.xyz/docs/react/wallets/embedded-wallets/mpc/setup
 - Server wallets (Node): https://www.dynamic.xyz/docs/node/wallets/server-wallets/overview
 - Vite polyfills: https://www.dynamic.xyz/docs/overview/troubleshooting/react/vitejs-polyfills-necessary-for-dynamic-sdk
+
+---
 
 ## Packages
 
@@ -22,11 +30,13 @@ Dynamic provides **two wallet surfaces** in AgentBlox:
 npm i @dynamic-labs/sdk-react-core @dynamic-labs/ethereum
 ```
 
-### Server — Broadcaster (add when implementing Phase 2)
+### Server — Broadcaster (Phase 2)
 
 ```bash
 npm i @dynamic-labs-wallet/node-evm
 ```
+
+---
 
 ## Dashboard configuration (required)
 
@@ -39,7 +49,9 @@ Configure at https://app.dynamic.xyz before local dev:
 | Embedded wallets | Wallets | Enabled |
 | Allowed origins | Security | `http://localhost:5173` |
 
-For production/demo deploy, add Vercel URL to Allowed Origins.
+For production deploy, add Vercel URL to Allowed Origins.
+
+---
 
 ## Frontend setup (done in scaffold)
 
@@ -72,7 +84,6 @@ import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
 
 ```typescript
 import { DynamicWidget } from '@dynamic-labs/sdk-react-core';
-// Renders auth + wallet connection UI
 ```
 
 ### Post-login hooks
@@ -81,40 +92,38 @@ import { DynamicWidget } from '@dynamic-labs/sdk-react-core';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
 
 const { primaryWallet, user, handleLogOut } = useDynamicContext();
-
 // primaryWallet.address — Owner candidate
-// primaryWallet.chain — chain ID (number)
 ```
 
-## Owner role (Lane B)
+---
+
+## Owner role
 
 ### Requirements
 
-- Embedded wallet address should match AccountBlox Owner set at provisioning
-- If mismatch for demo: re-provision treasury or update Owner via Bloxchain timelock
+- Embedded wallet address must match AccountBlox Owner set at provisioning
+- If mismatch: re-provision treasury or update Owner via Bloxchain timelock ([governance.md](../governance.md))
 
 ### Approve timelock
 
 ```typescript
-// Use @bloxchain/sdk GuardController or SecureOwnable wrapper
-// walletClient from Dynamic primaryWallet connector
 await guardController.approveTimeLockExecution(txId, { from: ownerAddress });
 ```
 
 ### UI flow
 
 1. User connects via `DynamicWidget`
-2. Dashboard shows "Connected as Owner: 0x..."
-3. Pending approvals list shows timelock txs
-4. "Approve" button calls `approveTimeLockExecution` with Dynamic signer
+2. Copilot or Console shows connected Owner address
+3. Pending approvals from `/pending` tool
+4. Approve button calls `approveTimeLockExecution` with Dynamic signer (Phase 5)
 
-## Broadcaster role (Lane A)
+---
+
+## Broadcaster role
 
 Server-side only. **Never expose Broadcaster credentials in frontend.**
 
 ### Setup (Node SDK)
-
-Per https://www.dynamic.xyz/docs/node/wallets/server-wallets/overview:
 
 ```typescript
 import { DynamicEvmWalletClient } from '@dynamic-labs-wallet/node-evm';
@@ -126,18 +135,18 @@ const { walletMetadata, externalServerKeyShares } = await client.createWalletAcc
   thresholdSignatureScheme: ThresholdSignatureScheme.TWO_OF_TWO,
   backUpToDynamic: true,
 });
-
-// Persist walletMetadata + externalServerKeyShares securely
 ```
+
+Create `server/dynamic/broadcaster.ts` for submit logic.
 
 ### Execute meta-tx
 
-After Agent Bridge returns signed meta-tx:
+After `propose_rebalance` returns signed meta-tx and user confirms:
 
-1. Broadcaster wallet submits transaction via Dynamic Node SDK
-2. Or use viem `walletClient` if Dynamic exposes signing interface for server wallet
+1. Broadcaster wallet submits via Dynamic Node SDK
+2. Calls `guardController.requestAndApproveExecution(signedMetaTx, ...)`
 
-Create `server/dynamic/broadcaster.ts` for this logic.
+---
 
 ## Environment variables
 
@@ -151,6 +160,10 @@ DYNAMIC_ENVIRONMENT_ID=your-env-id
 BROADCASTER_WALLET_ID=optional-if-persisted
 ```
 
+Full reference: [env-configuration.md](../env-configuration.md).
+
+---
+
 ## Mapping to AccountBlox roles
 
 | AccountBlox role | Dynamic wallet | Where configured |
@@ -158,14 +171,9 @@ BROADCASTER_WALLET_ID=optional-if-persisted
 | Owner | Embedded (user login) | bloxchain.app init + user connects |
 | Broadcaster | Server wallet | bloxchain.app init + server persists metadata |
 
-At provisioning, set `initialOwner` = expected Dynamic embedded address and `broadcaster` = Dynamic server wallet address.
+At provisioning, set `initialOwner` = Dynamic embedded address and `broadcaster` = Dynamic server wallet address.
 
-## Prize alignment
-
-| Track | How to qualify |
-|-------|----------------|
-| Best Agentic Build | Server wallet executes agent-signed meta-txs |
-| Best Money App | Embedded wallet approves treasury payments |
+---
 
 ## Troubleshooting
 
@@ -174,13 +182,17 @@ At provisioning, set `initialOwner` = expected Dynamic embedded address and `bro
 | Widget doesn't open | Check CORS allowed origins |
 | No wallet after login | Enable Embedded Wallets in dashboard |
 | Sepolia txs fail | Enable Sepolia chain in dashboard |
-| CORS errors | Add exact origin including port |
+| Owner approve fails | Embedded address ≠ on-chain Owner |
+
+---
 
 ## Do not
 
-- Use Dynamic + Ledger together as sponsor integrations (overlap)
 - Put `DYNAMIC_API_TOKEN` in `VITE_*` env vars
-- Let embedded wallet act as Broadcaster for meta-tx (breaks signer ≠ executor story)
+- Let embedded wallet act as Broadcaster (breaks signer ≠ executor)
+- Use Dynamic + Ledger together as sponsor integrations (overlap)
+
+---
 
 ## Files to implement
 

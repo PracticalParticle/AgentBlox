@@ -6,7 +6,7 @@ Copy `.env.example` → `.env` before running.
 
 ---
 
-## Required for demo (minimum)
+## Required minimum
 
 | Variable | Where | Purpose |
 |----------|-------|---------|

@@ -7,7 +7,7 @@ export default function AgentFlowsPage() {
         with an agent-ready API for future Hermes/OpenClaw integration.
       </p>
       <div className="card" style={{ marginTop: '1.5rem' }}>
-        <h2>Lane A — Rebalance (meta-tx)</h2>
+        <h2>Rebalance (policy execution / meta-tx)</h2>
         <p>
           Triggers a whitelisted LI.FI Composer flow via AGENT_POLICY signature and
           Dynamic Broadcaster execution.
@@ -22,7 +22,7 @@ export default function AgentFlowsPage() {
         </div>
       </div>
       <div className="card" style={{ marginTop: '1rem' }}>
-        <h2>Lane B — Vendor Payment (timelock)</h2>
+        <h2>Vendor payment (timelock)</h2>
         <p>Request a USDC payment that enters PENDING until Owner approves.</p>
         <div className="flow-actions">
           <button type="button" disabled>

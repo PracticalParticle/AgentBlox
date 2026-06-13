@@ -58,29 +58,28 @@ Day-to-day treasury operations happen in **Copilot**. Configuration happens in *
 
 ---
 
-## Dual demo lanes (via Copilot tools)
+## Treasury operations (via Copilot tools)
 
-| Lane | Persona | Bloxchain pattern | Sponsors |
-|------|---------|-------------------|----------|
-| **A — Agentic** | Policy agent | Meta-tx + GuardController whitelist | Dynamic + LI.FI |
-| **B — Fintech** | Analyst / CFO | Timelock + audit trail | Dynamic + ENS |
+One AccountBlox clone, two authorization paths. See [docs/treasury-lifecycle.md](./docs/treasury-lifecycle.md).
 
-### Lane A — Agentic (in Copilot)
+| Operation | Auth path | Copilot command |
+|-----------|-----------|-----------------|
+| **Treasury rebalance** | Policy execution (meta-tx) | `/rebalance` |
+| **Vendor payment** | Timelock | `/pay` |
+| **Policy validation** | Blocked target | `/attack` |
+| **Monitor / identity** | Read-only | `/status`, `/ens`, `/pending`, `/whitelist` |
 
-Say `/rebalance` or "Propose a treasury rebalance":
+### Policy execution (e.g. rebalance)
 
-1. Copilot calls `propose_rebalance` tool → policy gate validates flow ID
+1. `propose_rebalance` → policy gate validates flow ID
 2. `AGENT_POLICY` signs EIP-712 meta-tx (Phase 3)
 3. Dynamic Broadcaster executes → LI.FI Composer runs
-4. `/attack` demonstrates `TargetNotWhitelisted` block
 
-### Lane B — Institutional (in Copilot)
+### Timelock disbursement (e.g. vendor payment)
 
-Say `/pay` or "Request a vendor payment":
-
-1. Copilot calls `request_vendor_payment` → timelock `PENDING`
-2. Owner approves via Dynamic in chat card (Phase 5)
-3. `/ens` resolves treasury identity + policy text records
+1. `request_vendor_payment` → `PENDING` TxRecord
+2. Owner approves via Dynamic (Phase 5)
+3. Full audit trail via `/pending`
 
 ---
 
@@ -241,24 +240,22 @@ npm run build
 
 ## Documentation
 
-Implementation guides live in [`docs/`](./docs/) — start at [`docs/index.md`](./docs/index.md).
+Start at [`docs/treasury-lifecycle.md`](./docs/treasury-lifecycle.md) or [`docs/index.md`](./docs/index.md).
 
 | Doc | Description |
 |-----|-------------|
-| [implementation-status.md](./docs/implementation-status.md) | **What is built today** |
-| [provisioning-checklist.md](./docs/provisioning-checklist.md) | Setup before demo |
-| [guard-controller-setup.md](./docs/guard-controller-setup.md) | LI.FI + GuardController |
+| [treasury-lifecycle.md](./docs/treasury-lifecycle.md) | **Create, operate, govern, extend** |
+| [event/ethglobal-2026.md](./docs/event/ethglobal-2026.md) | ETHGlobal NY 2026 context & sponsors |
+| [guard-controller.md](./docs/guard-controller.md) | Bloxchain whitelist + TxRecord fields |
+| [provisioning-checklist.md](./docs/provisioning-checklist.md) | On-chain + app setup |
+| [governance.md](./docs/governance.md) | Change policy on live treasury |
+| [extending-use-cases.md](./docs/extending-use-cases.md) | Add new on-chain capabilities |
 | [on-chain-execution-flow.md](./docs/on-chain-execution-flow.md) | Tool → chain path |
-| [copilot.md](./docs/copilot.md) | Conversational interface |
 | [treasury-tools.md](./docs/treasury-tools.md) | Tool catalog (canonical) |
-| [implementation-plan.md](./docs/implementation-plan.md) | Phased build plan |
-| [demo-script.md](./docs/demo-script.md) | 3-minute Copilot demo |
-| [bloxchain-integration.md](./docs/bloxchain-integration.md) | AccountBlox + SDK |
-| [dynamic-integration.md](./docs/dynamic-integration.md) | Owner + Broadcaster |
-| [lifi-integration.md](./docs/lifi-integration.md) | Composer + whitelist |
-| [ens-integration.md](./docs/ens-integration.md) | Naming + text records |
+| [implementation-status.md](./docs/implementation-status.md) | What is built today |
+| [integrations/](./docs/integrations/README.md) | Dynamic, LI.FI, ENS, Bloxchain SDK |
 | [env-configuration.md](./docs/env-configuration.md) | Environment variables |
-| [agent-bridge.md](./docs/agent-bridge.md) | Deprecated — see treasury tools |
+| [copilot.md](./docs/copilot.md) | Conversational interface |
 
 ---
 

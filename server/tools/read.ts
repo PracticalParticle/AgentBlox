@@ -104,7 +104,7 @@ export async function getWhitelistedTargets() {
       {
         label: 'Sepolia USDC',
         status: 'expected_whitelist',
-        note: 'Required for Lane B vendor payments',
+        note: 'Required for timelock vendor payments',
       },
     ],
     message: 'On-chain whitelist reads via GuardController SDK — Phase 2.',

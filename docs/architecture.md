@@ -11,6 +11,8 @@ AgentBlox Copilot →  day-to-day ops via treasury tools (/api/chat)
 Bloxchain Protocol →  on-chain constitution
 ```
 
+Master guide: [treasury-lifecycle.md](./treasury-lifecycle.md)
+
 ## Layer diagram
 
 ```mermaid
@@ -63,7 +65,7 @@ flowchart TB
 ┌─────────────────────────────────────┐
 │  ENS — who is this actor?           │
 ├─────────────────────────────────────┤
-│  Bloxchain — what may they do?      │  ← Particle CS framework
+│  Bloxchain — what may they do?      │
 ├─────────────────────────────────────┤
 │  Dynamic — who signs?               │
 ├─────────────────────────────────────┤
@@ -71,49 +73,35 @@ flowchart TB
 └─────────────────────────────────────┘
 ```
 
+Integration docs: [integrations/README.md](./integrations/README.md)
+
 ## Role model
 
-AccountBlox composes **SecureOwnable + RuntimeRBAC + GuardController**. Configure at provisioning time on bloxchain.app; AgentBlox reads and uses these roles.
+AccountBlox composes **SecureOwnable + RuntimeRBAC + GuardController**. Configure at provisioning; AgentBlox reads and uses these roles.
 
-| Bloxchain role | Holder | Lane A (Agentic) | Lane B (Fintech) |
-|----------------|--------|------------------|------------------|
-| **Owner** | Dynamic embedded wallet | Approve policy/whitelist changes | Approve vendor payments |
-| **Broadcaster** | Dynamic server wallet | Execute agent meta-txs | Execute approved ops |
-| **Recovery** | Cold backup address | Emergency rotation | Emergency rotation |
-| **AGENT_POLICY** | Server signing key | Sign meta-tx only — never execute | — |
-| **ANALYST** | Ops user (Dynamic or EOA) | — | Request timelock payments |
+| Role | Holder | Policy execution | Timelock payments | Governance |
+|------|--------|------------------|-------------------|------------|
+| **Owner** | Dynamic embedded | — | Approve | Approve config changes |
+| **Broadcaster** | Dynamic server | Execute meta-tx | Execute approved | Execute config meta-tx |
+| **Recovery** | Cold backup | — | — | Emergency rotation |
+| **AGENT_POLICY** | Server key | Sign only — never execute | — | — |
+| **ANALYST** | Ops wallet | — | Request payments | — |
 
 ### Key invariant
 
-**Signer ≠ executor** for meta-tx flows. `AGENT_POLICY` can sign proposals but cannot submit `requestAndApproveExecution`. Only Broadcaster executes. Enforced in EngineBlox, not application code.
+**Signer ≠ executor** for meta-tx flows. `AGENT_POLICY` signs proposals; only Broadcaster executes. Enforced in EngineBlox.
 
 ## Transaction patterns
 
 See [on-chain-execution-flow.md](./on-chain-execution-flow.md) for full sequences.
 
-### Pattern 1 — Meta-tx (Lane A)
+### Policy execution (meta-tx)
 
-```
-Copilot propose_rebalance → AGENT_POLICY EIP-712 sign
-     ↓
-Dynamic Broadcaster → requestAndApproveExecution
-     ↓
-GuardController → whitelist check
-     ↓
-LI.FI Composer user proxy → atomic flow
-```
+Treasury operations (e.g. LI.FI rebalance): Copilot tool → AGENT_POLICY sign → Broadcaster `requestAndApproveExecution` → whitelist check → external call.
 
-### Pattern 2 — Timelock (Lane B)
+### Timelock (controlled disbursement)
 
-```
-Copilot request_vendor_payment → executeWithTimeLock
-     ↓
-TxRecord status: PENDING (countdown)
-     ↓
-Owner (Dynamic) → approveTimeLockExecution
-     ↓
-TxRecord status: COMPLETED
-```
+Vendor payments: Copilot tool → `executeWithTimeLock` → PENDING → Owner `approveTimeLockExecution` → COMPLETED.
 
 ## Repository layout
 
@@ -122,25 +110,19 @@ TxRecord status: COMPLETED
 | `src/pages/CopilotPage.tsx` | Primary chat UI (`/`) |
 | `src/pages/ConsolePage.tsx` | Setup + env checklist (`/console`) |
 | `src/components/chat/` | Chat UI, tool result cards |
-| `src/lib/config.ts` | Sepolia addresses, ENS text keys |
-| `src/lib/ens.ts` | ENS read helpers (viem) |
-| `server/index.ts` | HTTP: `/api/health`, `/api/chat` |
-| `server/tools/` | Treasury tool registry (read + propose) |
-| `server/chat/` | LLM handler + fallback slash router |
+| `server/tools/` | Treasury tool registry |
 | `server/policy-gate.ts` | Off-chain validation |
-| `server/signing/` | Meta-tx signing (Phase 3 — planned) |
-| `server/dynamic/` | Broadcaster submit (Phase 2 — planned) |
+| `server/signing/` | Meta-tx signing (Phase 3) |
+| `server/dynamic/` | Broadcaster submit (Phase 2) |
 | `docs/` | Implementation guides |
 
-**Orphan pages** (not routed): `DashboardPage`, `AgentFlowsPage`, `TreasurySetupPage` — functionality moved to Copilot + Console.
+**Orphan pages** (not routed): `DashboardPage`, `AgentFlowsPage`, `TreasurySetupPage`.
 
 ## Data handoff: bloxchain.app → AgentBlox
 
-bloxchain.app provisions the treasury. AgentBlox consumes it via:
-
 1. **Treasury address** — `TREASURY_ADDRESS` in `.env`
-2. **Optional ENS name** — `ENS_NAME` (configured in AgentBlox, not bloxchain.app)
-3. **On-chain reads** — roles, whitelist, timelock via `@bloxchain/sdk` (Phase 1+)
+2. **Optional ENS name** — `ENS_NAME` (AgentBlox only)
+3. **On-chain reads** — roles, whitelist via `@bloxchain/sdk`
 
 See [provisioning-checklist.md](./provisioning-checklist.md).
 
@@ -158,25 +140,25 @@ See [provisioning-checklist.md](./provisioning-checklist.md).
 
 | Phase | Approach |
 |-------|----------|
-| Hackathon | Deterministic tools + slash commands; optional LLM |
-| Post-hackathon | Export same tools as MCP for Hermes/OpenClaw |
+| Current | Deterministic tools + slash commands; optional LLM |
+| Future | Export same tools as MCP for external agents |
 | Never | LLM holds Broadcaster key or bypasses whitelist |
 
 ## Network
 
 - **Primary:** Sepolia testnet
 - **ENS resolution:** Ethereum mainnet (for `.eth` names)
-- **Bloxchain addresses:** See `src/lib/config.ts` and Bloxchain `deployed-addresses.json`
 
 ## What we do not build
 
 - Changes to `contracts/core/`
 - ENS provisioning in bloxchain.app
-- Ledger integration (enterprise stretch)
-- Legacy Agent Bridge REST API (`/api/agent/*`) — superseded by Copilot tools
+- Legacy Agent Bridge REST API — superseded by Copilot tools
 
 ## Related docs
 
-- [implementation-status.md](./implementation-status.md) — what is built today
-- [treasury-tools.md](./treasury-tools.md) — tool catalog
-- [guard-controller-setup.md](./guard-controller-setup.md) — LI.FI + GuardController
+- [treasury-lifecycle.md](./treasury-lifecycle.md)
+- [implementation-status.md](./implementation-status.md)
+- [guard-controller.md](./guard-controller.md)
+- [governance.md](./governance.md)
+- [extending-use-cases.md](./extending-use-cases.md)
