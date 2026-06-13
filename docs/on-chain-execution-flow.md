@@ -57,14 +57,18 @@ sequenceDiagram
 
 ### Implementation touchpoints
 
-| Step | File (planned) |
-|------|----------------|
-| Tool entry | `server/tools/propose.ts` → `proposeRebalance` |
-| Policy | `server/policy-gate.ts` |
-| LI.FI | `server/lifi/compose.ts` |
-| Sign | `server/signing/meta-tx.ts` |
-| Execute | `server/dynamic/broadcaster.ts` |
-| UI confirm | `src/components/chat/ToolResultCard.tsx` (Phase 3) |
+| Step | File | Status |
+|------|------|--------|
+| Tool entry | `server/tools/propose.ts` → `proposeRebalance` | ✅ |
+| Policy | `server/policy-gate.ts` | ✅ |
+| LI.FI compose | `server/lifi/compose.ts` | Phase 4 — env vars used until compose lands |
+| Sign | `server/signing/meta-tx.ts` | ✅ |
+| Serialize | `server/signing/serialize.ts` | ✅ |
+| Execute | `server/execution/rebalance.ts` + `server/dynamic/broadcaster.ts` | ✅ (env-dependent) |
+| Confirm API | `POST /api/execute/rebalance` in `server/index.ts` | ✅ |
+| UI confirm | `src/components/chat/ToolResultCard.tsx` + `src/lib/execute-api.ts` | ✅ (basic; typed card UI-3 deferred) |
+
+Until Phase 4, signing uses `REBALANCE_EXECUTION_TARGET`, `REBALANCE_EXECUTION_SELECTOR` (or `LIFI_EXECUTION_SELECTOR`), and `REBALANCE_EXECUTION_PARAMS` from `.env`.
 
 ### Bloxchain method
 
@@ -144,14 +148,12 @@ Fields: `releaseTime` (timelock countdown), `params.target` (whitelisted contrac
 
 ## Read path (no execution)
 
-| Tool | Client |
-|------|--------|
-| `get_treasury_status` | viem `getBalance` |
+| Tool | Server implementation |
+|------|------------------------|
+| `get_treasury_status` | viem `getBalance` + `server/bloxchain.ts` role reads |
 | `resolve_ens_treasury` | viem ENS on mainnet |
-| `list_pending_approvals` | `@bloxchain/sdk` TxRecord poll |
+| `list_pending_approvals` | `@bloxchain/sdk` via `server/bloxchain.ts` |
 | `get_whitelisted_targets` | `@bloxchain/sdk` `getFunctionWhitelistTargets` |
-
-Planned wrapper: `src/lib/bloxchain.ts`.
 
 ---
 

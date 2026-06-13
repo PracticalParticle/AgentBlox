@@ -32,7 +32,7 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 ---
 
-## Phase 1 — Bloxchain reads in tools
+## Phase 1 — Bloxchain reads in tools ✅
 
 **Goal:** `/pending` and `/whitelist` return real Sepolia data.
 
@@ -59,7 +59,7 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 ---
 
-## Phase 3 — Meta-tx sign + Copilot confirm
+## Phase 3 — Meta-tx sign + Copilot confirm ✅
 
 **Goal:** `/rebalance` → AGENT_POLICY signs → user confirms → Broadcaster executes.
 
@@ -109,8 +109,8 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 ## Phase 7 — Polish
 
-- [ ] Update [implementation-status.md](./implementation-status.md)
-- [ ] Documentation pass — [treasury-lifecycle.md](./treasury-lifecycle.md)
+- [x] Documentation pass — align `docs/` with implementation (June 2026)
+- [ ] Update [implementation-status.md](./implementation-status.md) per phase completion
 - [ ] Deploy to Vercel (optional)
 
 ---
@@ -124,7 +124,7 @@ Frontend work tracked in [ui-ux-guidelines.md](./ui-ux-guidelines.md). Pair with
 | UI-0 | Workspace shell (3-column layout, status rail, activity) | 2–3h | Phase 0 | Pending |
 | UI-1 | Typed read cards (`ToolCardRouter` + monitor cards) | 2h | Phase 1 | Pending |
 | UI-2 | Setup wizard (`/setup`, Workspace gate) | 2h | Phase 2 Dynamic | Pending |
-| UI-3 | Intent Preview + Approvals (`RebalanceProposalCard`, Confirm) | 3h | Phase 3 | Pending |
+| UI-3 | Intent Preview + Approvals (`RebalanceProposalCard`, Confirm) | 3h | Phase 3 | **Partial** — `ToolResultCard` Confirm; typed card deferred |
 | UI-4 | LI.FI quote + `PolicyBlockedCard` + Etherscan | 2h | Phase 4 | Pending |
 | UI-5 | Timelock payment card + Owner approve + countdown | 2h | Phase 5 | Pending |
 | UI-6 | Demo polish (`?demo=1`, loading states, keyboard focus) | 2h | Phase 7 | Pending |
@@ -149,8 +149,11 @@ Frontend work tracked in [ui-ux-guidelines.md](./ui-ux-guidelines.md). Pair with
 | File | Phase | Status |
 |------|-------|--------|
 | `server/bloxchain.ts` | 1 | Done |
+| `server/signing/meta-tx.ts` | 3 | Done |
+| `server/signing/serialize.ts` | 3 | Done |
+| `server/execution/rebalance.ts` | 3 | Done |
 | `server/lifi/compose.ts` | 4 | Pending |
-| `server/signing/meta-tx.ts` | 3 | Pending |
 | `server/dynamic/client.ts` | 2 | Done |
 | `server/dynamic/broadcaster.ts` | 2 | Done |
-| `src/lib/execute-api.ts` | Phase 3 | Done — `POST /api/execute/rebalance` |
+| `src/lib/execute-api.ts` | 3 | Done |
+| `src/components/chat/ToolResultCard.tsx` | 3 | Done (basic Confirm) |

@@ -79,7 +79,7 @@ From [treasury-tools.md](./treasury-tools.md):
 3. Add slash command in `server/chat/fallback-router.ts`
 4. Add policy-gate rules in `server/policy-gate.ts`
 5. Document operation type and auth path in `treasury-tools.md`
-6. Wire execution in `server/signing/meta-tx.ts` or Dynamic Broadcaster (Phase 3+)
+6. Wire execution in `server/signing/meta-tx.ts` (policy path) or Dynamic Broadcaster (timelock path)
 
 | Tier | On-chain? | Example |
 |------|-----------|---------|

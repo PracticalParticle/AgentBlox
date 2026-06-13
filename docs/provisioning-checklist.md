@@ -73,7 +73,8 @@ Full detail: [guard-controller.md](./guard-controller.md).
 - [ ] Set `TREASURY_ADDRESS` in `.env`
 - [ ] Set `VITE_DYNAMIC_ENVIRONMENT_ID`
 - [ ] Set `AGENT_POLICY_PRIVATE_KEY` (must match on-chain `AGENT_POLICY` wallet)
-- [ ] Set `DYNAMIC_API_TOKEN` for Broadcaster (Phase 2+)
+- [ ] Set `DYNAMIC_API_TOKEN` + `BROADCASTER_WALLET_ADDRESS` (Broadcaster execution)
+- [ ] Set `REBALANCE_EXECUTION_TARGET` + `LIFI_EXECUTION_SELECTOR` (or manual calldata until Phase 4)
 - [ ] Optional: `ENS_NAME`
 
 ### B2. Dynamic dashboard
@@ -89,7 +90,9 @@ npm run dev:all
 ```
 
 - [ ] `GET /api/health` → `treasuryConfigured: true`
-- [ ] Copilot `/status` shows real address + ETH balance
+- [ ] Optional: `dynamicBroadcasterConfigured`, `agentPolicySigningConfigured` when execution env set
+- [ ] Copilot `/status` shows real address + ETH balance + on-chain roles
+- [ ] Copilot `/pending` and `/whitelist` return SDK data (Phase 1 ✅)
 - [ ] Copilot `/ens` resolves (if ENS configured)
 - [ ] Owner connects via `DynamicWidget`
 
@@ -118,11 +121,12 @@ See [integrations/lifi.md](./integrations/lifi.md).
 
 ## Part E — End-to-end verification
 
-- [ ] `/rebalance` → on-chain success (Phase 3–4)
+- [ ] `/rebalance` → signed meta-tx in tool card (Phase 3 ✅)
+- [ ] Confirm execution → on-chain success (needs Dynamic + execution target env; Phase 4 for LI.FI calldata)
 - [ ] `/attack` → off-chain block + optional on-chain revert (Phase 4)
 - [ ] `/pay` → timelock → Owner approve (Phase 5)
-- [ ] `/whitelist` shows expected targets (Phase 1)
-- [ ] `/pending` shows TxRecords when applicable (Phase 1)
+- [ ] `/whitelist` shows expected targets ✅
+- [ ] `/pending` shows TxRecords when applicable ✅
 
 Event context: [event/ethglobal-2026.md](./event/ethglobal-2026.md)
 

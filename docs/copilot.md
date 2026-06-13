@@ -68,19 +68,21 @@ server/policy-gate.ts (off-chain validation)
     ↓
 Response with tool result cards
     ↓
-On-chain execution (Phase 3+) via Dynamic + Bloxchain
+User confirms (propose_rebalance) → POST /api/execute/rebalance
+    ↓
+Dynamic Broadcaster → requestAndApproveExecution (env-dependent)
 ```
 
 ## UI components
 
 Current scaffold (migrating to [ui-ux-guidelines.md](./ui-ux-guidelines.md) Workspace model):
 
-| File | Role | Target |
+| File | Role | Status |
 |------|------|--------|
-| `src/pages/CopilotPage.tsx` | Chat layout, `useChat` hook | → `WorkspacePage.tsx` |
-| `src/components/chat/ChatInput.tsx` | Input + suggestion chips | Retain in Action center |
-| `src/components/chat/ChatMessageView.tsx` | Message rendering | Retain |
-| `src/components/chat/ToolResultCard.tsx` | Structured tool output (JSON) | → `ToolCardRouter` + typed cards |
+| `src/pages/CopilotPage.tsx` | Chat layout, `useChat` hook | Current `/` |
+| `src/components/chat/ChatInput.tsx` | Input + suggestion chips | Done |
+| `src/components/chat/ChatMessageView.tsx` | Message rendering | Done |
+| `src/components/chat/ToolResultCard.tsx` | Tool output + Confirm button | Done (JSON card; typed cards UI-3 deferred) |
 
 ## LLM configuration
 
@@ -91,20 +93,20 @@ LLM_MODEL=gpt-4o-mini
 
 See [env-configuration.md](./env-configuration.md).
 
-## Human-in-the-loop (planned)
+## Human-in-the-loop
 
-| Tool output | User action |
-|-------------|-------------|
-| `propose_rebalance` | Confirm → Broadcaster executes |
-| `request_vendor_payment` | Owner approves via Dynamic |
+| Tool output | User action | Status |
+|-------------|-------------|--------|
+| `propose_rebalance` | **Confirm execution** in `ToolResultCard` → Broadcaster submits | ✅ (needs signing + Broadcaster env) |
+| `request_vendor_payment` | Owner approves via Dynamic | Phase 5 |
 
-Phase 3–5 in [implementation-plan.md](./implementation-plan.md). Flow details: [on-chain-execution-flow.md](./on-chain-execution-flow.md).
+Flow details: [on-chain-execution-flow.md](./on-chain-execution-flow.md). Remaining work: Phase 4 (LI.FI compose), Phase 5 (timelock), UI-3 typed cards.
 
 ## Suggested Copilot flow
 
 1. `/status` — configured vs not
-2. `/rebalance` — treasury operation proposal
+2. `/rebalance` — treasury operation proposal (+ Confirm when signed)
 3. `/attack` — policy validation (blocked target)
-4. `/pay` — timelock disbursement
+4. `/pay` — timelock disbursement (Phase 5)
 
 Event context: [event/ethglobal-2026.md](./event/ethglobal-2026.md).

@@ -64,7 +64,7 @@ EXTEND                →  register function → whitelist → grant role → ne
 
 Minimum: `TREASURY_ADDRESS`, `VITE_DYNAMIC_ENVIRONMENT_ID`.
 
-For execution: `AGENT_POLICY_PRIVATE_KEY`, `DYNAMIC_API_TOKEN`.
+For execution: `AGENT_POLICY_PRIVATE_KEY`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`, and rebalance execution target/selector (`REBALANCE_EXECUTION_*` or Phase 4 compose).
 
 Optional: `ENS_NAME` for identity and policy metadata.
 

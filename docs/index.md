@@ -8,6 +8,8 @@ Guides for creating, operating, governing, and extending on-chain treasuries wit
 
 → [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) · [event/ethglobal-2026.md](./event/ethglobal-2026.md) · [implementation-status.md](./implementation-status.md)
 
+**Build snapshot (June 2026):** Phases 0–1 and 3 done; Phase 2 scaffold done; Phase 4–7 pending. See [implementation-status.md](./implementation-status.md).
+
 ## Product model
 
 | Surface | Route | Purpose |

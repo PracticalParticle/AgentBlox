@@ -35,7 +35,7 @@ How AgentBlox demonstrates each sponsor integration in the product:
 ## Demo & submission
 
 - **Setup:** [provisioning-checklist.md](../provisioning-checklist.md)
-- **Build status:** [implementation-status.md](../implementation-status.md)
+- **Build status:** [implementation-status.md](../implementation-status.md) — Phases 0–1 and 3 complete; Phase 4 (LI.FI compose) is next critical path
 - **UI/UX spec:** [ui-ux-guidelines.md](../ui-ux-guidelines.md)
 - **LI.FI hackathon guide:** [docs.li.fi/composer/ethglobal-ny-2026](https://docs.li.fi/composer/ethglobal-ny-2026)
 

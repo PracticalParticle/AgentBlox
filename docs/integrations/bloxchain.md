@@ -51,34 +51,27 @@ Whitelist detail: [guard-controller.md](../guard-controller.md).
 
 ## SDK setup in AgentBlox
 
-Create `server/bloxchain.ts` (Phase 1):
+Implemented in `server/bloxchain.ts` (Phase 1 ✅):
 
 ```typescript
-import {
-  SecureOwnable,
-  RuntimeRBAC,
-  GuardController,
-} from '@bloxchain/sdk';
-import { createPublicClient, createWalletClient, http } from 'viem';
-import { sepolia } from 'viem/chains';
+import { GuardController, SecureOwnable } from '@bloxchain/sdk';
+import { sepoliaClient } from './clients.js';
+import { TREASURY_ADDRESS } from './config.js';
 
-const publicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(process.env.SEPOLIA_RPC_URL),
-});
+/** @bloxchain/sdk bundles its own viem — cast shared client/chain for SDK constructors. */
+export const sdkPublicClient = sepoliaClient as unknown as PublicClient;
+export const sdkSepolia = sepolia as unknown as Chain;
 
-const treasuryAddress = process.env.TREASURY_ADDRESS as `0x${string}`;
-
-export function createBloxchainClients(walletClient?: ReturnType<typeof createWalletClient>) {
-  return {
-    secureOwnable: new SecureOwnable(publicClient, walletClient, treasuryAddress, sepolia),
-    runtimeRbac: new RuntimeRBAC(publicClient, walletClient, treasuryAddress, sepolia),
-    guardController: new GuardController(publicClient, walletClient, treasuryAddress, sepolia),
-  };
+export function createGuardController(): GuardController {
+  return new GuardController(sdkPublicClient, undefined, TREASURY_ADDRESS, sdkSepolia);
 }
+
+export async function readTreasuryRoles() { /* owner, broadcasters, recovery, timelock */ }
 ```
 
-Use in **server tools** for reads; use with Dynamic `walletClient` for Owner/Broadcaster writes.
+Use in **server tools** (`server/tools/read.ts`) for reads. Meta-tx signing uses the same factory in `server/signing/meta-tx.ts`. Broadcaster writes use Dynamic `walletClient` in `server/execution/rebalance.ts`.
+
+There is **no** `src/lib/bloxchain.ts` in the current MVP — all SDK access is server-side.
 
 ---
 

@@ -51,7 +51,7 @@ For Composer authoring: `@lifi/composer-sdk`.
 
 ## SDK usage in AgentBlox
 
-Implement in `server/lifi/compose.ts` (Phase 4):
+**Phase 4** — implement `server/lifi/compose.ts`:
 
 ```typescript
 // Option A: Composer API POST /compose
@@ -61,8 +61,10 @@ Implement in `server/lifi/compose.ts` (Phase 4):
 
 Wire into:
 
-- `get_lifi_quote_preview` — read-only
-- `propose_rebalance` — embed in signed meta-tx
+- `get_lifi_quote_preview` — read-only (currently stub in `server/tools/propose.ts`)
+- `propose_rebalance` — replace manual `REBALANCE_EXECUTION_*` env vars
+
+**Phase 3 (interim):** `propose_rebalance` signs meta-txs using `REBALANCE_EXECUTION_TARGET`, `REBALANCE_EXECUTION_SELECTOR` / `LIFI_EXECUTION_SELECTOR`, and `REBALANCE_EXECUTION_PARAMS` from `.env` until compose is wired.
 
 ### Verify Composer route
 
@@ -127,12 +129,12 @@ See [env-configuration.md](../env-configuration.md).
 
 ## Files to implement
 
-| File | Phase | Purpose |
-|------|-------|---------|
-| `server/lifi/compose.ts` | 4 | Compose + calldata split |
-| `src/lib/lifi.ts` | 4 | Optional client wrapper |
-| `server/tools/propose.ts` | 3–4 | Wire compose into rebalance |
-| `server/tools/read.ts` | 4 | Real quote in preview tool |
+| File | Phase | Status | Purpose |
+|------|-------|--------|---------|
+| `server/lifi/compose.ts` | 4 | Pending | Compose + calldata split |
+| `server/tools/propose.ts` | 3–4 | Partial | Signs via env; compose Phase 4 |
+| `server/tools/read.ts` | 4 | Pending | Real quote in preview tool |
+| `src/lib/lifi.ts` | 4 | Optional | Client wrapper |
 
 ---
 

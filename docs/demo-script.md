@@ -30,7 +30,7 @@ See [provisioning-checklist.md](./provisioning-checklist.md) before rehearsing. 
 | **0:40** | Status | `/status` | "Copilot reads real on-chain state — treasury address, balance, policy engine." |
 | **0:55** | Architecture | Verbal / slide | "ENS names the actor. Bloxchain decides what's allowed. Dynamic holds keys. LI.FI runs approved flows." |
 | **1:05** | Rebalance | `/rebalance` | "Policy agent proposes a rebalance. It signs a meta-tx — but cannot execute alone." |
-| **1:25** | Execute | Confirm in tool card (Phase 3) | "Broadcaster submits. GuardController whitelists LI.FI only." |
+| **1:25** | Execute | Confirm in tool card | "Broadcaster submits. GuardController whitelists LI.FI only." |
 | **1:45** | Blocked | `/attack` | "Unauthorized target — policy validation." |
 | **2:00** | Revert | Show tool card + Etherscan | "TargetNotWhitelisted — architecturally enforced." |
 | **2:10** | Payment | `/pay` | "Vendor payment enters timelock — PENDING." |
@@ -60,7 +60,7 @@ Natural language works when `OPENAI_API_KEY` is set.
 ## Key beats
 
 1. **Bloxchain is load-bearing** — `/attack` proves policy enforcement
-2. **Real txs** — Sepolia Etherscan when Phase 3–4 complete
+2. **Real txs** — Sepolia Etherscan when Dynamic + execution env configured (Phase 4 for LI.FI calldata)
 3. **ENS is functional** — `/ens` with text records
 4. **One treasury, two auth paths** — policy execution + timelock in same Copilot
 
@@ -77,12 +77,19 @@ Natural language works when `OPENAI_API_KEY` is set.
 
 ---
 
-## Until Phase 3–4 is complete
+## Demo modes by build state
 
-Current demo can show:
+### Full demo (env + Phase 4)
 
-- `/status`, `/ens`, `/rebalance` (proposal cards with policy gate)
-- `/attack` (off-chain blocked state)
+All script beats including on-chain rebalance success and optional attack revert.
+
+### Current build (Phases 0–1, 3 scaffold)
+
+Can show:
+
+- `/status`, `/ens`, `/pending`, `/whitelist` — real reads
+- `/rebalance` — policy gate + signed meta-tx when signing env set; Confirm button when signed
+- `/attack` — off-chain blocked state
 - Console env checklist + Dynamic widget
 
-Note: "On-chain execution wiring is Phase 3–4; policy and tool architecture are live today."
+On-chain execution requires: `AGENT_POLICY_PRIVATE_KEY`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`, `REBALANCE_EXECUTION_TARGET`, and selector/calldata (Phase 4 compose automates calldata).

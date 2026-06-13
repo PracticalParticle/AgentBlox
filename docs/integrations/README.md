@@ -5,6 +5,8 @@
 
 AgentBlox uses **three sponsor integrations** for ETHGlobal NY 2026, plus **Bloxchain protocol** infrastructure.
 
+**Build status:** [implementation-status.md](../implementation-status.md) — Phases 0–1 and 3 complete; Dynamic Broadcaster scaffold done; LI.FI compose Phase 4 pending.
+
 ---
 
 ## Sponsor integrations

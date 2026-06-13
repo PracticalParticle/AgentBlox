@@ -156,9 +156,11 @@ When changing whitelist on a live treasury:
 
 ## AgentBlox implementation files
 
-| File | Phase |
-|------|-------|
-| `src/lib/bloxchain.ts` | 1 |
-| `server/signing/meta-tx.ts` | 3 |
-| `server/lifi/compose.ts` | 4 |
-| `server/dynamic/broadcaster.ts` | 2 |
+| File | Phase | Status |
+|------|-------|--------|
+| `server/bloxchain.ts` | 1 | ✅ Done |
+| `server/tools/read.ts` | 1 | ✅ Done |
+| `server/dynamic/broadcaster.ts` | 2 | ✅ Scaffold |
+| `server/signing/meta-tx.ts` | 3 | ✅ Done |
+| `server/execution/rebalance.ts` | 3 | ✅ Done |
+| `server/lifi/compose.ts` | 4 | Pending |

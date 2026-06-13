@@ -330,7 +330,7 @@ Required sections:
 | **Policy checks** | ✓ Flow ID · ✓ Amount · ✓ Target whitelisted · ✓ Treasury configured |
 | **Actions** | `[ Confirm execution ]` `[ Reject ]` `[ Edit amount ]` |
 
-Confirm triggers Broadcaster submit (Phase 3). Disabled until `signedMetaTx` present in payload.
+Confirm triggers Broadcaster submit via `POST /api/execute/rebalance`. **Implemented** in `ToolResultCard` when `signedMetaTx` is present; typed `RebalanceProposalCard` is deferred.
 
 #### `PaymentRequestCard`
 
@@ -589,7 +589,7 @@ UI phases align with [implementation-plan.md](./implementation-plan.md) backend 
 | **UI-0** | Workspace shell | 2–3h | Phase 0 ✅ | Three-column layout, header, status rail skeleton, activity feed |
 | **UI-1** | Typed read cards | 2h | Phase 1 reads | `ToolCardRouter` + read card components |
 | **UI-2** | Setup wizard | 2h | Dynamic widget | `/setup` 4-step flow, Workspace gate |
-| **UI-3** | Intent Preview + Approvals | 3h | Phase 3 sign/execute | `RebalanceProposalCard`, Confirm → Broadcaster |
+| **UI-3** | Intent Preview + Approvals | 3h | Phase 3 ✅ | **Partial** — `ToolResultCard` Confirm; `RebalanceProposalCard` deferred |
 | **UI-4** | LI.FI + blocked polish | 2h | Phase 4 | `LifiQuoteCard`, `PolicyBlockedCard`, Etherscan link |
 | **UI-5** | Timelock approval | 2h | Phase 5 | `PaymentRequestCard`, Owner approve, countdown |
 | **UI-6** | Demo polish | 2h | Phase 7 | Loading states, `?demo=1`, keyboard `/` focus |

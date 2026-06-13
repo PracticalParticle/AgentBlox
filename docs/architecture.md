@@ -112,8 +112,9 @@ Vendor payments: Copilot tool → `executeWithTimeLock` → PENDING → Owner `a
 | `src/components/chat/` | Chat input + message thread; tool cards → typed card system |
 | `server/tools/` | Treasury tool registry |
 | `server/policy-gate.ts` | Off-chain validation |
-| `server/signing/` | Meta-tx signing (Phase 3) |
-| `server/dynamic/` | Broadcaster submit (Phase 2) |
+| `server/signing/` | AGENT_POLICY EIP-712 signing + JSON serialize ✅ |
+| `server/execution/` | Broadcaster submit (`rebalance.ts`) ✅ |
+| `server/dynamic/` | Dynamic Node SDK — Broadcaster client + status ✅ |
 | `docs/` | Implementation guides |
 
 **Orphan pages** (not routed): `DashboardPage`, `AgentFlowsPage`, `TreasurySetupPage`.

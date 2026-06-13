@@ -30,11 +30,13 @@ Dynamic provides **two wallet surfaces** in AgentBlox:
 npm i @dynamic-labs/sdk-react-core @dynamic-labs/ethereum
 ```
 
-### Server — Broadcaster (Phase 2)
+### Server — Broadcaster (Phase 2 ✅ scaffold)
 
 ```bash
-npm i @dynamic-labs-wallet/node-evm
+npm i @dynamic-labs-wallet/node-evm @dynamic-labs-wallet/node
 ```
+
+Implemented: `server/dynamic/client.ts`, `server/dynamic/broadcaster.ts`. Requires `DYNAMIC_API_TOKEN` + `BROADCASTER_WALLET_ADDRESS` in `.env`.
 
 ---
 
@@ -137,14 +139,16 @@ const { walletMetadata, externalServerKeyShares } = await client.createWalletAcc
 });
 ```
 
-Create `server/dynamic/broadcaster.ts` for submit logic.
+Create `server/dynamic/broadcaster.ts` for submit logic — **done**. Execution path:
 
-### Execute meta-tx
+```typescript
+// server/execution/rebalance.ts
+await guardController.requestAndApproveExecution(signedMetaTx, {
+  from: BROADCASTER_WALLET_ADDRESS,
+});
+```
 
-After `propose_rebalance` returns signed meta-tx and user confirms:
-
-1. Broadcaster wallet submits via Dynamic Node SDK
-2. Calls `guardController.requestAndApproveExecution(signedMetaTx, ...)`
+Wallet client comes from `getBroadcasterWalletClient()` (`getEvmWallets()` + `walletMetadata`, not `accountAddress`).
 
 ---
 
@@ -193,10 +197,11 @@ At provisioning, set `initialOwner` = Dynamic embedded address and `broadcaster`
 
 ---
 
-## Files to implement
+## Files (implementation status)
 
-| File | Purpose |
-|------|---------|
-| `src/hooks/useDynamicOwner.ts` | Wrap `useDynamicContext` for Owner actions |
-| `server/dynamic/broadcaster.ts` | Server wallet init + sign/submit |
-| `server/dynamic/client.ts` | Authenticated DynamicEvmWalletClient factory |
+| File | Status | Purpose |
+|------|--------|---------|
+| `server/dynamic/client.ts` | ✅ Done | Authenticated `DynamicEvmWalletClient` factory |
+| `server/dynamic/broadcaster.ts` | ✅ Done | Status check + viem wallet client |
+| `server/execution/rebalance.ts` | ✅ Done | `requestAndApproveExecution` submit |
+| `src/hooks/useDynamicOwner.ts` | Pending | Wrap `useDynamicContext` for Owner actions (Phase 5) |

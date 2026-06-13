@@ -3,7 +3,7 @@
 > **Status:** Deprecated after Copilot pivot (June 2026).  
 > **Use instead:** [treasury-tools.md](./treasury-tools.md) + [on-chain-execution-flow.md](./on-chain-execution-flow.md)
 
-The original design exposed a standalone **Agent Bridge REST API** (`POST /api/agent/rebalance`, etc.). The current architecture routes all agent operations through **Copilot treasury tools** on `POST /api/chat`.
+The original design exposed a standalone **Agent Bridge REST API** (`POST /api/agent/rebalance`, etc.). The current architecture routes all agent operations through **Copilot treasury tools** on `POST /api/chat`, with execution via `POST /api/execute/rebalance`.
 
 ---
 
@@ -13,9 +13,9 @@ The original design exposed a standalone **Agent Bridge REST API** (`POST /api/a
 |----------------------|-------------------------|
 | `POST /api/agent/rebalance` | `propose_rebalance` tool via `/api/chat` |
 | `POST /api/agent/simulate-attack` | `simulate_policy_violation` tool |
-| `server/flows/rebalance.ts` | `server/tools/propose.ts` + `server/lifi/` (planned) |
+| `server/flows/rebalance.ts` | `server/tools/propose.ts` + `server/signing/` + `server/lifi/` (Phase 4) |
 | Agent Flows page buttons | Copilot `/rebalance`, `/attack` slash commands |
-| `src/lib/agent-api.ts` | Copilot `useChat` + tool result cards |
+| `src/lib/agent-api.ts` | `src/lib/execute-api.ts` + `ToolResultCard` Confirm |
 
 ---
 
@@ -25,8 +25,9 @@ The original design exposed a standalone **Agent Bridge REST API** (`POST /api/a
 |-----------|------------------------|
 | No LLM required for demo | Fallback slash router + optional LLM |
 | Agent-ready for MCP | Same tools exportable from `server/mcp/` (future) |
-| Sign only (AGENT_POLICY) | Planned in `server/signing/meta-tx.ts` |
+| Sign only (AGENT_POLICY) | `server/signing/meta-tx.ts` |
 | Policy before sign | `server/policy-gate.ts` |
+| Broadcaster executes | `server/execution/rebalance.ts` via Dynamic Node SDK |
 
 ---
 
@@ -34,11 +35,11 @@ The original design exposed a standalone **Agent Bridge REST API** (`POST /api/a
 
 If you see references to Agent Bridge in old notes or code:
 
-1. **Proposals** → implement in `server/tools/propose.ts`
-2. **Signing** → add `server/signing/meta-tx.ts`, call from propose tools after user confirm
-3. **Execution** → add `server/dynamic/broadcaster.ts`
-4. **Frontend** → use Copilot confirm buttons on `ToolResultCard`, not `agent-api.ts`
-5. **Remove** dead routes from `src/lib/agent-api.ts` when signing lands
+1. **Proposals** → `server/tools/propose.ts`
+2. **Signing** → `server/signing/meta-tx.ts` (called from `proposeRebalance`)
+3. **Execution** → `POST /api/execute/rebalance` → `server/execution/rebalance.ts`
+4. **Frontend** → `ToolResultCard` Confirm + `src/lib/execute-api.ts`
+5. **Do not restore** `src/lib/agent-api.ts` or REST agent routes
 
 ---
 

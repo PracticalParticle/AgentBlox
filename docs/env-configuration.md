@@ -30,13 +30,13 @@ Without `TREASURY_ADDRESS`, Copilot tools return `TREASURY_NOT_CONFIGURED`.
 | `OPENAI_API_KEY` | — | Enables LLM Copilot mode |
 | `LLM_MODEL` | `gpt-4o-mini` | OpenAI model when key is set |
 | `LIFI_INTEGRATOR` | `AgentBlox` | LI.FI compose integrator string |
-| `LIFI_EXECUTION_SELECTOR` | — | 4-byte Composer selector for whitelist reads |
+| `LIFI_EXECUTION_SELECTOR` | — | 4-byte Composer selector for whitelist reads + signing fallback |
 
 Without `OPENAI_API_KEY`, slash commands work (`mode: copilot-fallback`).
 
 ---
 
-## Phase 2+ (Dynamic Broadcaster — server only)
+## Phase 2 (Dynamic Broadcaster — server only)
 
 | Variable | Purpose |
 |----------|---------|
@@ -49,13 +49,17 @@ The server reads `VITE_DYNAMIC_ENVIRONMENT_ID` from `.env` via `dotenv` — **no
 
 ---
 
-## Phase 3+ (AGENT_POLICY signing — server only)
+## Phase 3 (AGENT_POLICY signing + execution target — server only)
 
 | Variable | Purpose |
 |----------|---------|
-| `AGENT_POLICY_PRIVATE_KEY` | EIP-712 meta-tx signer |
+| `AGENT_POLICY_PRIVATE_KEY` | EIP-712 meta-tx signer — must match on-chain `AGENT_POLICY` role |
+| `REBALANCE_EXECUTION_TARGET` | External call target (e.g. LI.FI userProxy) |
+| `REBALANCE_EXECUTION_SELECTOR` | 4-byte selector — falls back to `LIFI_EXECUTION_SELECTOR` |
+| `REBALANCE_EXECUTION_PARAMS` | ABI-encoded calldata (`0x` until Phase 4 compose) |
+| `REBALANCE_OPERATION_TYPE` | Optional — defaults to `keccak256(flowId)` |
 
-Must match the wallet assigned to `AGENT_POLICY` on-chain at provisioning.
+Phase 4 (`server/lifi/compose.ts`) will populate target + calldata automatically; until then, set these manually for end-to-end rebalance testing.
 
 ---
 
@@ -81,14 +85,16 @@ ENS_NAME=treasury.acme.eth
 
 # Optional
 # OPENAI_API_KEY=
-# LIFI_EXECUTION_SELECTOR=0x........ 
+# LIFI_EXECUTION_SELECTOR=0x........
 
-# Phase 2+
+# Phase 2
 # DYNAMIC_API_TOKEN=
 # BROADCASTER_WALLET_ADDRESS=0x...
 
-# Phase 3+
-# AGENT_POLICY_PRIVATE_KEY=
+# Phase 3
+# AGENT_POLICY_PRIVATE_KEY=0x...
+# REBALANCE_EXECUTION_TARGET=0x...
+# REBALANCE_EXECUTION_PARAMS=0x
 ```
 
 ---
@@ -100,7 +106,7 @@ npm run dev:all
 curl http://localhost:3001/api/health
 ```
 
-Expected when configured:
+Expected when treasury is configured:
 
 ```json
 {
@@ -108,6 +114,10 @@ Expected when configured:
   "service": "agentblox-server",
   "llmEnabled": false,
   "treasuryConfigured": true,
+  "dynamicEnvironmentConfigured": false,
+  "dynamicBroadcasterConfigured": false,
+  "agentPolicySigningConfigured": false,
+  "broadcaster": { "configured": false, "message": "...", "matchesOnChainBroadcaster": null },
   "mode": "copilot-fallback"
 }
 ```

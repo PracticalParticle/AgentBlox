@@ -10,8 +10,8 @@ AgentBlox exposes treasury operations as **MCP-style tools** — structured func
 | Tier | Executes on-chain? | Human approval? | Examples |
 |------|-------------------|-----------------|----------|
 | **Read** | No | No | `get_treasury_status` |
-| **Propose** | No | Confirm in chat (Phase 3+) | `propose_rebalance` |
-| **Execute** | Yes | Required role | Broadcaster / Owner (Phase 3+) |
+| **Propose** | No | Confirm in chat | `propose_rebalance` |
+| **Execute** | Yes | Required role | Broadcaster / Owner after confirm |
 
 ## Tool catalog
 
@@ -19,19 +19,19 @@ AgentBlox exposes treasury operations as **MCP-style tools** — structured func
 
 | Tool | Operation type | Description | Integrates |
 |------|----------------|-------------|------------|
-| `get_treasury_status` | Monitor | Address, ETH balance, policy summary | viem + config |
+| `get_treasury_status` | Monitor | Address, ETH balance, on-chain roles | viem + `@bloxchain/sdk` |
 | `resolve_ens_treasury` | Monitor | ENS → address + text records | ENS via viem mainnet |
-| `list_pending_approvals` | Monitor | Pending timelock txs | @bloxchain/sdk (Phase 1) |
-| `get_whitelisted_targets` | Monitor | GuardController whitelist | SDK (Phase 1) |
-| `get_lifi_quote_preview` | Monitor | Read-only LI.FI compose preview | LI.FI (Phase 4) |
+| `list_pending_approvals` | Monitor | Pending timelock txs | `@bloxchain/sdk` |
+| `get_whitelisted_targets` | Monitor | GuardController whitelist | `@bloxchain/sdk` |
+| `get_lifi_quote_preview` | Monitor | Read-only LI.FI compose preview | Stub — Phase 4 |
 
 ### Propose tools
 
-| Tool | Operation type | Auth path | Policy gate |
-|------|----------------|-----------|-------------|
-| `propose_rebalance` | Treasury operation | Policy execution | Flow ID allowlist |
-| `request_vendor_payment` | Disbursement | Timelock | Treasury configured |
-| `simulate_policy_violation` | Policy test | — (blocked) | Always blocks |
+| Tool | Operation type | Auth path | Policy gate | Sign | Execute |
+|------|----------------|-----------|-------------|------|---------|
+| `propose_rebalance` | Treasury operation | Policy execution | Flow ID allowlist | ✅ AGENT_POLICY | ⚠️ Broadcaster (env) |
+| `request_vendor_payment` | Disbursement | Timelock | Treasury configured | Phase 5 | Phase 5 |
+| `simulate_policy_violation` | Policy test | — (blocked) | Always blocks | — | — |
 
 ## Implementation files
 
@@ -41,8 +41,13 @@ server/tools/
 ├── read.ts       # Read tool executors
 └── propose.ts    # Propose tool executors
 
-server/policy-gate.ts   # Off-chain validation before sign/execute
+server/policy-gate.ts          # Off-chain validation before sign/execute
+server/signing/meta-tx.ts      # AGENT_POLICY EIP-712 signing
+server/signing/serialize.ts    # JSON-safe meta-tx for API + UI
+server/execution/rebalance.ts  # Broadcaster submit
 ```
+
+Client confirm: `src/lib/execute-api.ts` → `POST /api/execute/rebalance`
 
 ## Policy gate rules
 
@@ -58,8 +63,8 @@ On-chain, GuardController enforces the same properties.
 ## LI.FI integration pattern
 
 ```
-get_lifi_quote_preview  →  read
-propose_rebalance       →  policy gate  →  AGENT_POLICY sign  →  Broadcaster execute
+get_lifi_quote_preview  →  read (Phase 4: real compose)
+propose_rebalance       →  policy gate  →  AGENT_POLICY sign  →  Confirm  →  Broadcaster execute
 ```
 
 See [integrations/lifi.md](./integrations/lifi.md).
@@ -80,6 +85,6 @@ Export the same tools from `server/mcp/index.ts` for external agents (Hermes, Op
 ## Security rules
 
 - AGENT_POLICY key stays server-side only
-- Tools never call Broadcaster directly
+- Tools never call Broadcaster directly from propose executors — user confirm triggers `POST /api/execute/rebalance`
 - LLM cannot invent balances — read tools hit chain/config
 - Execute tier requires explicit user confirmation in UI
