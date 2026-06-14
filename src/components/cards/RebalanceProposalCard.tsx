@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import CardShell from './CardShell';
+import BroadcasterSubmitBlock from '../broadcaster/BroadcasterSubmitBlock';
 import { executeRebalance } from '../../lib/execute-api';
 import { isDemoMode } from '../../lib/demo-mode';
-import { sepoliaTxUrl } from '../../lib/links';
 import { extractSignedMetaTx } from '../../lib/tool-result-helpers';
 
 type Props = {
@@ -10,8 +9,6 @@ type Props = {
 };
 
 export default function RebalanceProposalCard({ result }: Props) {
-  const [executing, setExecuting] = useState(false);
-  const [feedback, setFeedback] = useState<{ ok: boolean; message: string; hash?: string } | null>(null);
   const demo = isDemoMode();
 
   const proposal = result.proposal as Record<string, unknown> | undefined;
@@ -19,27 +16,6 @@ export default function RebalanceProposalCard({ result }: Props) {
   const signing = proposal?.signing as Record<string, unknown> | undefined;
   const signedMetaTx = extractSignedMetaTx(result);
   const canConfirm = !demo && result.status === 'proposed' && signedMetaTx !== null;
-
-  async function handleConfirm() {
-    if (!signedMetaTx) return;
-    setExecuting(true);
-    setFeedback(null);
-    try {
-      const response = await executeRebalance(signedMetaTx);
-      setFeedback(
-        response.ok
-          ? { ok: true, message: 'Submitted on Sepolia', hash: response.hash }
-          : { ok: false, message: response.reason },
-      );
-    } catch (error) {
-      setFeedback({
-        ok: false,
-        message: error instanceof Error ? error.message : 'Execution request failed',
-      });
-    } finally {
-      setExecuting(false);
-    }
-  }
 
   const status = typeof result.status === 'string' ? result.status : 'proposed';
 
@@ -51,33 +27,23 @@ export default function RebalanceProposalCard({ result }: Props) {
       summary={`Flow ${String(proposal?.flowId ?? 'rebalance-sepolia-v1')} · Agent signs · Broadcaster executes`}
       footer={
         <>
-          {canConfirm ? (
-            <button type="button" className="card-cta" disabled={executing} onClick={handleConfirm}>
-              {executing ? 'Submitting…' : 'Confirm execution'}
-            </button>
+          {canConfirm && signedMetaTx ? (
+            <BroadcasterSubmitBlock onSubmit={() => executeRebalance(signedMetaTx)} />
           ) : null}
-          {feedback ? (
-            <p className={`tool-card-feedback ${feedback.ok ? 'ok' : 'error'}`}>
-              {feedback.message}
-              {feedback.hash ? (
-                <>
-                  {' '}
-                  <a href={sepoliaTxUrl(feedback.hash)} target="_blank" rel="noreferrer">
-                    View on Etherscan
-                  </a>
-                </>
-              ) : null}
+          {result.status === 'proposed_unsigned' ? (
+            <p className="card-copy muted">
+              Meta-tx signing failed — check AGENT_POLICY_PRIVATE_KEY and on-chain SIGN_META roles.
             </p>
           ) : null}
           {demo && signedMetaTx ? (
-            <p className="card-copy muted">Demo mode — execution disabled. Remove ?demo=1 to confirm.</p>
+            <p className="card-copy muted">Demo mode — execution disabled. Remove ?demo=1 to submit.</p>
           ) : null}
         </>
       }
     >
       <section className="intent-section">
         <h4>What</h4>
-        <p>Swap USDC → WETH via LI.FI Composer (policy-gated).</p>
+        <p>Policy-gated treasury operation (LI.FI compose when integrated).</p>
       </section>
       <section className="intent-section">
         <h4>Policy</h4>

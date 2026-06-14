@@ -11,7 +11,7 @@ AgentBlox exposes treasury operations as **MCP-style tools** — structured func
 |------|-------------------|-----------------|----------|
 | **Read** | No | No | `get_treasury_status` |
 | **Propose** | No | Confirm in chat | `propose_rebalance` |
-| **Execute** | Yes | Required role | Broadcaster after APPROVER sign (Lane B) or confirm (Lane A future) |
+| **Execute** | Yes | User clicks **Submit on-chain (Broadcaster)** | Broadcaster after APPROVER sign (Lane B) |
 
 ## Tool catalog
 
@@ -30,7 +30,7 @@ AgentBlox exposes treasury operations as **MCP-style tools** — structured func
 | Tool | Operation type | Auth path | Policy gate | Sign | Execute |
 |------|----------------|-----------|-------------|------|---------|
 | `propose_rebalance` | Treasury operation | Policy execution | Flow ID allowlist | ✅ AGENT_POLICY | ⚠️ Broadcaster (env) |
-| `request_vendor_payment` | Disbursement | Timelock | Treasury configured | Phase 5 | Phase 5 |
+| `request_vendor_payment` | Disbursement | Lane B dual path | Treasury + amount routing | ✅ APPROVER / ANALYST | ✅ Broadcaster |
 | `simulate_policy_violation` | Policy test | — (blocked) | Always blocks | — | — |
 
 ## Implementation files
@@ -45,9 +45,13 @@ server/policy-gate.ts          # Off-chain validation before sign/execute
 server/signing/meta-tx.ts      # AGENT_POLICY EIP-712 signing
 server/signing/serialize.ts    # JSON-safe meta-tx for API + UI
 server/execution/rebalance.ts  # Broadcaster submit
+server/execution/payment-approve.ts  # B-timelock sign + Broadcaster approve
 ```
 
-Client confirm: `src/lib/execute-api.ts` → `POST /api/execute/rebalance`
+Client broadcast (Dynamic server wallet):
+
+- `src/components/broadcaster/BroadcasterSubmitBlock.tsx` — shared **Submit on-chain (Broadcaster)** button (gated by `/api/health`)
+- `src/lib/execute-api.ts` → `POST /api/execute/rebalance` | `/payment` | `/payment-approve`
 
 ## Policy gate rules
 
@@ -85,6 +89,6 @@ Export the same tools from `server/mcp/index.ts` for external agents (Hermes, Op
 ## Security rules
 
 - AGENT_POLICY key stays server-side only
-- Tools never call Broadcaster directly from propose executors — user confirm triggers `POST /api/execute/rebalance`
+- Tools never call Broadcaster directly from propose executors — user **Submit on-chain (Broadcaster)** triggers execute APIs
 - LLM cannot invent balances — read tools hit chain/config
 - Execute tier requires explicit user confirmation in UI

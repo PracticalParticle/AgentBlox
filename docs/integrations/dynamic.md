@@ -150,6 +150,19 @@ await guardController.requestAndApproveExecution(signedMetaTx, {
 
 Wallet client comes from `getBroadcasterWalletClient()` (`getEvmWallets()` + `walletMetadata`, not `accountAddress`).
 
+### Copilot broadcast button (UI)
+
+When a tool returns a **signed meta-tx** (rebalance, B-fast payment) or a **releasable timelock** TxRecord (B-timelock), the workspace shows **Submit on-chain (Broadcaster)** on the tool card (and on pending timelocks in the Approvals sidebar).
+
+Flow:
+
+1. User runs `/rebalance`, `/pay 5$`, or `/pay 20$` in Copilot.
+2. Server signs (AGENT_POLICY or APPROVER) or ANALYST submits timelock request — card shows status.
+3. User clicks **Submit on-chain (Broadcaster)** → `POST /api/execute/*` → `getBroadcasterWalletClient()` submits via GuardController.
+4. Button disabled until `/api/health` reports `dynamicBroadcasterConfigured: true` and `matchesOnChainBroadcaster !== false`.
+
+Components: `src/components/broadcaster/BroadcasterSubmitBlock.tsx`, `src/lib/broadcaster-ready.ts`, `src/hooks/useBroadcasterReady.ts`.
+
 ---
 
 ## Environment variables

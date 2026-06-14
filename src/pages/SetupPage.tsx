@@ -6,6 +6,8 @@ import { useBroadcasterVerify } from '../hooks/useBroadcasterVerify';
 
 import { useServerHealth } from '../hooks/useServerHealth';
 
+import { isBroadcasterReady } from '../lib/broadcaster-ready';
+
 import { truncateAddress } from '../lib/format';
 
 
@@ -18,9 +20,7 @@ export default function SetupPage() {
 
 
 
-  const broadcasterReady =
-
-    health?.dynamicBroadcasterConfigured && health.broadcaster?.matchesOnChainBroadcaster !== false;
+  const broadcasterReady = isBroadcasterReady(health);
 
 
 

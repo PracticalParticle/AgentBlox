@@ -18,7 +18,7 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | `@bloxchain/sdk` | **Done** | Reads + meta-tx signing + payment approve paths |
 | `@lifi/sdk` | **Future** | Composer scaffold; not hackathon MVP |
 | Dynamic (Owner UI) | **Partial** | `DynamicWidget` only |
-| Dynamic (Broadcaster) | **Partial** | Needs `DYNAMIC_API_TOKEN` + wallet in `.env` |
+| Dynamic (Broadcaster) | **Done** | Server wallet submit + UI **Submit on-chain (Broadcaster)** button |
 | Docker dev stack | **Done** | `docker-compose.yml` |
 | On-chain execution | **Partial** | Code complete; E2E needs operator provisioning |
 | Unit tests (Vitest) | **Done** | `npm run verify` — 59 tests |
@@ -93,7 +93,10 @@ See [implementation-plan.md](./implementation-plan.md) · [ROADMAP-PLAN.md](./RO
 | `server/signing/meta-tx.ts` | Done | AGENT_POLICY rebalance sign |
 | `server/execution/rebalance.ts` | Done | Delegates to meta-tx-broadcaster |
 | `src/lib/execute-api.ts` | Done | payment + payment-approve clients |
-| `src/components/cards/PaymentRequestCard.tsx` | Done | Dual-path Confirm UX |
+| `src/components/cards/PaymentRequestCard.tsx` | Done | Dual-path broadcast UX |
+| `src/components/cards/RebalanceProposalCard.tsx` | Done | Rebalance broadcast UX |
+| `src/components/broadcaster/BroadcasterSubmitBlock.tsx` | Done | Shared Dynamic Broadcaster submit button |
+| `src/lib/broadcaster-ready.ts` | Done | Health gating for submit button |
 | `src/lib/tool-result-helpers.ts` | Done | B-fast / B-timelock detection |
 
 ---

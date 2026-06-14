@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import CardShell from './CardShell';
+import BroadcasterSubmitBlock from '../broadcaster/BroadcasterSubmitBlock';
 import { isDemoMode } from '../../lib/demo-mode';
-import { sepoliaTxUrl } from '../../lib/links';
 import {
   approveTimelockPayment as approveTimelockViaBroadcaster,
   executeInstantPayment,
@@ -19,8 +19,6 @@ type Props = {
 };
 
 export default function PaymentRequestCard({ result }: Props) {
-  const [executing, setExecuting] = useState(false);
-  const [feedback, setFeedback] = useState<{ ok: boolean; message: string; hash?: string } | null>(null);
   const [countdown, setCountdown] = useState(0);
   const demo = isDemoMode();
 
@@ -43,52 +41,6 @@ export default function PaymentRequestCard({ result }: Props) {
     return () => window.clearInterval(id);
   }, [paymentApproval]);
 
-  async function handleConfirmExecution() {
-    if (!paymentSignedMetaTx) return;
-    setExecuting(true);
-    setFeedback(null);
-    try {
-      const response = await executeInstantPayment(paymentSignedMetaTx);
-      setFeedback(
-        response.ok
-          ? { ok: true, message: 'Payment executed on Sepolia', hash: response.hash }
-          : { ok: false, message: response.reason },
-      );
-    } catch (error) {
-      setFeedback({
-        ok: false,
-        message: error instanceof Error ? error.message : 'Payment execution failed',
-      });
-    } finally {
-      setExecuting(false);
-    }
-  }
-
-  async function handleConfirmRelease() {
-    if (!paymentApproval) return;
-    if (countdown > 0) {
-      setFeedback({ ok: false, message: `Timelock active — wait ${countdown}s before release.` });
-      return;
-    }
-    setExecuting(true);
-    setFeedback(null);
-    try {
-      const response = await approveTimelockViaBroadcaster(paymentApproval.txId);
-      setFeedback(
-        response.ok
-          ? { ok: true, message: 'Timelock released on Sepolia', hash: response.hash }
-          : { ok: false, message: response.reason },
-      );
-    } catch (error) {
-      setFeedback({
-        ok: false,
-        message: error instanceof Error ? error.message : 'Timelock release failed',
-      });
-    } finally {
-      setExecuting(false);
-    }
-  }
-
   const status = typeof result.status === 'string' ? result.status : 'requested';
   const pathLabel = String(request?.pathLabel ?? request?.paymentPath ?? '—');
   const whoLine =
@@ -104,45 +56,29 @@ export default function PaymentRequestCard({ result }: Props) {
       summary={`Pay ${String(request?.amountUsdc ?? '—')} USDC · ${pathLabel} · ${whoLine}`}
       footer={
         <>
-          {canAct && isInstant ? (
-            <button
-              type="button"
-              className="card-cta"
-              disabled={executing}
-              onClick={handleConfirmExecution}
-            >
-              {executing ? 'Submitting…' : 'Confirm execution'}
-            </button>
+          {canAct && isInstant && paymentSignedMetaTx ? (
+            <BroadcasterSubmitBlock
+              successMessage="Payment executed on Sepolia via Dynamic Broadcaster"
+              onSubmit={() => executeInstantPayment(paymentSignedMetaTx)}
+            />
           ) : null}
-          {canAct && isTimelock ? (
-            <button
-              type="button"
-              className="card-cta"
-              disabled={executing || countdown > 0}
-              onClick={handleConfirmRelease}
-            >
-              {executing
-                ? 'Releasing…'
-                : countdown > 0
-                  ? `Timelock ${countdown}s`
-                  : 'Confirm release'}
-            </button>
+          {canAct && isTimelock && paymentApproval ? (
+            <BroadcasterSubmitBlock
+              label="Submit release on-chain (Broadcaster)"
+              loadingLabel="Releasing…"
+              successMessage="Timelock released on Sepolia via Dynamic Broadcaster"
+              disabled={countdown > 0}
+              disabledHint={`Timelock ${countdown}s`}
+              onSubmit={() => approveTimelockViaBroadcaster(paymentApproval.txId)}
+            />
           ) : null}
-          {feedback ? (
-            <p className={`tool-card-feedback ${feedback.ok ? 'ok' : 'error'}`}>
-              {feedback.message}
-              {feedback.hash ? (
-                <>
-                  {' '}
-                  <a href={sepoliaTxUrl(feedback.hash)} target="_blank" rel="noreferrer">
-                    View on Etherscan
-                  </a>
-                </>
-              ) : null}
+          {result.status === 'requested_unsigned' ? (
+            <p className="card-copy muted">
+              On-chain request or signing failed — check ANALYST/APPROVER keys and RBAC.
             </p>
           ) : null}
           {demo && (isInstant || isTimelock) ? (
-            <p className="card-copy muted">Demo mode — execution disabled. Remove ?demo=1 to confirm.</p>
+            <p className="card-copy muted">Demo mode — execution disabled. Remove ?demo=1 to submit.</p>
           ) : null}
         </>
       }

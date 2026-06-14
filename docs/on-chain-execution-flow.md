@@ -14,7 +14,7 @@ Same treasury, same TxRecord model — two paths:
 |------|----------|-------------|
 | **Policy execution (Lane A — future)** | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
 | **Timelock (Lane B — large / demo default)** | Human-gated disbursements | ANALYST `executeWithTimeLock` → APPROVER sign → Broadcaster approve |
-| **Instant payment (Lane B — small, future)** | Sub-threshold USDC payouts | Payment signer → `requestAndApproveExecution` → Broadcaster execute |
+| **Instant payment (Lane B — small)** | Sub-threshold USDC payouts (&lt; $10) | APPROVER sign → `requestAndApproveExecution` → Broadcaster execute |
 
 ---
 
@@ -49,7 +49,7 @@ sequenceDiagram
     LI-->>Tool: userProxy, calldata
     Tool->>Sign: build + sign meta-tx
     Tool-->>User: proposal card (awaiting confirm)
-    User->>BC: Confirm
+    User->>BC: Submit on-chain (Broadcaster)
     BC->>AB: requestAndApproveExecution(signedMetaTx)
     AB->>AB: whitelist + RBAC + signer≠executor
     AB->>Proxy: call(calldata)
@@ -67,7 +67,7 @@ sequenceDiagram
 | Serialize | `server/signing/serialize.ts` | ✅ |
 | Execute | `server/execution/rebalance.ts` + `server/dynamic/broadcaster.ts` | ✅ (env-dependent) |
 | Confirm API | `POST /api/execute/rebalance` in `server/index.ts` | ✅ |
-| UI confirm | `src/components/chat/ToolResultCard.tsx` + `src/lib/execute-api.ts` | ✅ (basic; typed card UI-3 deferred) |
+| UI confirm | `RebalanceProposalCard` + `BroadcasterSubmitBlock` → `POST /api/execute/rebalance` | ✅ |
 
 Until Phase 4, signing uses `REBALANCE_EXECUTION_TARGET`, `REBALANCE_EXECUTION_SELECTOR` (or `LIFI_EXECUTION_SELECTOR`), and `REBALANCE_EXECUTION_PARAMS` from `.env`.
 
@@ -101,7 +101,7 @@ Off-chain tool returns `status: blocked`. Phase 4 adds optional Broadcaster subm
 
 ## Controlled disbursement: Vendor payment — Lane B (dual path)
 
-USDC `transfer(address,uint256)` on Sepolia USDC can use **two whitelisted paths**. Provision **both** on-chain; AgentBlox will route by amount in a future policy gate (e.g. **&lt; $10 → B-fast**, **≥ $10 → B-timelock**).
+USDC `transfer(address,uint256)` on Sepolia USDC uses **two whitelisted paths**. Provision **both** on-chain. AgentBlox routes by amount in `server/policy-gate.ts` (`resolvePaymentPath`): **&lt; $10 USDC → B-fast**, **≥ $10 USDC → B-timelock** (slash: `/pay 5$`, `/pay 20$`).
 
 ### Path B-fast — instant (signer + Broadcaster, no ANALYST gas)
 
@@ -117,7 +117,7 @@ sequenceDiagram
     User->>Tool: /pay (small amount)
     Tool->>Sign: build + sign meta-tx (USDC transfer)
     Tool-->>User: payment card (awaiting confirm)
-    User->>BC: Confirm execution
+    User->>BC: Submit on-chain (Broadcaster)
     BC->>AB: requestAndApproveExecution(signedMetaTx)
     AB->>USDC: transfer(recipient, amount)
     AB-->>User: COMPLETED
@@ -145,7 +145,7 @@ sequenceDiagram
     Tool-->>User: request card (awaiting release)
     Note over AB: After releaseTime
     Approver->>Approver: sign approveTimeLockExecutionWithMetaTx
-    User->>BC: Confirm release
+    User->>BC: Submit release on-chain (Broadcaster)
     BC->>AB: approveTimeLockExecutionWithMetaTx(signedMetaTx)
     AB-->>User: COMPLETED
 ```
@@ -154,18 +154,24 @@ sequenceDiagram
 
 **RBAC:** ANALYST `EXECUTE_TIME_DELAY_REQUEST`; APPROVER `SIGN_META_APPROVE`; Broadcaster `EXECUTE_META_APPROVE`.
 
-### Future off-chain routing
+### Off-chain routing (implemented)
 
-```typescript
-// Planned in server/policy-gate.ts — not implemented yet
-if (amount < PAYMENT_INSTANT_MAX_USDC) {
-  // B-fast: sign meta-tx → Broadcaster requestAndApproveExecution
-} else {
-  // B-timelock: ANALYST executeWithTimeLock → approve after delay
-}
-```
+`server/policy-gate.ts` → `resolvePaymentPath(amountUsdc)`:
 
-Suggested default threshold: **10 USDC** (`10_000_000` units, 6 decimals).
+- **B-fast:** amount &lt; `PAYMENT_INSTANT_MAX_USDC` (default **10 USDC**, `10_000_000` units, 6 decimals)
+- **B-timelock:** amount ≥ threshold → ANALYST `executeWithTimeLock` on propose
+
+### UI broadcast button
+
+When a signed meta-tx is ready (or a timelock TxRecord is releasable), tool cards show **Submit on-chain (Broadcaster)**. The button calls AgentBlox execute APIs; the **Dynamic server wallet** submits the transaction (user never holds Broadcaster keys).
+
+| Path | Card | API | Broadcaster method |
+|------|------|-----|-------------------|
+| Rebalance | `RebalanceProposalCard` | `POST /api/execute/rebalance` | `requestAndApproveExecution` |
+| B-fast payment | `PaymentRequestCard` | `POST /api/execute/payment` | `requestAndApproveExecution` |
+| B-timelock release | `PaymentRequestCard` or Approvals sidebar | `POST /api/execute/payment-approve` | `approveTimeLockExecutionWithMetaTx` |
+
+The button is **disabled** when `/api/health` reports Broadcaster not configured or `matchesOnChainBroadcaster: false`. See [integrations/dynamic.md](./integrations/dynamic.md).
 
 ### Bloxchain methods
 

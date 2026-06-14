@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { AgentBloxToolPayload } from '../../lib/tool-parser';
 import { statusColor } from '../../lib/tool-parser';
+import BroadcasterSubmitBlock from '../broadcaster/BroadcasterSubmitBlock';
 import {
   approveTimelockPayment as approveTimelockViaBroadcaster,
   executeInstantPayment,
   executeRebalance,
 } from '../../lib/execute-api';
+import { isDemoMode } from '../../lib/demo-mode';
 import { secondsUntilRelease } from '../../lib/owner-guard';
 import {
   canConfirmInstantPayment,
@@ -22,10 +24,7 @@ type Props = {
 
 export default function ToolResultCard({ payload }: Props) {
   const result = payload.result as Record<string, unknown> | null;
-  const [executing, setExecuting] = useState(false);
-  const [executeResult, setExecuteResult] = useState<{ ok: boolean; message: string } | null>(
-    null,
-  );
+  const demo = isDemoMode();
   const [countdown, setCountdown] = useState(0);
 
   const status =
@@ -39,9 +38,9 @@ export default function ToolResultCard({ payload }: Props) {
   const paymentSignedMetaTx = result ? extractPaymentSignedMetaTx(result) : null;
   const paymentApproval = result ? extractPaymentApproval(result) : null;
 
-  const showConfirmRebalance = canConfirmRebalance(payload.tool, result);
-  const showConfirmInstantPayment = canConfirmInstantPayment(payload.tool, result);
-  const showConfirmTimelockRelease = canConfirmTimelockRelease(payload.tool, result);
+  const showConfirmRebalance = !demo && canConfirmRebalance(payload.tool, result);
+  const showConfirmInstantPayment = !demo && canConfirmInstantPayment(payload.tool, result);
+  const showConfirmTimelockRelease = !demo && canConfirmTimelockRelease(payload.tool, result);
 
   useEffect(() => {
     if (!paymentApproval) {
@@ -55,60 +54,8 @@ export default function ToolResultCard({ payload }: Props) {
     return () => window.clearInterval(id);
   }, [paymentApproval]);
 
-  async function handleConfirmExecution() {
-    const metaTx = signedMetaTx ?? paymentSignedMetaTx;
-    if (!metaTx) return;
-    setExecuting(true);
-    setExecuteResult(null);
-    try {
-      const response = paymentSignedMetaTx
-        ? await executeInstantPayment(metaTx)
-        : await executeRebalance(metaTx);
-      if (response.ok) {
-        setExecuteResult({ ok: true, message: `Submitted: ${response.hash}` });
-      } else {
-        setExecuteResult({ ok: false, message: response.reason });
-      }
-    } catch (error) {
-      setExecuteResult({
-        ok: false,
-        message: error instanceof Error ? error.message : 'Execution request failed',
-      });
-    } finally {
-      setExecuting(false);
-    }
-  }
-
-  async function handleConfirmRelease() {
-    if (!paymentApproval) return;
-    if (countdown > 0) {
-      setExecuteResult({
-        ok: false,
-        message: `Timelock active — wait ${countdown}s before release.`,
-      });
-      return;
-    }
-
-    setExecuting(true);
-    setExecuteResult(null);
-    try {
-      const response = await approveTimelockViaBroadcaster(paymentApproval.txId);
-      if (response.ok) {
-        setExecuteResult({ ok: true, message: `Released: ${response.hash}` });
-      } else {
-        setExecuteResult({ ok: false, message: response.reason });
-      }
-    } catch (error) {
-      setExecuteResult({
-        ok: false,
-        message: error instanceof Error ? error.message : 'Timelock release failed',
-      });
-    } finally {
-      setExecuting(false);
-    }
-  }
-
   const showConfirmExecution = showConfirmRebalance || showConfirmInstantPayment;
+  const executionMetaTx = signedMetaTx ?? paymentSignedMetaTx;
 
   return (
     <div className={`tool-card status-${statusColor(status)}`}>
@@ -117,29 +64,31 @@ export default function ToolResultCard({ payload }: Props) {
         <span className={`status-badge ${statusColor(status)}`}>{status}</span>
       </div>
       <pre className="tool-card-body">{JSON.stringify(payload.result, null, 2)}</pre>
-      {showConfirmExecution && (
+      {showConfirmExecution && executionMetaTx ? (
         <div className="tool-card-actions">
-          <button type="button" disabled={executing} onClick={handleConfirmExecution}>
-            {executing ? 'Submitting…' : 'Confirm execution'}
-          </button>
+          <BroadcasterSubmitBlock
+            className=""
+            onSubmit={() =>
+              paymentSignedMetaTx
+                ? executeInstantPayment(executionMetaTx)
+                : executeRebalance(executionMetaTx)
+            }
+          />
         </div>
-      )}
-      {showConfirmTimelockRelease && (
+      ) : null}
+      {showConfirmTimelockRelease && paymentApproval ? (
         <div className="tool-card-actions">
-          <button type="button" disabled={executing || countdown > 0} onClick={handleConfirmRelease}>
-            {executing
-              ? 'Releasing…'
-              : countdown > 0
-                ? `Timelock ${countdown}s`
-                : 'Confirm release'}
-          </button>
+          <BroadcasterSubmitBlock
+            className=""
+            label="Submit release on-chain (Broadcaster)"
+            loadingLabel="Releasing…"
+            successMessage="Timelock released on Sepolia via Dynamic Broadcaster"
+            disabled={countdown > 0}
+            disabledHint={`Timelock ${countdown}s`}
+            onSubmit={() => approveTimelockViaBroadcaster(paymentApproval.txId)}
+          />
         </div>
-      )}
-      {executeResult && (
-        <p className={`tool-card-feedback ${executeResult.ok ? 'ok' : 'error'}`}>
-          {executeResult.message}
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }

@@ -1,8 +1,18 @@
+import { useEffect, useState } from 'react';
+
 import type { PendingApprovalsResponse } from '../../lib/treasury-api';
+
+import BroadcasterSubmitBlock from '../broadcaster/BroadcasterSubmitBlock';
+
+import { approveTimelockPayment } from '../../lib/execute-api';
 
 import { truncateAddress } from '../../lib/format';
 
 import { getToolDisplayName } from '../../lib/tool-labels';
+
+import { isDemoMode } from '../../lib/demo-mode';
+
+import { secondsUntilRelease } from '../../lib/owner-guard';
 
 import type { SessionApproval } from '../../lib/activity';
 
@@ -21,6 +31,100 @@ type Props = {
   onSelectCommand?: (command: string) => void;
 
 };
+
+
+
+function OnChainPendingRow({
+
+  txId,
+
+  releaseTime,
+
+  releaseTimeIso,
+
+  status,
+
+  target,
+
+}: {
+
+  txId: string;
+
+  releaseTime: string;
+
+  releaseTimeIso: string | null;
+
+  status: string;
+
+  target: string;
+
+}) {
+
+  const demo = isDemoMode();
+
+  const [countdown, setCountdown] = useState(0);
+
+
+
+  useEffect(() => {
+
+    const tick = () => setCountdown(secondsUntilRelease(releaseTime));
+
+    tick();
+
+    const id = window.setInterval(tick, 1000);
+
+    return () => window.clearInterval(id);
+
+  }, [releaseTime]);
+
+
+
+  return (
+
+    <article className="approval-item on-chain">
+
+      <div className="approval-item-head">
+
+        <strong>Timelock #{txId}</strong>
+
+        <span className="status-badge pending">{status}</span>
+
+      </div>
+
+      <p className="card-copy mono">{truncateAddress(target)}</p>
+
+      {releaseTimeIso ? (
+
+        <p className="card-copy muted">Release {releaseTimeIso}</p>
+
+      ) : null}
+
+      {!demo ? (
+
+        <BroadcasterSubmitBlock
+
+          label="Submit release on-chain (Broadcaster)"
+
+          loadingLabel="Releasing…"
+
+          successMessage="Timelock released on Sepolia via Dynamic Broadcaster"
+
+          disabled={countdown > 0}
+
+          disabledHint={`Timelock ${countdown}s`}
+
+          onSubmit={() => approveTimelockPayment(txId)}
+
+        />
+
+      ) : null}
+
+    </article>
+
+  );
+
+}
 
 
 
@@ -76,6 +180,12 @@ export default function ApprovalsPanel({
 
           <p className="card-copy">{item.summary}</p>
 
+          <p className="card-copy muted">
+
+            Submit from the tool card in chat when signed meta-tx is ready.
+
+          </p>
+
         </article>
 
       ))}
@@ -84,25 +194,21 @@ export default function ApprovalsPanel({
 
       {pending.map((row) => (
 
-        <article key={row.txId} className="approval-item on-chain">
+        <OnChainPendingRow
 
-          <div className="approval-item-head">
+          key={row.txId}
 
-            <strong>Timelock #{row.txId}</strong>
+          txId={row.txId}
 
-            <span className="status-badge pending">{row.status}</span>
+          releaseTime={row.releaseTime}
 
-          </div>
+          releaseTimeIso={row.releaseTimeIso}
 
-          <p className="card-copy mono">{truncateAddress(row.target)}</p>
+          status={row.status}
 
-          {row.releaseTimeIso ? (
+          target={row.target}
 
-            <p className="card-copy muted">Release {row.releaseTimeIso}</p>
-
-          ) : null}
-
-        </article>
+        />
 
       ))}
 
@@ -127,4 +233,3 @@ export default function ApprovalsPanel({
   );
 
 }
-
