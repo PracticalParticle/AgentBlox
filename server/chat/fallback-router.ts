@@ -11,6 +11,7 @@ import {
   listPendingApprovals,
   resolveEnsTreasury,
 } from '../tools/read.js';
+import { parsePaySlashCommand, PAY_DEMO_COMMANDS } from './pay-command.js';
 
 type RoutedCommand = {
   tool: TreasuryToolName;
@@ -63,15 +64,47 @@ export function routeUserMessage(text: string): RoutedCommand | null {
     return { tool: 'get_lifi_quote_preview', args: {}, label: 'LI.FI quote preview' };
   }
 
-  if (msg.startsWith('/pay') || msg.includes('vendor payment') || msg.includes('pay vendor')) {
+  if (msg.startsWith('/pay') || msg === 'pay') {
+    const parsed = parsePaySlashCommand(text);
+    if (parsed) {
+      return {
+        tool: 'request_vendor_payment',
+        args: {
+          recipient: parsed.recipient,
+          amountUsdc: parsed.amountUsdc,
+          memo: parsed.memo,
+        },
+        label: parsed.label,
+      };
+    }
+    return null;
+  }
+
+  if (msg.includes('vendor payment') || msg.includes('pay vendor')) {
+    const parsed = parsePaySlashCommand(PAY_DEMO_COMMANDS.timelock);
+    if (!parsed) return null;
     return {
       tool: 'request_vendor_payment',
       args: {
-        recipient: '0x0000000000000000000000000000000000000001',
-        amountUsdc: '500000000',
-        memo: 'Demo vendor payment',
+        recipient: parsed.recipient,
+        amountUsdc: parsed.amountUsdc,
+        memo: parsed.memo,
       },
-      label: 'Vendor payment request',
+      label: parsed.label,
+    };
+  }
+
+  if (msg.includes('instant payment') || msg.includes('small payment')) {
+    const parsed = parsePaySlashCommand(PAY_DEMO_COMMANDS.fast);
+    if (!parsed) return null;
+    return {
+      tool: 'request_vendor_payment',
+      args: {
+        recipient: parsed.recipient,
+        amountUsdc: parsed.amountUsdc,
+        memo: parsed.memo,
+      },
+      label: parsed.label,
     };
   }
 
@@ -126,7 +159,8 @@ Slash commands (works without LLM API key):
 - \`/status\` — treasury status
 - \`/ens\` — resolve ENS name
 - \`/rebalance\` — propose LI.FI rebalance
-- \`/pay\` — request vendor payment (timelock)
+- \`/pay 5$\` — instant vendor payment (B-fast, APPROVER sign → Broadcaster)
+- \`/pay 20$\` — timelock vendor payment (B-timelock, ANALYST → APPROVER → Broadcaster)
 - \`/attack\` — demo blocked unauthorized transfer
 - \`/pending\` — pending approvals
 - \`/whitelist\` — GuardController whitelist

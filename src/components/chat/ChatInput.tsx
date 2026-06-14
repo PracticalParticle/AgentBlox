@@ -13,8 +13,9 @@ type Props = {
 const SUGGESTIONS = [
   '/status',
   '/rebalance',
+  '/pay 5$',
+  '/pay 20$',
   '/attack',
-  '/pay',
   '/ens',
   '/help',
 ];

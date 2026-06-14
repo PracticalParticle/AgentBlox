@@ -40,7 +40,8 @@ export const DEMO_HEALTH: ServerHealth = {
 
 export const DEMO_SAMPLE_COMMANDS = [
   { label: 'Treasury status', command: '/status' },
-  { label: 'LI.FI quote', command: '/quote' },
+  { label: 'Instant pay $5', command: '/pay 5$' },
+  { label: 'Timelock pay $20', command: '/pay 20$' },
   { label: 'Policy block demo', command: '/attack' },
   { label: 'Pending approvals', command: '/pending' },
 ];

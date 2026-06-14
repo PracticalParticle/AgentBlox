@@ -229,8 +229,8 @@ export default function WorkspacePage() {
                   <div className="chat-empty">
                     <p>
                       Your treasury is connected. Try <strong>/status</strong> for balances,{' '}
-                      <strong>/rebalance</strong> to propose a swap, or <strong>/pay</strong> for a
-                      timelock payment.
+                      <strong>/rebalance</strong> to propose a swap, <strong>/pay 5$</strong> for
+                      instant payment, or <strong>/pay 20$</strong> for timelock.
                     </p>
                     {!health?.llmEnabled ? (
                       <p className="chat-hint">
@@ -251,7 +251,7 @@ export default function WorkspacePage() {
               placeholder={
                 health?.llmEnabled
                   ? 'Ask about balances, rebalances, payments, or policy…'
-                  : 'Use /status, /rebalance, /pay, /attack, or /help'
+                  : 'Use /status, /rebalance, /pay 5$, /pay 20$, /attack, or /help'
               }
             />
           </div>

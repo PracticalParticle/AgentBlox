@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatToolResult, routeUserMessage } from './fallback-router.js';
+import { PAY_DEMO_COMMANDS } from './pay-command.js';
 
 describe('routeUserMessage', () => {
   it('routes slash commands to treasury tools', () => {
@@ -8,8 +9,24 @@ describe('routeUserMessage', () => {
     expect(routeUserMessage('/whitelist')?.tool).toBe('get_whitelisted_targets');
     expect(routeUserMessage('/rebalance')?.tool).toBe('propose_rebalance');
     expect(routeUserMessage('/quote')?.tool).toBe('get_lifi_quote_preview');
-    expect(routeUserMessage('/pay')?.tool).toBe('request_vendor_payment');
     expect(routeUserMessage('/attack')?.tool).toBe('simulate_policy_violation');
+  });
+
+  it('routes /pay 5$ and /pay 20$ to vendor payment with distinct amounts', () => {
+    const fast = routeUserMessage(PAY_DEMO_COMMANDS.fast);
+    const timelock = routeUserMessage(PAY_DEMO_COMMANDS.timelock);
+
+    expect(fast?.tool).toBe('request_vendor_payment');
+    expect(fast?.args.amountUsdc).toBe('5000000');
+    expect(fast?.label).toContain('B-fast');
+
+    expect(timelock?.tool).toBe('request_vendor_payment');
+    expect(timelock?.args.amountUsdc).toBe('20000000');
+    expect(timelock?.label).toContain('B-timelock');
+  });
+
+  it('returns null for bare /pay', () => {
+    expect(routeUserMessage('/pay')).toBeNull();
   });
 
   it('extracts ENS names from slash commands', () => {

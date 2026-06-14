@@ -38,7 +38,8 @@ export default function CopilotPage() {
             <div className="chat-empty">
               <p>
                 Try <code>/status</code> for treasury state, <code>/rebalance</code> for a treasury
-                operation, or <code>/pay</code> for a timelock vendor payment.
+                operation, <code>/pay 5$</code> for instant payment, or <code>/pay 20$</code> for
+                timelock.
               </p>
               {!health?.llmEnabled ? (
                 <p className="chat-hint">
@@ -57,7 +58,7 @@ export default function CopilotPage() {
           placeholder={
             health?.llmEnabled
               ? 'Ask about balances, rebalances, payments, or policy...'
-              : 'Use /status, /rebalance, /pay, /attack, or /help'
+              : 'Use /status, /rebalance, /pay 5$, /pay 20$, /attack, or /help'
           }
         />
       </div>
