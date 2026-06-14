@@ -37,15 +37,16 @@ See [integrations/dynamic.md](./integrations/dynamic.md).
 
 ### A3. RBAC roles
 
-- [ ] Create `AGENT_POLICY` role; assign server signing address (from `AGENT_POLICY_PRIVATE_KEY`)
+- [ ] Create `AGENT_POLICY` role *(future Lane A / LI.FI)*; assign server signing address
 - [ ] Grant `AGENT_POLICY`: `SIGN_META_REQUEST_AND_APPROVE` on Composer execution selector only
-- [ ] Optional: create `ANALYST` for timelock payment requests
+- [ ] Create **`ANALYST`** for timelock payment requests (`EXECUTE_TIME_DELAY_REQUEST`)
+- [ ] Create **`APPROVER`** for timelock approval signing (`SIGN_META_APPROVE` on USDC transfer selector)
 
 ### A4. GuardController whitelist
 
 Full detail: [guard-controller.md](./guard-controller.md).
 
-**Treasury operation (LI.FI rebalance):**
+**Treasury operation (LI.FI rebalance — *future*):** step-by-step in [getting-started.md Part 4](./getting-started.md#part-4--configure-accountblox-for-lifi-composer-phase-4--future).
 
 - [ ] Register Composer function schema (`LIFI_COMPOSER_FLOW`)
 - [ ] Whitelist LI.FI **user proxy** for treasury signer address
@@ -72,9 +73,9 @@ Full detail: [guard-controller.md](./guard-controller.md).
 - [ ] Copy `.env.example` → `.env`
 - [ ] Set `TREASURY_ADDRESS` in `.env`
 - [ ] Set `VITE_DYNAMIC_ENVIRONMENT_ID`
-- [ ] Set `AGENT_POLICY_PRIVATE_KEY` (must match on-chain `AGENT_POLICY` wallet)
+- [ ] Set `ANALYST_PRIVATE_KEY` + `APPROVER_PRIVATE_KEY` (must match on-chain roles)
 - [ ] Set `DYNAMIC_API_TOKEN` + `BROADCASTER_WALLET_ADDRESS` (Broadcaster execution)
-- [ ] Set `REBALANCE_EXECUTION_TARGET` + `LIFI_EXECUTION_SELECTOR` (or manual calldata until Phase 4)
+- [ ] *(Future Lane A)* `AGENT_POLICY_PRIVATE_KEY`, `REBALANCE_EXECUTION_TARGET`, `LIFI_EXECUTION_SELECTOR`
 - [ ] Optional: `ENS_NAME`
 
 ### B2. Dynamic dashboard
@@ -121,10 +122,8 @@ See [integrations/lifi.md](./integrations/lifi.md).
 
 ## Part E — End-to-end verification
 
-- [ ] `/rebalance` → signed meta-tx in tool card (Phase 3 ✅)
-- [ ] Confirm execution → on-chain success (needs Dynamic + execution target env; Phase 4 for LI.FI calldata)
-- [ ] `/attack` → off-chain block + optional on-chain revert (Phase 4)
-- [ ] `/pay` → timelock → Owner approve (Phase 5)
+- [ ] `/pay` → timelock → APPROVER sign → Broadcaster submit (Lane B)
+- [ ] *(Future)* `/rebalance` → signed meta-tx → on-chain success (LI.FI)
 - [ ] `/whitelist` shows expected targets ✅
 - [ ] `/pending` shows TxRecords when applicable ✅
 
@@ -137,7 +136,8 @@ Event context: [event/ethglobal-2026.md](./event/ethglobal-2026.md)
 | Symptom | Check |
 |---------|-------|
 | `treasuryConfigured: false` | `TREASURY_ADDRESS` in server `.env` |
-| Owner approve fails | Embedded wallet address ≠ on-chain Owner |
+| APPROVER sign fails | `APPROVER_PRIVATE_KEY` ≠ on-chain APPROVER or missing `SIGN_META_APPROVE` |
+| Owner approve fails (legacy) | Embedded wallet address ≠ on-chain Owner |
 | Meta-tx reverts | Signer = executor (must differ) |
 | `TargetNotWhitelisted` on valid flow | Proxy not whitelisted for execution selector |
 | ENS mismatch | Mainnet record vs Sepolia clone address |

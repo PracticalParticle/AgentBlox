@@ -79,11 +79,12 @@ There is **no** `src/lib/bloxchain.ts` in the current MVP — all SDK access is 
 
 | Role | Holder | AgentBlox usage |
 |------|--------|-----------------|
-| Owner | Dynamic embedded | Timelock approve, governance |
-| Broadcaster | Dynamic server | `requestAndApproveExecution` |
+| Owner | Dynamic embedded | Governance, recovery — not Lane B demo approve |
+| Broadcaster | Dynamic server | Meta-tx execution (Lane A + Lane B approve submit) |
 | Recovery | Cold backup | Emergency rotation |
-| AGENT_POLICY | Server key | Sign meta-tx only — [integrations/dynamic.md](./dynamic.md) |
-| ANALYST | Ops wallet | Timelock payment requests |
+| AGENT_POLICY | Server key | Sign Lane A meta-tx *(future LI.FI)* |
+| ANALYST | Ops wallet | Timelock payment requests (`executeWithTimeLock`) |
+| APPROVER | Policy server key | Sign timelock approval meta-tx (`SIGN_META_APPROVE`) |
 
 Live changes: [governance.md](../governance.md).
 
@@ -95,10 +96,10 @@ Full sequences with diagrams: [on-chain-execution-flow.md](../on-chain-execution
 
 | Path | Copilot | Bloxchain entry |
 |------|---------|-----------------|
-| Policy execution | `/rebalance` | `requestAndApproveExecution` |
-| Timelock disbursement | `/pay` | `executeWithTimeLock` → `approveTimeLockExecution` |
+| Policy execution *(future)* | `/rebalance` | `requestAndApproveExecution` |
+| Timelock disbursement (Lane B) | `/pay` | `executeWithTimeLock` → APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx` |
 
-**Key invariant:** signer ≠ executor for meta-tx. `AGENT_POLICY` signs; Broadcaster executes.
+**Key invariant:** signer ≠ executor for meta-tx. Lane A: `AGENT_POLICY` signs, Broadcaster executes. Lane B: `APPROVER` signs, Broadcaster executes.
 
 ---
 

@@ -19,9 +19,12 @@ AgentBlox is Particle CS’s **treasury operations platform** for [ETHGlobal New
 | Identity | ENS | Names treasuries; optional `bloxchain.*` policy text records |
 | Authorization | Bloxchain GuardController | Whitelist, RBAC, TxRecord audit, signer ≠ executor |
 | Custody | Dynamic | Owner (embedded wallet) + Broadcaster (server wallet) |
-| Execution | LI.FI Composer | Atomic rebalance flows via whitelisted proxy calls |
+| Execution | LI.FI Composer *(future)* | Atomic rebalance flows via whitelisted proxy calls |
+| Lane B (MVP) | Bloxchain timelock + Dynamic | ANALYST request → APPROVER sign → Broadcaster execute |
 
-**One line:** *Dynamic holds the keys. LI.FI runs the flows. ENS names the actors. Bloxchain decides what anyone is allowed to trigger.*
+**One line (hackathon MVP):** *Dynamic holds the keys. ENS names the actors. Bloxchain decides what anyone is allowed to trigger.*
+
+**One line (with LI.FI — future):** *Dynamic holds the keys. LI.FI runs the flows. ENS names the actors. Bloxchain decides what anyone is allowed to trigger.*
 
 **Product surfaces today:** Copilot chat at `/` with slash commands; Console checklist at `/console`. Target UX is a three-column **Workspace** — see [ui-ux-guidelines.md](./ui-ux-guidelines.md).
 
@@ -33,9 +36,9 @@ AgentBlox is Particle CS’s **treasury operations platform** for [ETHGlobal New
 Phase 0  Scaffold + Copilot + Console     ✅ Done
 Phase 1  Bloxchain SDK reads             ✅ Done
 Phase 2  Dynamic Broadcaster             ⚠️  Scaffold done — env pending
-Phase 3  Meta-tx sign + Confirm          ✅ Done — E2E needs env + Phase 4 calldata
-Phase 4  LI.FI compose + whitelist demo  ❌ Not started  ← critical path
-Phase 5  Timelock payments               ❌ Not started
+Phase 3  Meta-tx sign + Confirm          ✅ Done
+Phase 4  LI.FI compose + whitelist demo  ⏸ Future — not hackathon MVP
+Phase 5  Timelock payments (Lane B)      ⚠️ ANALYST ✅; APPROVER + Broadcaster path in progress
 Phase 6  ENS write                       ⚠️  Read only
 Phase 7  Demo + submission               ❌ Not started
 ```
@@ -52,11 +55,9 @@ Phase 7  Demo + submission               ❌ Not started
 
 ### Not demo-complete yet
 
-- On-chain rebalance **success** (needs env + LI.FI compose)
-- Real LI.FI quote preview
-- Timelock `/pay` → Owner approve
+- Lane B `/pay` E2E: APPROVER sign + Broadcaster submit (ANALYST request ✅)
 - On-chain `/attack` revert proof
-- Typed Workspace UI (UI-0–6)
+- **LI.FI (future):** on-chain rebalance, real quote preview
 
 ---
 
@@ -67,10 +68,12 @@ Minimum sequence for a judge-ready story:
 ```mermaid
 flowchart TD
     PROV[Provisioning: clone + roles + whitelist] --> ENV[Fill .env execution vars]
-    ENV --> P4[Phase 4: LI.FI compose]
-    P4 --> E2E["/rebalance → Confirm → Etherscan success"]
-    P4 --> P5[Phase 5: timelock /pay]
+    ENV --> P5[Phase 5: Lane B /pay]
+    P5 --> E2E["/pay → APPROVER sign → Broadcaster → Etherscan"]
     P5 --> P7[Phase 7: video + submission]
+    P6[Phase 6 ENS] --> P7
+    ENV -.-> P4[Phase 4: LI.FI future]
+    P4 -.-> E2E2["/rebalance → Confirm → Etherscan"]
     UI[UI-0 shell + typed cards] -.-> E2E
 ```
 
@@ -90,30 +93,34 @@ Without these, code paths exist but nothing lands on-chain:
 | `VITE_DYNAMIC_ENVIRONMENT_ID` | Owner widget + server Dynamic client |
 | `DYNAMIC_API_TOKEN` | Broadcaster authentication |
 | `BROADCASTER_WALLET_ADDRESS` | Must match on-chain Broadcaster role |
-| `AGENT_POLICY_PRIVATE_KEY` | Must match on-chain AGENT_POLICY role |
-| `LIFI_EXECUTION_SELECTOR` | Whitelist + signing (from provisioning) |
-| `REBALANCE_EXECUTION_TARGET` | LI.FI userProxy (Phase 4 can auto-fill) |
+| `AGENT_POLICY_PRIVATE_KEY` | Lane A rebalance signing *(future with LI.FI)* |
+| `ANALYST_PRIVATE_KEY` | Lane B timelock request — must match on-chain ANALYST |
+| `APPROVER_PRIVATE_KEY` | Lane B timelock approval sign — must match on-chain APPROVER |
+| `LIFI_EXECUTION_SELECTOR` | LI.FI whitelist + signing *(future)* |
+| `REBALANCE_EXECUTION_TARGET` | LI.FI userProxy *(future)* |
 
 Verify: `curl http://localhost:3001/api/health` — all `*Configured` flags should be `true`.
 
-### 2. Phase 4 — LI.FI compose (engineering — critical path)
-
-| Deliverable | File |
-|-------------|------|
-| Composer integration | `server/lifi/compose.ts` |
-| Wire into propose flow | `server/tools/propose.ts` |
-| Real quote tool | `server/tools/read.ts` or `propose.ts` |
-| Optional attack revert | Broadcaster submit for `/attack` |
-
-See [integrations/lifi.md](./integrations/lifi.md) and [guard-controller.md](./guard-controller.md).
-
-### 3. Phase 5 — Timelock payments
+### 2. Phase 5 — Lane B timelock payments *(hackathon critical path)*
 
 | Deliverable | Purpose |
 |-------------|---------|
-| `request_vendor_payment` on-chain | `executeWithTimeLock` |
-| Owner approve in UI | Dynamic + `approveTimeLockExecution` |
-| UI-5 card | Payment request + countdown |
+| `request_vendor_payment` on-chain | ANALYST → `executeWithTimeLock` ✅ |
+| APPROVER sign + Broadcaster submit | `approveTimeLockExecutionWithMetaTx` |
+| On-chain APPROVER role | `SIGN_META_APPROVE` on USDC transfer selector |
+| UI-5 card | Payment request + countdown + Confirm release |
+
+See [on-chain-execution-flow.md](./on-chain-execution-flow.md) · [guard-controller.md](./guard-controller.md).
+
+### 3. Phase 4 — LI.FI compose *(future implementation)*
+
+| Deliverable | File |
+|-------------|------|
+| Composer integration | `server/lifi/compose.ts` (scaffold ✅) |
+| Wire into propose flow | `server/tools/propose.ts` |
+| Real quote tool | `server/tools/read.ts` |
+
+Blocked on `LIFI_API_KEY` + on-chain whitelist. See [integrations/lifi.md](./integrations/lifi.md).
 
 ### 4. UI parallel track
 
@@ -121,7 +128,8 @@ See [integrations/lifi.md](./integrations/lifi.md) and [guard-controller.md](./g
 |----------|-------|-----|
 | P0 | UI-0 | Workspace shell — judges see control surface, not raw JSON |
 | P0 | UI-1 | Typed read cards for `/status`, `/pending`, `/whitelist` |
-| P0 | UI-4 | LI.FI quote + policy-blocked cards |
+| P0 | UI-5 | Timelock payment + APPROVER / Broadcaster confirm |
+| P2 | UI-4 | LI.FI quote + policy-blocked cards *(future)* |
 | P1 | UI-2 | Setup wizard replaces Console checklist |
 
 UI-3 Confirm is **partial** — basic button in `ToolResultCard`; typed `RebalanceProposalCard` deferred.
@@ -143,7 +151,9 @@ UI-3 Confirm is **partial** — basic button in `ToolResultCard`; typed `Rebalan
 | Treasury not fully provisioned | Human | bloxchain.app clone + RBAC + whitelist — [provisioning-checklist.md](./provisioning-checklist.md) Part A |
 | Dynamic env empty | Config | Dashboard + `VITE_DYNAMIC_ENVIRONMENT_ID`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS` |
 | AGENT_POLICY key mismatch | Config | Private key must match on-chain role assigned at init |
-| No LI.FI compose | Code | Phase 4 — manual `REBALANCE_*` env is interim only |
+| No LI.FI API key | Config | **Defer Lane A** — demo Lane B; see [integrations/lifi.md](./integrations/lifi.md) |
+| APPROVER key mismatch | Config | Private key must match on-chain APPROVER + `SIGN_META_APPROVE` |
+| No LI.FI compose | Code | Phase 4 future — manual `REBALANCE_*` env is interim only |
 | userProxy not whitelisted | On-chain | Part A4 — wrong proxy = revert even with correct meta-tx |
 
 ### Soft gaps (demo works but weaker story)
@@ -173,9 +183,9 @@ From [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) §7:
 | Criterion | Status |
 |-----------|--------|
 | Treasury provisioned on Sepolia | ⬜ Operator |
-| `/rebalance` → signed meta-tx → LI.FI executes on-chain | ⚠️ Code partial; env + Phase 4 |
+| `/pay` → timelock → APPROVER sign → Broadcaster executes | ⚠️ ANALYST ✅; APPROVER path in progress |
 | `/attack` → off-chain block + optional on-chain revert | ⚠️ Off-chain only |
-| `/pay` → timelock → Owner approves | ❌ Phase 5 |
+| `/rebalance` → signed meta-tx → LI.FI executes on-chain | ⏸ Future (Phase 4) |
 | `/ens` resolves treasury + text records | ⚠️ Read works; ENS optional |
 | Demo video + submission | ❌ Phase 7 |
 
@@ -183,14 +193,24 @@ From [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) §7:
 
 ## Architecture at a glance
 
+**Lane B (hackathon MVP):**
+
 ```text
-User → Copilot (/api/chat) → server/tools → policy-gate
+User → Copilot (/api/chat) → request_vendor_payment
                                     ↓
-              propose_rebalance → sign (AGENT_POLICY) → tool card
+              ANALYST → executeWithTimeLock → TxRecord PENDING
                                     ↓
-              Confirm → POST /api/execute/rebalance → Dynamic Broadcaster
+              APPROVER signs → approveTimeLockExecutionWithMetaTx
                                     ↓
-              AccountBlox.requestAndApproveExecution → whitelist → LI.FI proxy
+              Broadcaster submits → USDC transfer → COMPLETED
+```
+
+**Lane A (future — LI.FI):**
+
+```text
+User → Copilot → propose_rebalance → sign (AGENT_POLICY) → Confirm
+                                    ↓
+              Broadcaster → requestAndApproveExecution → LI.FI proxy
 ```
 
 Details: [architecture.md](./architecture.md) · [on-chain-execution-flow.md](./on-chain-execution-flow.md)

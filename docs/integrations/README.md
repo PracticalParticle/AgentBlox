@@ -5,7 +5,7 @@
 
 AgentBlox uses **three sponsor integrations** for ETHGlobal NY 2026, plus **Bloxchain protocol** infrastructure.
 
-**Build status:** [implementation-status.md](../implementation-status.md) — Phases 0–1 and 3 complete; Dynamic Broadcaster scaffold done; LI.FI compose Phase 4 pending.
+**Build status:** [implementation-status.md](../implementation-status.md) — Lane B (timelock `/pay`) is hackathon MVP; LI.FI compose is future.
 
 ---
 
@@ -14,7 +14,7 @@ AgentBlox uses **three sponsor integrations** for ETHGlobal NY 2026, plus **Blox
 | Integration | Doc | Role |
 |-------------|-----|------|
 | **Dynamic** | [dynamic.md](./dynamic.md) | Owner (embedded) + Broadcaster (server) wallets |
-| **LI.FI** | [lifi.md](./lifi.md) | Composer compose, rebalance flows |
+| **LI.FI** | [lifi.md](./lifi.md) | Composer compose, rebalance flows *(future)* |
 | **ENS** | [ens.md](./ens.md) | Treasury identity + policy text records |
 
 ---
@@ -38,7 +38,7 @@ AgentBlox uses **three sponsor integrations** for ETHGlobal NY 2026, plus **Blox
 ├─────────────────────────────────────┤
 │  Dynamic — who signs?               │
 ├─────────────────────────────────────┤
-│  LI.FI — how does execution run?    │
+│  LI.FI — how does execution run?    │  ← future (Lane A)
 └─────────────────────────────────────┘
 ```
 
@@ -51,4 +51,4 @@ Event context: [event/ethglobal-2026.md](../event/ethglobal-2026.md)
 1. [bloxchain.md](./bloxchain.md) + [guard-controller.md](../guard-controller.md) — provision on bloxchain.app ([checklist](../provisioning-checklist.md) Part A)
 2. [dynamic.md](./dynamic.md) — map Owner and Broadcaster wallets
 3. [ens.md](./ens.md) — optional identity and policy metadata
-4. [lifi.md](./lifi.md) — Composer flows for treasury operations
+4. [lifi.md](./lifi.md) — Composer flows for treasury operations *(future)*

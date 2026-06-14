@@ -1,6 +1,8 @@
 # LI.FI Integration
 
-**Audience:** Developers wiring Composer rebalance flows into Copilot tools.  
+> **Status: future implementation.** LI.FI Composer rebalance (Lane A) is scaffolded in AgentBlox but **not required for the hackathon MVP**. The live demo path is **Lane B** — timelock payments via ANALYST → APPROVER → Broadcaster. See [ROADMAP-PLAN.md](../ROADMAP-PLAN.md).
+
+**Audience:** Developers wiring Composer rebalance flows into Copilot tools (post-hackathon).  
 **Prerequisites:** GuardController whitelist configured — [guard-controller.md](../guard-controller.md) · [provisioning-checklist.md](../provisioning-checklist.md) Part A4, D.  
 **See also:** [on-chain-execution-flow.md](../on-chain-execution-flow.md) · [event/ethglobal-2026.md](../event/ethglobal-2026.md)
 

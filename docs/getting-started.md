@@ -4,7 +4,7 @@ Step-by-step guide to run AgentBlox locally and connect it to a **new AccountBlo
 
 **Time estimate:** 1–2 hours for first-time setup (on-chain provisioning + env + verification).
 
-**Related docs:** [provisioning-checklist.md](./provisioning-checklist.md) (checklist format) · [env-configuration.md](./env-configuration.md) (full env reference) · [guard-controller.md](./guard-controller.md) (whitelist detail) · [treasury-lifecycle.md](./treasury-lifecycle.md) (product model)
+**Related docs:** [provisioning-checklist.md](./provisioning-checklist.md) (checklist format) · [env-configuration.md](./env-configuration.md) (full env reference) · [guard-controller.md](./guard-controller.md) (whitelist detail) · [integrations/lifi.md](./integrations/lifi.md) (Composer flows) · [treasury-lifecycle.md](./treasury-lifecycle.md) (product model)
 
 ---
 
@@ -14,26 +14,27 @@ AgentBlox does **not** deploy Bloxchain contracts. You:
 
 1. **Provision** an AccountBlox clone on Sepolia (via [bloxchain.app](https://bloxchain.app/) or protocol scripts).
 2. **Configure** roles, RBAC, and GuardController whitelists on that clone.
-3. **Point** AgentBlox at the clone address and sponsor integrations (Dynamic, LI.FI, optional ENS).
+3. **Point** AgentBlox at the clone address and sponsor integrations (Dynamic, optional ENS). LI.FI Composer is **future implementation** — hackathon MVP uses **Lane B** timelock payments.
 
 ```text
 bloxchain.app / CopyBlox     →  AccountBlox clone (Sepolia)
 Dynamic                      →  Owner + Broadcaster keys
-LI.FI Composer               →  Rebalance execution (whitelisted)
-AgentBlox (.env + Copilot)   →  Day-to-day operations
+AgentBlox (.env + Copilot)   →  Lane B: ANALYST → APPROVER → Broadcaster
+LI.FI Composer (future)      →  Lane A rebalance execution (whitelisted)
 ```
 
 ### Role map (must match at provisioning)
 
 | AccountBlox role | Who holds it | AgentBlox usage |
 |------------------|--------------|-----------------|
-| **Owner** | Dynamic embedded wallet (human) | Timelock approvals, governance |
+| **Owner** | Dynamic embedded wallet (human) | Governance, recovery — not Lane B demo approve |
 | **Broadcaster** | Dynamic server wallet | Submits signed meta-txs |
 | **Recovery** | Cold backup address | Emergency rotation |
-| **AGENT_POLICY** | Server private key in `.env` | Signs meta-tx only — never executes |
-| **ANALYST** (optional) | Ops wallet | Timelock payment requests (Phase 5) |
+| **ANALYST** | Agent / ops server key | Timelock payment requests (`executeWithTimeLock`) |
+| **APPROVER** | Policy server key | Signs timelock approval meta-tx (`SIGN_META_APPROVE`) |
+| **AGENT_POLICY** *(future)* | Server private key in `.env` | Signs Lane A rebalance meta-tx — never executes |
 
-**Critical invariant:** for rebalances, `AGENT_POLICY` **signs** and Broadcaster **executes**. They must be different addresses.
+**Critical invariant:** signer ≠ executor. Lane B: **APPROVER** signs, **Broadcaster** executes. Lane A *(future)*: **AGENT_POLICY** signs, Broadcaster executes.
 
 ---
 
@@ -48,7 +49,7 @@ Before you start, gather:
 | **Sepolia test USDC** | Rebalance demo ([Circle faucet](https://faucet.circle.com/) → Sepolia USDC `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`) |
 | **Docker Desktop** | Windows dev — Dynamic Node SDK requires Linux ([docker-plan.md](./docker-plan.md)) |
 | **Dynamic account** | [app.dynamic.xyz](https://app.dynamic.xyz) — Environment ID ([§1.2](#12-get-vite_dynamic_environment_id)) + API token |
-| **LI.FI API key** | [portal.li.fi](https://portal.li.fi) — Composer compose for `/quote` and `/rebalance` |
+| **LI.FI portal** (optional) | [portal.li.fi](https://portal.li.fi) — optional `LIFI_API_KEY` for higher API rate limits; compose works without it |
 | **AGENT_POLICY keypair** | Generate once; address goes on-chain, private key goes in `.env` only |
 
 Optional: ENS name on mainnet for `/ens` demo ([integrations/ens.md](./integrations/ens.md)).
@@ -141,7 +142,7 @@ curl.exe -s http://127.0.0.1:3001/api/health
 
 On Windows PowerShell, prefer `curl.exe` (not the `Invoke-WebRequest` alias) or call the API from inside Docker: `docker exec agentblox-server-1 curl -s http://127.0.0.1:3001/api/health`.
 
-With only `TREASURY_ADDRESS` set, expect `treasuryConfigured: true`. Other flags turn `true` as you complete Parts 2–4.
+With only `TREASURY_ADDRESS` set, expect `treasuryConfigured: true`. Other flags turn `true` as you complete Parts 2–5.
 
 ### 1.6 Configure Dynamic Broadcaster (server wallet)
 
@@ -256,19 +257,21 @@ More detail: [integrations/dynamic.md](./integrations/dynamic.md#broadcaster-rol
 
 ## Part 1.7 — What to configure next (progress checklist)
 
-After Broadcaster env + on-chain role match, finish these in order:
+After Broadcaster env + on-chain role match, finish these in order for **Lane B (hackathon MVP)**:
 
 | Step | Env / on-chain | Validates with |
 |------|----------------|----------------|
 | 1 | `SEPOLIA_RPC_URL` (working RPC) | `/status` returns balance + roles |
 | 2 | On-chain **Broadcaster** = `BROADCASTER_WALLET_ADDRESS` | `npm run docker:ops:verify` → `matchesOnChainBroadcaster: true` |
-| 3 | `LIFI_API_KEY` | `/api/health` → `lifiComposeConfigured: true`; `/quote` works |
-| 4 | `AGENT_POLICY_PRIVATE_KEY` + on-chain **AGENT_POLICY** role + sign permission on Composer selector | `/rebalance` → `signing.status: signed` |
-| 5 | Whitelist LI.FI **userProxy** + selector from `/quote` | `/whitelist`; no `TargetNotWhitelisted` on execute |
-| 6 | (Optional) `ANALYST_PRIVATE_KEY` + role | `/pay` timelock request |
+| 3 | Whitelist Sepolia USDC for `transfer(address,uint256)` | [Part 4.8](#48-lane-b--vendor-payments-phase-5) |
+| 4 | **`ANALYST`** role + `ANALYST_PRIVATE_KEY` | `/pay` creates PENDING tx |
+| 5 | **`APPROVER`** role + `APPROVER_PRIVATE_KEY` + `SIGN_META_APPROVE` | Timelock approve meta-tx signs |
+| 6 | Broadcaster submits approval | `/pay` → Confirm release → Etherscan |
 | 7 | (Optional) `OPENAI_API_KEY` | Natural language Copilot (slash commands work without it) |
 
-**Full demo gate:** steps 1–5 complete, then `/rebalance` → **Confirm execution** in the Workspace UI.
+**Full demo gate (Lane B):** steps 1–6 complete, then `/pay` → wait for release → **Confirm release**.
+
+**Future (Lane A / LI.FI):** steps in [Part 3](#part-3--lifi-composer-setup-future) and [Part 4](#part-4--configure-accountblox-for-lifi-composer-phase-4--future).
 
 ---
 
@@ -351,31 +354,25 @@ Reference: [Bloxchain getting started](https://github.com/PracticalParticle/Blox
 
 ---
 
-### 2.4 Configure RBAC — AGENT_POLICY role
+### 2.4 Configure RBAC — AGENT_POLICY role (summary)
 
 AgentBlox’s server signs rebalance meta-txs with `AGENT_POLICY_PRIVATE_KEY`. That key’s **address** must exist on-chain with sign-only permissions.
 
-#### Generate AGENT_POLICY key (off-chain)
+**Full step-by-step (generate key → RBAC → whitelist → verify):** [Part 4 — Configure AccountBlox for LI.FI Composer](#part-4--configure-accountblox-for-lifi-composer-phase-4).
+
+Quick reference:
 
 ```bash
-# Example with cast (Foundry) — or any secure key generator
+# Generate key (example with Foundry)
 cast wallet new
 ```
 
-Save:
-
-- **Address** → assign to `AGENT_POLICY` role on-chain
+- **Address** → assign to `AGENT_POLICY` role on-chain  
 - **Private key** → `AGENT_POLICY_PRIVATE_KEY` in `.env` (never commit, never `VITE_*`)
 
-#### On-chain RBAC steps
+Grant **`SIGN_META_REQUEST_AND_APPROVE`** on the LI.FI Composer **execution selector** only — not Broadcaster permissions. The selector comes from `/quote` ([Part 4 §4.1](#41-discover-lifi-addresses-from-agentblox)).
 
-1. Create role **`AGENT_POLICY`** (via bloxchain.app or `roleConfigBatch`).
-2. Assign the AGENT_POLICY **wallet address** to that role.
-3. Grant **`SIGN_META_REQUEST_AND_APPROVE`** on the LI.FI Composer **execution selector** only — not Broadcaster permissions.
-
-The execution selector comes from your first successful LI.FI compose (Part 3). You can whitelist a placeholder selector during provisioning and update after first `/quote` if your tooling requires it upfront.
-
-Optional: create **`ANALYST`** for timelock `/pay` flows (Phase 5):
+Optional **`ANALYST`** for timelock `/pay` ([Part 4 §4.8](#48-optional--vendor-payments-phase-5)):
 
 1. Generate an off-chain key (`cast wallet new`).
 2. Create role **`ANALYST`** and assign the wallet address.
@@ -384,37 +381,21 @@ Optional: create **`ANALYST`** for timelock `/pay` flows (Phase 5):
 
 ---
 
-### 2.5 Configure GuardController whitelist
+### 2.5 Configure GuardController whitelist (summary)
 
 GuardController is the on-chain gate: **empty whitelist = deny all** external calls.
 
-See [guard-controller.md](./guard-controller.md) for the full model.
-
-#### For LI.FI rebalance (required for `/rebalance`)
+**Full LI.FI whitelist workflow:** [Part 4 §4.2–4.3](#42-register-the-composer-function-schema-on-chain).
 
 | Action | What to whitelist |
 |--------|-------------------|
-| Register function schema | Composer proxy execute function (from LI.FI compile) |
-| `ADD_TARGET_TO_WHITELIST` | LI.FI **`userProxy`** for your treasury signer (`TREASURY_ADDRESS`) |
+| Register function schema | Composer proxy execute function (from `/quote`) |
+| `ADD_TARGET_TO_WHITELIST` | LI.FI **`userProxy`** for your treasury (`TREASURY_ADDRESS`) |
 | `ADD_TARGET_TO_WHITELIST` | LI.FI **proxy factory** (first-time proxy deploy on Sepolia) |
 
-**Important:** `userProxy` is **per treasury address**, not a shared router. Get it from AgentBlox after Part 3:
+`userProxy` is **per treasury address**, not a shared router. Do **not** whitelist arbitrary EOAs for unrestricted transfers.
 
-```text
-Copilot → /quote  →  response includes userProxy
-```
-
-Whitelist that address for the execution selector returned in the same response.
-
-#### For vendor payments (optional — Phase 5)
-
-| Target | Selector |
-|--------|----------|
-| Sepolia USDC `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` | `transfer(address,uint256)` (`0xa9059cbb`) |
-
-Do **not** whitelist arbitrary EOAs for unrestricted transfers.
-
----
+See [guard-controller.md](./guard-controller.md) for the full model.
 
 ### 2.6 Fund the treasury
 
@@ -427,31 +408,34 @@ Send to the **clone address** (`TREASURY_ADDRESS`):
 
 ---
 
-## Part 3 — LI.FI Composer setup
+## Part 3 — LI.FI Composer setup *(future implementation)*
+
+> **Not required for hackathon MVP.** AgentBlox demo uses **Lane B** (`/pay`). Return here when integrating LI.FI for Lane A `/rebalance`.
 
 AgentBlox composes rebalance flows server-side (`server/lifi/compose.ts`).
 
-### 3.1 Get LI.FI API key
+### 3.1 LI.FI Composer (API key optional)
 
-1. Register at [portal.li.fi](https://portal.li.fi).
-2. Create an API key.
-3. Add to `.env`:
+AgentBlox uses `@lifi/composer-sdk` against the hackathon Composer deployment. Public LI.FI docs say an API key is optional for compose; **`https://ethglobal-composer.li.quest` requires one** — without `LIFI_API_KEY`, `/quote` fails with `API key is required`.
+
+Default server config (no `.env` changes needed for hackathon):
+
+```env
+# LIFI_COMPOSER_BASE_URL=https://ethglobal-composer.li.quest  # default in code
+# LIFI_INTEGRATOR=AgentBlox  # matches portal integration string
+```
+
+**Required for hackathon compose** — request via [portal.li.fi](https://portal.li.fi) Support or LI.FI Builders Telegram if the UI does not show a key:
 
 ```env
 LIFI_API_KEY=your-api-key
-# Hackathon deployment (default in code):
-# LIFI_COMPOSER_BASE_URL=https://ethglobal-composer.li.quest
 ```
 
-### 3.2 Discover userProxy and selector
+Register an integration at the portal with integrator string **`AgentBlox`** and a public HTTPS URL (e.g. your GitHub repo). Fee wallet setup is optional for the demo.
 
-With `TREASURY_ADDRESS` and `LIFI_API_KEY` set:
+### 3.2 Next: configure AccountBlox on-chain
 
-1. Run `npm run docker:dev` (Windows) or `npm run dev:all` (macOS/Linux).
-2. In Copilot, run **`/quote`**.
-3. From the tool result, note:
-   - **`userProxy`** → whitelist on GuardController (Part 2.5)
-   - **`executionSelector`** → set `LIFI_EXECUTION_SELECTOR` in `.env` for `/whitelist` reads
+Composer runs server-side — no browser LI.FI widget. After `TREASURY_ADDRESS` is set, continue to **[Part 4](#part-4--configure-accountblox-for-lifi-composer-phase-4)** for the ordered AccountBlox setup (discover `userProxy` → GuardController whitelist → RBAC → first rebalance).
 
 Default demo flow: **`rebalance-sepolia-v1`** — USDC → WETH on Sepolia.
 
@@ -459,11 +443,266 @@ Details: [integrations/lifi.md](./integrations/lifi.md).
 
 ---
 
-## Part 4 — Complete AgentBlox `.env`
+## Part 4 — Configure AccountBlox for LI.FI Composer (Phase 4 — *future*)
+
+> **Reference only until LI.FI lands.** Hackathon MVP provisioning: [Part 4.8 Lane B](#48-lane-b--vendor-payments-phase-5).
+
+This section is the step-by-step for on-chain AccountBlox configuration so `/quote` and `/rebalance` work end-to-end. It maps to [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) Phase 4 (LI.FI + whitelist guard — deferred).
+
+**Goal:** GuardController allows only your treasury’s LI.FI **userProxy**; AGENT_POLICY can **sign** meta-txs; Broadcaster **executes** them.
+
+```mermaid
+flowchart TB
+  subgraph AgentBlox["AgentBlox (off-chain)"]
+    Q["/quote → compose"]
+    R["/rebalance → sign"]
+    E["Confirm → Broadcaster"]
+  end
+  subgraph OnChain["AccountBlox clone (Sepolia)"]
+    RBAC["RuntimeRBAC: AGENT_POLICY sign permission"]
+    GC["GuardController: whitelist userProxy + factory"]
+    AB["requestAndApproveExecution"]
+  end
+  subgraph LIFI["LI.FI Composer"]
+    UP["userProxy executes swap"]
+  end
+  Q --> RBAC
+  R --> RBAC
+  E --> AB
+  AB --> GC
+  GC --> UP
+```
+
+### 4.0 Prerequisites
+
+Complete these before Part 4:
+
+| # | Requirement | How to verify |
+|---|-------------|---------------|
+| 1 | AccountBlox clone on Sepolia | `TREASURY_ADDRESS` in `.env`; [Part 2](#part-2--create-and-configure-accountblox-on-chain) |
+| 2 | Owner = Dynamic embedded wallet | `/status` → on-chain Owner |
+| 3 | Broadcaster = Dynamic server wallet | `npm run docker:ops:verify` → `matchesOnChainBroadcaster: true` |
+| 4 | `AGENT_POLICY` keypair generated | Address saved for on-chain role; `AGENT_POLICY_PRIVATE_KEY` in `.env` |
+| 5 | AgentBlox running | `npm run docker:dev` or `npm run dev:all` |
+| 6 | Working Sepolia RPC | `SEPOLIA_RPC_URL` — not the broken default `rpc.sepolia.org` |
+
+**Critical invariant:** AGENT_POLICY **signs**; Broadcaster **executes**. They must be **different addresses**.
+
+**Order note:** Steps 4.1–4.3 use values from `/quote`. You can do RBAC (4.4) before or after whitelist (4.3), but **both** must use the **same `executionSelector`** from `/quote`.
+
+---
+
+### 4.1 Discover LI.FI addresses from AgentBlox
+
+AgentBlox composes flows server-side (`server/lifi/compose.ts`) against `https://ethglobal-composer.li.quest` by default. No `LIFI_API_KEY` is required for hackathon compose.
+
+1. Ensure `TREASURY_ADDRESS` is set in `.env` and the server is restarted.
+2. Open http://localhost:5173 → Copilot → run **`/quote`**.
+3. From the **LI.FI quote** tool card, record:
+
+| Field | Example shape | Used for |
+|-------|---------------|----------|
+| **`userProxy`** | `0x…` (contract) | GuardController whitelist target; meta-tx `target` |
+| **`executionSelector`** | `0x` + 4 bytes | Function schema + RBAC permission + whitelist key |
+| **Flow ID** | `rebalance-sepolia-v1` | Policy gate (must be in server allowlist) |
+
+4. Optional — add to `.env` so `/whitelist` polls the Composer selector:
+
+```env
+LIFI_EXECUTION_SELECTOR=0x12345678   # paste from /quote (4 bytes only)
+```
+
+5. If compose fails, check the card error (RPC, treasury address, Sepolia liquidity). See [Troubleshooting](#troubleshooting).
+
+**Do not** hard-code `userProxy` from docs or another treasury — it is **derived per `TREASURY_ADDRESS`**.
+
+---
+
+### 4.2 Register the Composer function schema (on-chain)
+
+On [bloxchain.app](https://bloxchain.app/) (connected as **Owner**), open your clone → **GuardController** / function configuration. Alternatively use `@bloxchain/sdk` `guardConfigBatch` with action **`REGISTER_FUNCTION`**.
+
+Register one external function for LI.FI Composer execution:
+
+| Setting | Value |
+|---------|--------|
+| **Function selector** | `executionSelector` from [§4.1](#41-discover-lifi-addresses-from-agentblox) |
+| **Operation type** | `LIFI_COMPOSER_FLOW` (or `keccak256("rebalance-sepolia-v1")` — must match AgentBlox `resolveRebalanceOperationType`) |
+| **Allowed TxActions** | `SIGN_META_REQUEST_AND_APPROVE` and `EXECUTE_META_REQUEST_AND_APPROVE` on the **AccountBlox handler** `requestAndApproveExecution` |
+
+Reference: [guard-controller.md](./guard-controller.md) · Bloxchain `GuardControllerDefinitions.sol`.
+
+**Checklist:**
+
+- [ ] Function registered for the exact 4-byte selector from `/quote`
+- [ ] Operation type recorded (needed for meta-tx `operationType` field)
+- [ ] Meta-tx path enabled (`requestAndApproveExecution`)
+
+---
+
+### 4.3 Whitelist GuardController targets
+
+Still on bloxchain.app (or SDK), use **`ADD_TARGET_TO_WHITELIST`** for the selector from §4.1.
+
+| Target | Why required |
+|--------|--------------|
+| **`userProxy`** (from `/quote`) | LI.FI executes the composed swap through this proxy for **your treasury** |
+| **LI.FI proxy factory** | First-time proxy deploy on Sepolia (same transaction path as execute) |
+
+How to find the **proxy factory**:
+
+- Inspect the `/quote` tool result JSON for factory/deployer addresses in `producedResources` or transaction `to` when the proxy is not yet deployed, **or**
+- Note the factory address from a successful LI.FI Composer integration doc / support channel for Sepolia hackathon deployment.
+
+Whitelist **both** addresses for the **same execution selector**.
+
+**Checklist:**
+
+- [ ] `userProxy` whitelisted for `executionSelector`
+- [ ] Proxy factory whitelisted for `executionSelector`
+- [ ] No arbitrary EOA addresses whitelisted for unrestricted transfers
+
+Verify in Copilot:
+
+```text
+/whitelist
+```
+
+Expect your `userProxy` under the Composer selector (set `LIFI_EXECUTION_SELECTOR` in `.env` if the card only shows ERC-20 transfer by default).
+
+---
+
+### 4.4 Configure RBAC — AGENT_POLICY role
+
+On bloxchain.app → **RuntimeRBAC** (or SDK `roleConfigBatch`):
+
+| Step | Action |
+|------|--------|
+| 1 | Create role **`AGENT_POLICY`** (if not exists) |
+| 2 | Assign wallet address from `AGENT_POLICY_PRIVATE_KEY` (never the Broadcaster or Owner) |
+| 3 | Grant **`SIGN_META_REQUEST_AND_APPROVE`** on the **Composer `executionSelector`** from §4.1 only |
+
+**Do not grant AGENT_POLICY:**
+
+- Broadcaster role
+- `EXECUTE_META_REQUEST_AND_APPROVE` on the Composer selector (Broadcaster executes)
+- Permissions on unrelated selectors
+
+Set server env and restart:
+
+```env
+AGENT_POLICY_PRIVATE_KEY=0x...   # must match on-chain assigned address
+```
+
+**Checklist:**
+
+- [ ] On-chain AGENT_POLICY address = address derived from `.env` private key
+- [ ] Sign permission on Composer selector only
+- [ ] AGENT_POLICY ≠ Broadcaster ≠ Owner
+
+Verify:
+
+```bash
+curl http://localhost:3001/api/health
+# agentPolicySigningConfigured: true
+```
+
+Copilot **`/rebalance`** → tool card should show `signing.status: signed` (compose may run before execute; whitelist must still be done for on-chain success).
+
+---
+
+### 4.5 Fund the treasury
+
+Send to **`TREASURY_ADDRESS`** (the clone, not AGENT_POLICY or Broadcaster):
+
+| Asset | Amount (demo) | Purpose |
+|-------|---------------|---------|
+| Sepolia ETH | Enough for several txs | Gas for meta-tx + Composer execution |
+| Sepolia USDC | ≥ 1 USDC (`1000000` units, 6 decimals) | Default rebalance amount |
+
+USDC faucet: [faucet.circle.com](https://faucet.circle.com/) → Sepolia.
+
+**Checklist:**
+
+- [ ] `/status` shows ETH balance > 0
+- [ ] Clone holds USDC for rebalance (or lower amount in `/rebalance` args if you change policy)
+
+---
+
+### 4.6 Verify end-to-end rebalance
+
+Run in order:
+
+| Step | Command / action | Expected result |
+|------|------------------|-----------------|
+| 1 | `/status` | Correct Owner, Broadcaster, balances |
+| 2 | `/whitelist` | `userProxy` listed for Composer selector |
+| 3 | `/quote` | Same `userProxy` as whitelisted |
+| 4 | `/rebalance` | `compose.status: composed`, `signing.status: signed` |
+| 5 | **Confirm execution** in tool card | Broadcaster submits tx |
+| 6 | [Sepolia Etherscan](https://sepolia.etherscan.io) | Success — no `TargetNotWhitelisted` |
+
+Flow diagram: [on-chain-execution-flow.md](./on-chain-execution-flow.md).
+
+**Demo gate:** one successful rebalance tx hash completes Phase 4 for the hackathon MVP.
+
+---
+
+### 4.7 Policy demo — `/attack` (recommended)
+
+After rebalance works:
+
+1. Copilot → **`/attack`**
+2. Off-chain policy block in tool card
+3. Optional: on-chain attempt shows **`TargetNotWhitelisted`** — proves GuardController enforcement
+
+See [demo-script.md](./demo-script.md).
+
+---
+
+### 4.8 Lane B — vendor payments (Phase 5)
+
+For **`/pay`** timelock flows (hackathon MVP):
+
+| On-chain | Setting |
+|----------|---------|
+| Whitelist | Sepolia USDC `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` for `transfer(address,uint256)` (`0xa9059cbb`) |
+| RBAC | Role **`ANALYST`** + `EXECUTE_TIME_DELAY_REQUEST` on payment selector |
+| RBAC | Role **`APPROVER`** + `SIGN_META_APPROVE` on same payment selector |
+| Env | `ANALYST_PRIVATE_KEY` matching on-chain ANALYST wallet |
+| Env | `APPROVER_PRIVATE_KEY` matching on-chain APPROVER wallet |
+
+**Flow:** ANALYST submits `executeWithTimeLock` → wait for `releaseTime` → APPROVER signs `approveTimeLockExecutionWithMetaTx` → Broadcaster submits → COMPLETED.
+
+Broadcaster already has default `EXECUTE_META_APPROVE` on the approve handler. Details: [guard-controller.md § Timelock disbursement](./guard-controller.md) · [on-chain-execution-flow.md](./on-chain-execution-flow.md).
+
+---
+
+### 4.9 Phase 4 completion checklist *(future — LI.FI)*
+
+Use this before rehearsing the demo:
+
+```text
+[ ] /quote returns userProxy + executionSelector for TREASURY_ADDRESS
+[ ] GuardController: function schema registered for executionSelector
+[ ] GuardController: userProxy whitelisted
+[ ] GuardController: proxy factory whitelisted
+[ ] RBAC: AGENT_POLICY role + SIGN_META_REQUEST_AND_APPROVE on executionSelector
+[ ] .env: AGENT_POLICY_PRIVATE_KEY, TREASURY_ADDRESS, Broadcaster vars
+[ ] Treasury funded (ETH + USDC)
+[ ] /rebalance → signed → Confirm → Etherscan success
+[ ] /attack demonstrates policy block (optional on-chain revert)
+```
+
+Checklist format: [provisioning-checklist.md](./provisioning-checklist.md) Part A4 · Part E.
+
+---
+
+## Part 5 — Complete AgentBlox `.env`
 
 Full reference: [env-configuration.md](./env-configuration.md).
 
-### 4.1 Required for full demo
+### 5.1 Required for full demo
 
 ```env
 # --- Client (browser) — from Dynamic Developer → API (§1.2)
@@ -483,14 +722,15 @@ SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 # --- AGENT_POLICY signing ---
 AGENT_POLICY_PRIVATE_KEY=0x...must match on-chain AGENT_POLICY role...
 
-# --- LI.FI Composer ---
-LIFI_API_KEY=your-lifi-api-key
+# --- LI.FI Composer (optional API key for rate limits) ---
+# LIFI_API_KEY=
+# LIFI_COMPOSER_BASE_URL=https://ethglobal-composer.li.quest
 
 # --- ANALYST timelock requests (/pay) ---
 ANALYST_PRIVATE_KEY=0x...must match on-chain ANALYST role...
 ```
 
-### 4.2 Optional
+### 5.2 Optional
 
 ```env
 ENS_NAME=treasury.acme.eth
@@ -499,7 +739,7 @@ LIFI_EXECUTION_SELECTOR=0x.... # from /quote; helps /whitelist display
 # MAINNET_RPC_URL=...          # for /ens only
 ```
 
-### 4.3 What not to do
+### 5.3 What not to do
 
 - Do **not** put secrets in `VITE_*` variables (they ship to the browser).
 - Do **not** duplicate `TREASURY_ADDRESS` as `VITE_TREASURY_ADDRESS`.
@@ -508,9 +748,9 @@ LIFI_EXECUTION_SELECTOR=0x.... # from /quote; helps /whitelist display
 
 ---
 
-## Part 5 — Verify setup
+## Part 6 — Verify setup
 
-### 5.1 Health endpoint
+### 6.1 Health endpoint
 
 ```bash
 curl http://localhost:3001/api/health
@@ -524,11 +764,12 @@ Target flags for a fully configured demo:
 | `dynamicEnvironmentConfigured` | `true` |
 | `dynamicBroadcasterConfigured` | `true` |
 | `agentPolicySigningConfigured` | `true` |
-| `lifiComposeConfigured` | `true` |
+| `lifiComposeConfigured` | `true` (always — SDK wired) |
+| `lifiApiKeyConfigured` | `true` only if `LIFI_API_KEY` set (optional) |
 | `analystConfigured` | `true` (for `/pay`) |
 | `broadcaster.matchesOnChainBroadcaster` | `true` |
 
-### 5.2 Copilot slash commands
+### 6.2 Copilot slash commands
 
 Open http://localhost:5173 and run:
 
@@ -541,7 +782,9 @@ Open http://localhost:5173 and run:
 | `/rebalance` | Policy gate → compose → signed meta-tx in tool card |
 | `/attack` | Off-chain policy block (unauthorized target) |
 
-### 5.3 First on-chain rebalance
+### 6.3 First on-chain rebalance
+
+See [Part 4 §4.6](#46-verify-end-to-end-rebalance) for the full Phase 4 verification sequence. Short version:
 
 1. **`/rebalance`** — confirm tool card shows `compose.status: composed` and `signing.status: signed`.
 2. Click **Confirm execution** in the tool card.
@@ -552,7 +795,7 @@ Flow diagram: [on-chain-execution-flow.md](./on-chain-execution-flow.md).
 
 ---
 
-## Part 6 — Optional ENS identity
+## Part 7 — Optional ENS identity
 
 ENS is configured on **Ethereum mainnet**; the treasury clone lives on **Sepolia**.
 
@@ -585,13 +828,10 @@ Use this sequence if you are configuring from scratch:
 3. Generate AGENT_POLICY keypair (address for on-chain role; key for .env later)
 4. Clone AccountBlox on Sepolia — Owner + Broadcaster (= step 2 address) + Recovery
    OR update Broadcaster on existing clone via governance
-5. RBAC: AGENT_POLICY role + sign permission on Composer selector (after first /quote)
-6. Fund clone (ETH + USDC)
-7. AgentBlox .env: TREASURY_ADDRESS, Dynamic, SEPOLIA_RPC_URL, AGENT_POLICY, LIFI_API_KEY
-8. npm run docker:dev (Windows) or npm run dev:all → /quote → note userProxy + selector
-9. GuardController: whitelist userProxy + proxy factory
-10. docker:ops:verify → matchesOnChainBroadcaster; /status, /whitelist, /rebalance → Confirm
-11. (Optional) ENS + /ens
+5. AgentBlox .env: TREASURY_ADDRESS, Dynamic, SEPOLIA_RPC_URL, AGENT_POLICY (LIFI_API_KEY optional)
+6. npm run docker:dev → Part 4: /quote → GuardController whitelist + RBAC → fund → /rebalance → Confirm
+7. docker:ops:verify → matchesOnChainBroadcaster; /status, /whitelist, /attack
+8. (Optional) ANALYST + USDC whitelist for /pay; ENS + /ens
 ```
 
 Checklist format: [provisioning-checklist.md](./provisioning-checklist.md).
@@ -608,10 +848,11 @@ Checklist format: [provisioning-checklist.md](./provisioning-checklist.md).
 | Dynamic wallet create fails: password | Missing `DYNAMIC_WALLET_PASSWORD` | Add to `.env`; rerun `docker:ops:create-wallet` |
 | `matchesOnChainBroadcaster: false` | New Dynamic wallet ≠ on-chain Broadcaster | Update Broadcaster role on treasury ([governance.md](./governance.md)) or re-provision with correct address |
 | `/status` shows wrong Owner/Broadcaster | Addresses mismatch at init | Re-provision or governance update ([governance.md](./governance.md)) |
-| `compose_failed` / `COMPOSE_NOT_CONFIGURED` | No `LIFI_API_KEY` | Add key from portal.li.fi |
-| `proposed_unsigned` / missing agent key | No `AGENT_POLICY_PRIVATE_KEY` | Generate key; assign address to AGENT_POLICY role |
+| `compose_failed` | Composer API / network / Sepolia liquidity | Check server logs; verify `TREASURY_ADDRESS`; retry `/quote` |
+| `proposed_unsigned` / `signing.status: unsigned` | Missing key, wrong RBAC, or compose failed | Set `AGENT_POLICY_PRIVATE_KEY`; grant `SIGN_META_REQUEST_AND_APPROVE` on Composer selector ([Part 4 §4.4](#44-configure-rbac--agent_policy-role)) |
 | Meta-tx reverts: signer = executor | Same wallet for AGENT_POLICY and Broadcaster | Use separate keys; re-provision roles |
-| `TargetNotWhitelisted` on execute | userProxy not whitelisted | Run `/quote`, whitelist returned `userProxy` for selector |
+| `TargetNotWhitelisted` on execute | userProxy or factory not whitelisted | [Part 4 §4.3](#43-whitelist-guardcontroller-targets) — re-run `/quote`, match selector |
+| `/whitelist` empty for Composer | Wrong selector in env | Set `LIFI_EXECUTION_SELECTOR` from `/quote` |
 | Dynamic Node SDK / Windows | Server + Broadcaster ops require Linux | `npm run docker:dev` + `docker:ops:*` — [docker-plan.md](./docker-plan.md) |
 | `/ens` empty | No `ENS_NAME` or mainnet RPC | Set `ENS_NAME`; check `MAINNET_RPC_URL` |
 | Dynamic widget does not open | CORS or missing env ID | Set `VITE_DYNAMIC_ENVIRONMENT_ID` (§1.2); add `http://localhost:5173` in Dynamic **Security → Allowed origins** |
@@ -620,10 +861,11 @@ Checklist format: [provisioning-checklist.md](./provisioning-checklist.md).
 
 ## Next steps
 
-**You are here if Broadcaster Dynamic auth works:** complete [Part 1.7](#part-17--what-to-configure-next-progress-checklist) — on-chain Broadcaster match → `LIFI_API_KEY` → `AGENT_POLICY` → whitelist → `/rebalance`.
+**You are here if AGENT_POLICY is configured:** complete [Part 4](#part-4--configure-accountblox-for-lifi-composer-phase-4) — `/quote` → whitelist + RBAC → fund → `/rebalance` → Confirm.
 
 | Goal | Doc |
 |------|-----|
+| **Phase 4 — LI.FI AccountBlox setup** | [Part 4](#part-4--configure-accountblox-for-lifi-composer-phase-4) (this guide) |
 | Docker dev on Windows | [docker-plan.md](./docker-plan.md) |
 | Understand tools and commands | [copilot.md](./copilot.md) · [treasury-tools.md](./treasury-tools.md) |
 | Change policy on a live treasury | [governance.md](./governance.md) |

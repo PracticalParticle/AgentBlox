@@ -13,9 +13,9 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 | 0 | Scaffold + Copilot + Console | 2h | App runs; slash commands work |
 | 1 | Bloxchain SDK reads in tools | 4h | `/pending`, `/whitelist` show real data |
 | 2 | Dynamic wallets | 5h | Owner connects; Broadcaster configured |
-| 3 | Meta-tx sign + Copilot confirm | 6h | `/rebalance` signs; Broadcaster executes |
-| 4 | LI.FI + on-chain policy revert | 4h | Composer flow + Etherscan revert |
-| 5 | Timelock payments | 4h | `/pay` → Owner approve |
+| 3 | Meta-tx sign + Copilot confirm | 6h | Meta-tx infra for Lane A + Lane B |
+| 4 | LI.FI + on-chain policy revert | 4h | **Future** — Composer flow + Etherscan revert |
+| 5 | Timelock payments (Lane B) | 4h | `/pay` → APPROVER sign → Broadcaster submit |
 | 6 | ENS write + Console persistence | 3h | Link name from Console |
 | 7 | Polish + submission | 4h | Video, README, docs |
 
@@ -75,7 +75,9 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 ---
 
-## Phase 4 — LI.FI + whitelist guard ✅
+## Phase 4 — LI.FI + whitelist guard *(future)*
+
+**Goal:** Composer flow as whitelisted target for Lane A `/rebalance`. Not hackathon MVP.
 
 **Goal:** Composer flow as whitelisted target; on-chain policy revert.
 
@@ -90,14 +92,16 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 ---
 
-## Phase 5 — Timelock payments ✅
+## Phase 5 — Timelock payments (Lane B)
 
-**Goal:** `/pay` → timelock → Owner approves in Copilot.
+**Goal:** `/pay` → timelock → **APPROVER** signs → **Broadcaster** submits.
 
 - [x] `request_vendor_payment` calls `executeWithTimeLock` via ANALYST key
-- [x] Owner approves via Dynamic — `approveTimeLockExecution` in `ToolResultCard`
-- [x] Timelock countdown on Approve button
-- [ ] Operator: `ANALYST_PRIVATE_KEY` + RBAC + USDC whitelist
+- [ ] APPROVER signs `approveTimeLockExecutionWithMetaTx` (server)
+- [ ] Broadcaster submits signed approval meta-tx
+- [x] Timelock countdown on confirm button
+- [x] Owner direct approve fallback — `approveTimeLockExecution` in `owner-guard.ts`
+- [ ] Operator: `ANALYST_PRIVATE_KEY`, **`APPROVER_PRIVATE_KEY`**, RBAC + USDC whitelist
 
 ---
 
@@ -130,8 +134,8 @@ Frontend work tracked in [ui-ux-guidelines.md](./ui-ux-guidelines.md). Pair with
 | UI-1 | Typed read cards (`ToolCardRouter` + monitor cards) | 2h | Phase 1 | **Done** |
 | UI-2 | Setup wizard (`/setup`, Workspace gate) | 2h | Phase 2 Dynamic | **Partial** |
 | UI-3 | Intent Preview + Approvals (`RebalanceProposalCard`, Confirm) | 3h | Phase 3 | **Done** |
-| UI-4 | LI.FI quote + `PolicyBlockedCard` + Etherscan | 2h | Phase 4 | **Partial** |
-| UI-5 | Timelock payment card + Owner approve + countdown | 2h | Phase 5 | **Done** |
+| UI-4 | LI.FI quote + `PolicyBlockedCard` + Etherscan | 2h | Phase 4 *(future)* | **Partial** |
+| UI-5 | Timelock payment card + APPROVER/Broadcaster + countdown | 2h | Phase 5 | **Partial** |
 | UI-6 | Demo polish (`?demo=1`, loading states, keyboard focus) | 2h | Phase 7 | **Done** |
 
 **Total UI:** ~15h
@@ -141,11 +145,12 @@ Frontend work tracked in [ui-ux-guidelines.md](./ui-ux-guidelines.md). Pair with
 ## Definition of done
 
 - [ ] Treasury provisioned — [provisioning-checklist.md](./provisioning-checklist.md)
-- [ ] `/rebalance` succeeds via LI.FI + meta-tx
+- [ ] `/pay` → APPROVER sign → Broadcaster executes (Lane B)
 - [ ] `/attack` shows block (off-chain + on-chain revert)
-- [ ] `/pay` approved by Dynamic Owner
 - [ ] `/ens` resolves in Copilot
-- [ ] Dynamic + LI.FI + ENS documented and functional
+- [ ] Dynamic + ENS + Bloxchain documented and functional
+- [ ] *(Future)* `/rebalance` succeeds via LI.FI + meta-tx
+- [ ] *(Future)* LI.FI documented and functional
 
 ---
 

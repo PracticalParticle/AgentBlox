@@ -15,9 +15,10 @@ See [provisioning-checklist.md](./provisioning-checklist.md) before rehearsing. 
 - [ ] ENS name linked (`/ens` resolves to clone)
 - [ ] Dynamic Owner logged in (`DynamicWidget` in header)
 - [ ] `npm run dev:all` running
-- [ ] LI.FI Composer flow pre-tested on Sepolia (Phase 4)
+- [ ] `ANALYST_PRIVATE_KEY` + `APPROVER_PRIVATE_KEY` + on-chain roles configured
 - [ ] Sepolia Etherscan tabs open: success tx + revert tx
 - [ ] Optional: pre-stage timelock payment via `/pay`
+- [ ] *(Future)* LI.FI Composer flow pre-tested on Sepolia
 
 ---
 
@@ -28,14 +29,13 @@ See [provisioning-checklist.md](./provisioning-checklist.md) before rehearsing. 
 | **0:00** | Problem | — | "AI agents and finance teams both move money — both need the same controls. Keys alone aren't enough." |
 | **0:20** | Identity | `/ens` | "This is `treasury.acme.eth` — it resolves to our AccountBlox clone on Sepolia." |
 | **0:40** | Status | `/status` | "Copilot reads real on-chain state — treasury address, balance, policy engine." |
-| **0:55** | Architecture | Verbal / slide | "ENS names the actor. Bloxchain decides what's allowed. Dynamic holds keys. LI.FI runs approved flows." |
-| **1:05** | Rebalance | `/rebalance` | "Policy agent proposes a rebalance. It signs a meta-tx — but cannot execute alone." |
-| **1:25** | Execute | Confirm in tool card | "Broadcaster submits. GuardController whitelists LI.FI only." |
+| **0:55** | Architecture | Verbal / slide | "ENS names the actor. Bloxchain decides what's allowed. Dynamic holds keys — signer and executor are separate roles." |
+| **1:05** | Payment | `/pay` | "ANALYST requests a vendor payment. It enters timelock — PENDING." |
+| **1:25** | Approve | Confirm release in tool card | "APPROVER signed the approval meta-tx. Broadcaster submits after the waiting period." |
 | **1:45** | Blocked | `/attack` | "Unauthorized target — policy validation." |
 | **2:00** | Revert | Show tool card + Etherscan | "TargetNotWhitelisted — architecturally enforced." |
-| **2:10** | Payment | `/pay` | "Vendor payment enters timelock — PENDING." |
-| **2:25** | Approve | Owner approves via Dynamic (Phase 5) | "Owner approves after the waiting period." |
-| **2:40** | Audit | `/pending` | "Full on-chain audit trail — same treasury, same rules." |
+| **2:10** | Audit | `/pending` | "Full on-chain audit trail — same treasury, same rules." |
+| **2:25** | *(Optional future)* | `/rebalance` | "Lane A: LI.FI Composer behind the same GuardController pattern." |
 | **2:50** | Close | — | "AgentBlox by Particle CS. Powered by Bloxchain Protocol." |
 
 ---
@@ -46,7 +46,7 @@ See [provisioning-checklist.md](./provisioning-checklist.md) before rehearsing. 
 |---------|---------|
 | `/status` | Treasury configured + ETH balance |
 | `/ens` | Resolve name + text records |
-| `/rebalance` | Propose LI.FI rebalance (policy execution) |
+| `/rebalance` | Propose LI.FI rebalance *(future — Lane A)* |
 | `/attack` | Policy validation (blocked target) |
 | `/pay` | Request timelock payment |
 | `/pending` | Pending approvals |

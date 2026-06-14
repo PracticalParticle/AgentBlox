@@ -88,7 +88,7 @@ export async function proposeRebalance(params: {
       : [
           compose.ok ? null : compose.reason,
           signing.reason,
-          'Set LIFI_API_KEY + AGENT_POLICY_PRIVATE_KEY, or manual REBALANCE_EXECUTION_* env vars',
+          'Set AGENT_POLICY_PRIVATE_KEY, or manual REBALANCE_EXECUTION_* env vars if compose failed',
         ].filter(Boolean),
   };
 

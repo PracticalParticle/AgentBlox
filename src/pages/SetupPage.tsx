@@ -98,7 +98,12 @@ export default function SetupPage() {
 
         <li className={health?.lifiComposeConfigured ? 'done' : ''}>
 
-          <strong>LI.FI</strong> — <code>LIFI_API_KEY</code> for compose
+          <strong>LI.FI Composer</strong> — server compose wired
+          {health?.lifiApiKeyConfigured ? (
+            <> (<code>LIFI_API_KEY</code> set)</>
+          ) : (
+            <> (optional <code>LIFI_API_KEY</code> for rate limits)</>
+          )}
 
         </li>
 

@@ -2,7 +2,7 @@
 
 Master guide for **creating**, **operating**, **governing**, and **extending** an on-chain treasury with AgentBlox and Bloxchain AccountBlox.
 
-**Built for [ETHGlobal New York 2026](https://ethglobal.com/events/newyork2026)** — Sepolia testnet, three sponsor integrations (Dynamic, LI.FI, ENS). Event details: [event/ethglobal-2026.md](./event/ethglobal-2026.md).
+**Built for [ETHGlobal New York 2026](https://ethglobal.com/events/newyork2026)** — Sepolia testnet. Hackathon MVP: Dynamic + ENS + Bloxchain **Lane B**. LI.FI Composer (Lane A) is **future implementation**. Event details: [event/ethglobal-2026.md](./event/ethglobal-2026.md).
 
 ---
 
@@ -51,7 +51,7 @@ EXTEND                →  register function → whitelist → grant role → ne
 
 1. Clone AccountBlox via CopyBlox or bloxchain.app
 2. `initialize(owner, broadcaster, recovery, timeLockPeriodSec, eventForwarder)`
-3. Configure RBAC (`AGENT_POLICY`, `ANALYST`, …)
+3. Configure RBAC (`ANALYST`, `APPROVER`, `AGENT_POLICY` for future LI.FI, …)
 4. Configure GuardController whitelist — [guard-controller.md](./guard-controller.md)
 5. Fund clone (ETH + tokens)
 6. Set `TREASURY_ADDRESS` in AgentBlox
@@ -64,7 +64,9 @@ EXTEND                →  register function → whitelist → grant role → ne
 
 Minimum: `TREASURY_ADDRESS`, `VITE_DYNAMIC_ENVIRONMENT_ID`.
 
-For execution: `AGENT_POLICY_PRIVATE_KEY`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`, and rebalance execution target/selector (`REBALANCE_EXECUTION_*` or Phase 4 compose).
+For Lane B execution: `ANALYST_PRIVATE_KEY`, `APPROVER_PRIVATE_KEY`, `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`.
+
+For future Lane A / LI.FI: `AGENT_POLICY_PRIVATE_KEY` and rebalance execution target/selector (`REBALANCE_EXECUTION_*` or compose).
 
 Optional: `ENS_NAME` for identity and policy metadata.
 
@@ -85,8 +87,8 @@ Day-to-day actions via **Copilot treasury tools** (`POST /api/chat`).
 
 | Path | Best for | Bloxchain methods |
 |------|----------|-------------------|
-| **Policy execution** | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
-| **Timelock** | Human-gated disbursements | `executeWithTimeLock` → `approveTimeLockExecution` |
+| **Policy execution** *(future)* | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
+| **Timelock (Lane B)** | Human-gated disbursements | ANALYST request → APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx` |
 
 ### Three policy layers
 

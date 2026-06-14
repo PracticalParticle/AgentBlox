@@ -16,7 +16,7 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | Treasury tools (propose) | **Partial** | Policy gate + meta-tx sign; on-chain execute needs env |
 | Policy gate (off-chain) | **Done** | Flow ID, amount, target validation |
 | `@bloxchain/sdk` | **Partial** | Reads + meta-tx signing; timelock writes Phase 5 |
-| `@lifi/sdk` | **Partial** | Composer via `@lifi/composer-sdk`; quote + propose wired |
+| `@lifi/sdk` | **Future** | Composer scaffold in repo; not hackathon MVP |
 | Dynamic (Owner UI) | **Partial** | `DynamicWidget` only |
 | Dynamic (Broadcaster) | **Partial** | Docker + verify API; needs `DYNAMIC_API_TOKEN` + wallet in `.env` |
 | Docker dev stack | **Done** | `docker-compose.yml` — server + web + ops profiles (D0–D2) |
@@ -36,7 +36,7 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | `get_whitelisted_targets` | Monitor | ✅ | ✅ SDK | — | — | — |
 | `get_lifi_quote_preview` | Monitor | ✅ | ⚠️ compose | — | — | — |
 | `propose_rebalance` | Treasury op | ✅ policy | — | ✅ | ⚠️ env | ✅ |
-| `request_vendor_payment` | Disbursement | ✅ policy | ⚠️ timelock | ⚠️ env | ⚠️ Owner UI | ✅ partial |
+| `request_vendor_payment` | Disbursement | ✅ policy | ⚠️ timelock | ⚠️ ANALYST | ⚠️ APPROVER+BC | ✅ partial |
 | `simulate_policy_violation` | Policy test | ✅ | ❌ | ❌ | ❌ | — |
 
 Legend: ✅ working · ⚠️ env-dependent / stub · ❌ not implemented
@@ -51,8 +51,8 @@ Legend: ✅ working · ⚠️ env-dependent / stub · ❌ not implemented
 | 1 | Bloxchain SDK reads | **Done** |
 | 2 | Dynamic Owner + Broadcaster | **In progress** (scaffold done; env pending) |
 | 3 | Meta-tx sign + Copilot confirm | **Done** (end-to-end needs env + Phase 4 calldata) |
-| 4 | LI.FI + whitelist demo | **Done** (code); env + on-chain whitelist pending |
-| 5 | Timelock payments + Owner approve | **Done** (code); ANALYST env + whitelist pending |
+| 4 | LI.FI + whitelist demo | **Future** (scaffold done; API key + whitelist pending) |
+| 5 | Timelock Lane B — ANALYST / APPROVER / Broadcaster | **In progress** (ANALYST request ✅; APPROVER meta-tx approve ⬜) |
 | 6 | ENS write + Console persistence | **Partial** (read only) |
 | 7 | Polish + submission | **Not started** |
 
@@ -104,8 +104,14 @@ See [implementation-plan.md](./implementation-plan.md).
 
 ## Next implementation priorities
 
-1. Set Dynamic Broadcaster: `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS` — use Setup verify or `npm run verify:broadcaster`
-2. Set `LIFI_API_KEY` (portal.li.fi) + `AGENT_POLICY_PRIVATE_KEY`
-3. Set `ANALYST_PRIVATE_KEY` + on-chain ANALYST role for `/pay`
-4. Whitelist composed `userProxy` + selector on treasury (provisioning Part A4)
-5. Phase 7 — demo video + ETHGlobal submission
+1. Set Dynamic Broadcaster: `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`
+2. Set `ANALYST_PRIVATE_KEY` + on-chain ANALYST role for `/pay` request
+3. Set **`APPROVER_PRIVATE_KEY`** + on-chain APPROVER role with `SIGN_META_APPROVE` on USDC transfer selector
+4. Wire APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx` for timelock approve
+5. Whitelist Sepolia USDC for `transfer` selector (Lane B)
+6. Phase 7 — demo video + ETHGlobal submission
+
+**Future (Lane A / LI.FI):**
+
+7. Obtain `LIFI_API_KEY` + whitelist composed `userProxy` on treasury
+8. E2E `/rebalance` on Sepolia

@@ -103,7 +103,7 @@ export async function signRebalanceMetaTransaction(params: {
       ok: false,
       code: 'MISSING_EXECUTION_CONFIG',
       reason:
-        'Configure LIFI_API_KEY for compose, or set REBALANCE_EXECUTION_TARGET and LIFI_EXECUTION_SELECTOR manually.',
+        'Run /quote for compose output, or set REBALANCE_EXECUTION_TARGET and LIFI_EXECUTION_SELECTOR manually.',
     };
   }
 

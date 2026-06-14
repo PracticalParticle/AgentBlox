@@ -85,7 +85,11 @@ Bloxchain **attached payment** keys (register via same `guardConfigBatch` flow w
 
 AgentBlox Phase 5 path uses **`executeWithTimeLock`** + USDC transfer selector unless you adopt `executeWithPayment`. Confirm selector setup matches your bloxchain.app template.
 
-Grant **ANALYST** role: `EXECUTE_TIME_DELAY_REQUEST` on the payment execution selector. **Owner** approves via `approveTimeLockExecution`.
+Grant **ANALYST** role: `EXECUTE_TIME_DELAY_REQUEST` on the payment execution selector.
+
+Grant **APPROVER** role (custom RuntimeRBAC): `SIGN_META_APPROVE` on the same payment selector. **Broadcaster** submits `approveTimeLockExecutionWithMetaTx` (default schema grants `EXECUTE_META_APPROVE`).
+
+Owner direct approve via `approveTimeLockExecution` remains available for governance workflows — Lane B demo uses APPROVER + Broadcaster instead.
 
 ---
 

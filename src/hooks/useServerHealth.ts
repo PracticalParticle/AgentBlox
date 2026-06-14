@@ -10,6 +10,7 @@ export type ServerHealth = {
   agentPolicySigningConfigured?: boolean;
   analystConfigured?: boolean;
   lifiComposeConfigured?: boolean;
+  lifiApiKeyConfigured?: boolean;
   broadcaster?: {
     configured: boolean;
     message: string;

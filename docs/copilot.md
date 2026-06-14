@@ -97,10 +97,10 @@ See [env-configuration.md](./env-configuration.md).
 
 | Tool output | User action | Status |
 |-------------|-------------|--------|
-| `propose_rebalance` | **Confirm execution** in `ToolResultCard` → Broadcaster submits | ✅ (needs signing + Broadcaster env) |
-| `request_vendor_payment` | Owner approves via Dynamic | Phase 5 |
+| `request_vendor_payment` | **Confirm release** (Broadcaster) after APPROVER signed | ⚠️ APPROVER path in progress; Owner fallback exists |
+| `propose_rebalance` | **Confirm execution** in `ToolResultCard` → Broadcaster submits | ✅ *(future with LI.FI)* |
 
-Flow details: [on-chain-execution-flow.md](./on-chain-execution-flow.md). Remaining work: Phase 4 (LI.FI compose), Phase 5 (timelock), UI-3 typed cards.
+Flow details: [on-chain-execution-flow.md](./on-chain-execution-flow.md). Hackathon MVP: **Lane B** (`/pay`). LI.FI rebalance is future implementation.
 
 ## Suggested Copilot flow
 

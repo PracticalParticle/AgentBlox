@@ -1,7 +1,6 @@
 import { createComposeSdk, isComposeError } from '@lifi/composer-sdk';
 import type { Address, Hex } from 'viem';
 import {
-  isLifiComposeConfigured,
   isTreasuryConfigured,
   LIFI_API_KEY,
   LIFI_COMPOSER_BASE_URL,
@@ -60,7 +59,7 @@ export type LifiComposeResult = LifiComposeSuccess | LifiComposeFailure;
 function createLifiComposeSdk() {
   return createComposeSdk({
     baseUrl: LIFI_COMPOSER_BASE_URL,
-    apiKey: LIFI_API_KEY,
+    ...(LIFI_API_KEY ? { apiKey: LIFI_API_KEY } : {}),
   });
 }
 
@@ -96,14 +95,6 @@ export async function composeRebalanceFlow(params: {
       ok: false,
       code: 'UNKNOWN_FLOW',
       reason: `Unknown flow ID "${params.flowId}". Allowed: rebalance-sepolia-v1`,
-    };
-  }
-
-  if (!isLifiComposeConfigured()) {
-    return {
-      ok: false,
-      code: 'COMPOSE_NOT_CONFIGURED',
-      reason: 'Set LIFI_API_KEY in .env (portal.li.fi). Optional: LIFI_COMPOSER_BASE_URL.',
     };
   }
 
@@ -233,4 +224,4 @@ export async function fetchLifiQuoteFallback(params: {
   }
 }
 
-export { isLifiComposeConfigured } from '../config.js';
+export { isLifiApiKeyConfigured, isLifiComposeConfigured } from '../config.js';

@@ -225,6 +225,17 @@ export function validateRecipientAddress(recipient: string) {
   return isAddress(recipient) ? { valid: true, address: recipient as Address } : { valid: false };
 }
 
+function logQuotePreviewFailure(result: {
+  composeError: { code: string; reason: string };
+  quoteError: string;
+}) {
+  console.warn('[lifi] quote preview unavailable', {
+    composeCode: result.composeError.code,
+    composeReason: result.composeError.reason,
+    quoteError: result.quoteError,
+  });
+}
+
 export async function getLifiQuotePreview(params: { fromAmount?: string }) {
   const treasuryCheck = validateTreasuryConfigured(isTreasuryConfigured());
   if (!treasuryCheck.allowed) {
@@ -262,10 +273,12 @@ export async function getLifiQuotePreview(params: { fromAmount?: string }) {
     };
   }
 
-  return {
-    status: 'preview_unavailable',
+  const failure = {
+    status: 'preview_unavailable' as const,
     composeError: { code: compose.code, reason: compose.reason },
     quoteError: fallback.reason,
-    hint: 'Set LIFI_API_KEY for Composer preview, or verify Sepolia token liquidity.',
+    hint: 'Verify Sepolia token liquidity and ethglobal-composer.li.quest reachability. Optional: LIFI_API_KEY for higher rate limits.',
   };
+  logQuotePreviewFailure(failure);
+  return failure;
 }

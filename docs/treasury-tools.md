@@ -11,7 +11,7 @@ AgentBlox exposes treasury operations as **MCP-style tools** — structured func
 |------|-------------------|-----------------|----------|
 | **Read** | No | No | `get_treasury_status` |
 | **Propose** | No | Confirm in chat | `propose_rebalance` |
-| **Execute** | Yes | Required role | Broadcaster / Owner after confirm |
+| **Execute** | Yes | Required role | Broadcaster after APPROVER sign (Lane B) or confirm (Lane A future) |
 
 ## Tool catalog
 

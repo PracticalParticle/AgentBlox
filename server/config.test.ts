@@ -49,6 +49,19 @@ describe('config helpers', () => {
     expect(cfg2.isAnalystConfigured()).toBe(false);
   });
 
+  it('isLifiComposeConfigured is always true; isLifiApiKeyConfigured tracks LIFI_API_KEY', async () => {
+    vi.stubEnv('LIFI_API_KEY', '');
+    const { isLifiComposeConfigured, isLifiApiKeyConfigured } = await loadConfig();
+    expect(isLifiComposeConfigured()).toBe(true);
+    expect(isLifiApiKeyConfigured()).toBe(false);
+
+    vi.resetModules();
+    vi.stubEnv('LIFI_API_KEY', 'test-key');
+    const cfg2 = await loadConfig();
+    expect(cfg2.isLifiComposeConfigured()).toBe(true);
+    expect(cfg2.isLifiApiKeyConfigured()).toBe(true);
+  });
+
   it('getWhitelistSelectors always includes ERC-20 transfer', async () => {
     vi.stubEnv('LIFI_EXECUTION_SELECTOR', '');
     const { getWhitelistSelectors } = await loadConfig();

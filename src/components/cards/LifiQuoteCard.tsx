@@ -40,6 +40,26 @@ export default function LifiQuoteCard({ result }: Props) {
           userProxy: <span className="mono">{String(compose.userProxy)}</span>
         </p>
       ) : null}
+      {result.userProxy ? (
+        <p className="card-copy">
+          userProxy: <span className="mono">{String(result.userProxy)}</span>
+        </p>
+      ) : null}
+      {result.executionSelector ? (
+        <p className="card-copy">
+          executionSelector: <span className="mono">{String(result.executionSelector)}</span>
+        </p>
+      ) : null}
+      {result.composeError ? (
+        <p className="card-copy error">
+          Compose: [{String((result.composeError as { code?: string }).code ?? 'error')}]{' '}
+          {String((result.composeError as { reason?: string }).reason ?? result.composeError)}
+        </p>
+      ) : null}
+      {result.quoteError ? (
+        <p className="card-copy error">LI.FI fallback: {String(result.quoteError)}</p>
+      ) : null}
+      {result.hint ? <p className="card-copy muted">{String(result.hint)}</p> : null}
       {result.reason ? <p className="card-copy muted">{String(result.reason)}</p> : null}
     </CardShell>
   );

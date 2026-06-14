@@ -4,11 +4,11 @@ Guides for creating, operating, governing, and extending on-chain treasuries wit
 
 ## About this project
 
-**AgentBlox** is built for **[ETHGlobal New York 2026](https://ethglobal.com/events/newyork2026)** by [Particle CS](https://particlecs.com). It demonstrates the [Bloxchain Protocol](https://github.com/PracticalParticle/Bloxchain-Protocol) AccountBlox pattern on Sepolia — Dynamic (keys), LI.FI (execution), ENS (identity), Bloxchain (policy).
+**AgentBlox** is built for **[ETHGlobal New York 2026](https://ethglobal.com/events/newyork2026)** by [Particle CS](https://particlecs.com). It demonstrates the [Bloxchain Protocol](https://github.com/PracticalParticle/Bloxchain-Protocol) AccountBlox pattern on Sepolia — Dynamic (keys), ENS (identity), Bloxchain (policy). LI.FI Composer rebalance is **future implementation**.
 
 → [overview.md](./overview.md) · [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) · [event/ethglobal-2026.md](./event/ethglobal-2026.md) · [implementation-status.md](./implementation-status.md)
 
-**Build snapshot (June 2026):** ~50% complete — Phases 0–1 and 3 done; Phase 2 scaffold done; **Phase 4 (LI.FI) is the engineering critical path.** See [overview.md](./overview.md).
+**Build snapshot (June 2026):** Hackathon MVP focuses on **Lane B** (Dynamic + ENS + Bloxchain timelock). **LI.FI (Lane A) is future implementation** — scaffold in repo. See [overview.md](./overview.md).
 
 ## Product model
 

@@ -19,8 +19,8 @@ Master guide: [treasury-lifecycle.md](./treasury-lifecycle.md)
 flowchart TB
     subgraph Users["Users"]
         CFO["CFO / Owner"]
-        Analyst["Analyst"]
-        Policy["AGENT_POLICY (server key)"]
+        Policy["APPROVER / AGENT_POLICY (server keys)"]
+        Analyst["ANALYST (server key)"]
     end
 
     subgraph AgentBloxApp["AgentBlox Application"]
@@ -32,7 +32,7 @@ flowchart TB
     subgraph Sponsors["Sponsor Layer"]
         DYN["Dynamic — keys"]
         ENS["ENS — identity"]
-        LIFI["LI.FI — execution"]
+        LIFI["LI.FI — execution (future)"]
     end
 
     subgraph BloxchainLayer["Bloxchain (Sepolia)"]
@@ -50,8 +50,9 @@ flowchart TB
     ToolServer --> LIFI
     Copilot --> DYN
     ToolServer --> ENS
-    DYN -->|"Owner approve / Broadcaster execute"| AB
+    DYN -->|"Broadcaster execute / Owner governance"| AB
     Policy -->|"EIP-712 sign only"| AB
+    Analyst -->|"executeWithTimeLock request"| AB
     AB --> SO
     AB --> RBAC
     AB --> GC

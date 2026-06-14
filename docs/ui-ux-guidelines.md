@@ -17,7 +17,7 @@ AgentBlox is **not** a chatbot with treasury tools. It is a **treasury control s
 
 The product narrative from [event/ethglobal-2026.md](./event/ethglobal-2026.md) must be **visible in the interface**, not only in docs or demo narration:
 
-> Dynamic holds the keys. LI.FI runs the flows. ENS names the actors. Bloxchain decides what anyone is allowed to trigger.
+> Dynamic holds the keys. ENS names the actors. Bloxchain decides what anyone is allowed to trigger. *(LI.FI runs approved flows — future Lane A.)*
 
 ### Why not chat-first?
 
@@ -75,9 +75,11 @@ Users must always see who **proposes**, who **signs**, and who **executes**:
 
 | Role | Holder | UI label |
 |------|--------|----------|
-| AGENT_POLICY | Server key | "Agent signs" |
+| ANALYST | Agent / ops server key | "Analyst requests" |
+| APPROVER | Policy server key | "Approver signs" |
 | Broadcaster | Dynamic server wallet | "Broadcaster executes" |
-| Owner | Dynamic embedded wallet | "Owner approves" |
+| AGENT_POLICY *(future)* | Server key | "Agent signs" (Lane A / LI.FI) |
+| Owner | Dynamic embedded wallet | Governance only — not Lane B demo approve |
 
 ### 5. Three policy layers surfaced
 
@@ -338,11 +340,11 @@ Confirm triggers Broadcaster submit via `POST /api/execute/rebalance`. **Impleme
 |---------|---------|
 | **WHAT** | "Pay {vendor} {amount} {token}" |
 | **PATH** | Timelock disbursement |
-| **WHO** | Analyst requests · Owner approves after release |
+| **WHO** | Analyst requests · Approver signs · Broadcaster executes after release |
 | **Release** | Countdown from `releaseTime` when on-chain |
-| **Actions** | `[ Approve as Owner ]` (Dynamic) · `[ Cancel request ]` |
+| **Actions** | `[ Confirm release ]` (Broadcaster) · `[ Cancel request ]` |
 
-Use **"Approve as Owner"** — not "Confirm" — to distinguish from rebalance path.
+Use **"Confirm release"** for Lane B — not "Confirm execution" (rebalance) or legacy "Approve as Owner".
 
 ### Validate card: `PolicyBlockedCard`
 
@@ -591,7 +593,7 @@ UI phases align with [implementation-plan.md](./implementation-plan.md) backend 
 | **UI-2** | Setup wizard | 2h | Dynamic widget | `/setup` 4-step flow, Workspace gate |
 | **UI-3** | Intent Preview + Approvals | 3h | Phase 3 ✅ | **Partial** — `ToolResultCard` Confirm; `RebalanceProposalCard` deferred |
 | **UI-4** | LI.FI + blocked polish | 2h | Phase 4 | `LifiQuoteCard`, `PolicyBlockedCard`, Etherscan link |
-| **UI-5** | Timelock approval | 2h | Phase 5 | `PaymentRequestCard`, Owner approve, countdown |
+| **UI-5** | Timelock approval | 2h | Phase 5 | `PaymentRequestCard`, APPROVER + Broadcaster, countdown |
 | **UI-6** | Demo polish | 2h | Phase 7 | Loading states, `?demo=1`, keyboard `/` focus |
 
 **Total:** ~15h (parallelizable with backend phases)

@@ -185,7 +185,8 @@ At provisioning, set `initialOwner` = Dynamic embedded address and `broadcaster`
 | Widget doesn't open | Check CORS allowed origins |
 | No wallet after login | Enable Embedded Wallets in dashboard |
 | Sepolia txs fail | Enable Sepolia chain in dashboard |
-| Owner approve fails | Embedded address ≠ on-chain Owner |
+| Owner approve fails (legacy fallback) | Embedded address ≠ on-chain Owner |
+| APPROVER sign fails | `APPROVER_PRIVATE_KEY` ≠ on-chain APPROVER or missing `SIGN_META_APPROVE` |
 
 ---
 

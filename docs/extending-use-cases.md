@@ -35,7 +35,7 @@ flowchart LR
 | Path | When to use | Initiator | Approver / executor |
 |------|-------------|-----------|---------------------|
 | **Policy execution** (meta-tx) | Automated, whitelist-bounded ops | AGENT_POLICY signs | Broadcaster executes |
-| **Timelock** | Human review before funds move | ANALYST requests | Owner approves after delay |
+| **Timelock (Lane B)** | Human review before funds move | ANALYST requests | APPROVER signs → Broadcaster submits after delay |
 
 Both produce **TxRecords**. See [on-chain-execution-flow.md](./on-chain-execution-flow.md).
 

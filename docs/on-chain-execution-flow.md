@@ -12,8 +12,8 @@ Same treasury, same TxRecord model — two paths:
 
 | Path | Best for | Key methods |
 |------|----------|-------------|
-| **Policy execution** | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
-| **Timelock** | Human-gated disbursements | `executeWithTimeLock` → `approveTimeLockExecution` |
+| **Policy execution (Lane A — future)** | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
+| **Timelock (Lane B — MVP)** | Human-gated disbursements | ANALYST request → APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx` |
 
 ---
 
@@ -29,7 +29,7 @@ On-chain enforcement is authoritative. Off-chain and ENS layers should align for
 
 ---
 
-## Treasury operation: Rebalance (policy execution)
+## Treasury operation: Rebalance (policy execution — *future / LI.FI*)
 
 ```mermaid
 sequenceDiagram
@@ -61,7 +61,7 @@ sequenceDiagram
 |------|------|--------|
 | Tool entry | `server/tools/propose.ts` → `proposeRebalance` | ✅ |
 | Policy | `server/policy-gate.ts` | ✅ |
-| LI.FI compose | `server/lifi/compose.ts` | Phase 4 — env vars used until compose lands |
+| LI.FI compose | `server/lifi/compose.ts` | Future — scaffold exists; needs API key |
 | Sign | `server/signing/meta-tx.ts` | ✅ |
 | Serialize | `server/signing/serialize.ts` | ✅ |
 | Execute | `server/execution/rebalance.ts` + `server/dynamic/broadcaster.ts` | ✅ (env-dependent) |
@@ -98,29 +98,51 @@ Off-chain tool returns `status: blocked`. Phase 4 adds optional Broadcaster subm
 
 ---
 
-## Controlled disbursement: Vendor payment (timelock)
+## Controlled disbursement: Vendor payment — Lane B (timelock)
 
 ```mermaid
 sequenceDiagram
-    participant User as User / Analyst
+    participant User as User / Copilot
     participant Tool as request_vendor_payment
+    participant Analyst as ANALYST (server)
     participant AB as AccountBlox
-    participant Owner as Dynamic Owner
+    participant Approver as APPROVER (sign)
+    participant BC as Broadcaster
 
     User->>Tool: /pay
-    Tool-->>User: request card (PENDING)
-    Note over AB: Phase 5: executeWithTimeLock on-chain
+    Tool->>Analyst: executeWithTimeLock
+    Analyst->>AB: payment request
     AB->>AB: TxRecord PENDING + releaseTime
-    Owner->>AB: approveTimeLockExecution(txId)
+    Tool-->>User: request card (awaiting release)
+    Note over AB: After releaseTime
+    Approver->>Approver: sign approveTimeLockExecutionWithMetaTx
+    User->>BC: Confirm release
+    BC->>AB: approveTimeLockExecutionWithMetaTx(signedMetaTx)
+    AB->>AB: SIGN_META_APPROVE + EXECUTE_META_APPROVE + whitelist
     AB-->>User: COMPLETED + audit trail
 ```
+
+**Role separation:** ANALYST initiates; APPROVER signs; Broadcaster executes — same signer ≠ executor pattern as Lane A.
 
 ### Bloxchain methods
 
 ```typescript
+// Request (ANALYST — direct call)
 guardController.executeWithTimeLock(target, value, selector, params, gasLimit, operationType);
-guardController.approveTimeLockExecution(txId, { from: ownerAddress });
+
+// Approve (APPROVER sign + Broadcaster submit)
+guardController.approveTimeLockExecutionWithMetaTx(signedMetaTx, { from: broadcasterAddress });
 ```
+
+**Legacy fallback:** Owner may still call `approveTimeLockExecution(txId)` directly via Dynamic embedded wallet (`src/lib/owner-guard.ts`) — not the hackathon demo path.
+
+**On-chain RBAC:**
+
+| Role | Permission | Selector |
+|------|------------|----------|
+| ANALYST | `EXECUTE_TIME_DELAY_REQUEST` | USDC `transfer(address,uint256)` |
+| APPROVER | `SIGN_META_APPROVE` | Same payment selector |
+| Broadcaster | `EXECUTE_META_APPROVE` | `approveTimeLockExecutionWithMetaTx` handler (default schema) |
 
 **Whitelist required:** Sepolia USDC contract + `transfer(address,uint256)` selector (and attached-payment keys if applicable). See [guard-controller.md](./guard-controller.md) § Timelock disbursement.
 
@@ -136,7 +158,7 @@ const record = await guardController.getTransaction(txId);
 
 | Status | Meaning | User action |
 |--------|---------|-------------|
-| `PENDING` | Awaiting timelock release or approval | Owner approve when ready |
+| `PENDING` | Awaiting timelock release or approval | APPROVER sign + Broadcaster confirm when ready |
 | `EXECUTING` | On-chain in progress | Wait |
 | `COMPLETED` | Success | Audit |
 | `FAILED` | Reverted | Inspect |

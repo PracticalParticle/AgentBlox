@@ -29,7 +29,7 @@ Without `TREASURY_ADDRESS`, Copilot tools return `TREASURY_NOT_CONFIGURED`.
 | `PORT` | `3001` | AgentBlox server port |
 | `OPENAI_API_KEY` | — | Enables LLM Copilot mode |
 | `LLM_MODEL` | `gpt-4o-mini` | OpenAI model when key is set |
-| `LIFI_API_KEY` | Composer API key (portal.li.fi) — required for compose |
+| `LIFI_API_KEY` | Optional — higher rate limits ([portal.li.fi](https://portal.li.fi)); compose works without it |
 | `LIFI_COMPOSER_BASE_URL` | Default: `https://ethglobal-composer.li.quest` |
 | `SEPOLIA_USDC` / `SEPOLIA_WETH` | Token addresses for rebalance flow |
 | `LIFI_REBALANCE_SLIPPAGE` | Default `0.03` (3%) |
@@ -56,17 +56,20 @@ The server reads `VITE_DYNAMIC_ENVIRONMENT_ID` from `.env` via `dotenv` — **no
 | Variable | Purpose |
 |----------|---------|
 | `AGENT_POLICY_PRIVATE_KEY` | EIP-712 meta-tx signer — must match on-chain `AGENT_POLICY` role |
-| `REBALANCE_EXECUTION_*` | Manual fallback only — compose auto-fills target + calldata when `LIFI_API_KEY` is set |
+| `REBALANCE_EXECUTION_*` | Manual fallback only — compose auto-fills target + calldata when `/quote` succeeds |
 
 ---
 
-## Phase 5 (ANALYST timelock `/pay` — server only)
+## Phase 5 (Lane B timelock `/pay` — server only)
 
 | Variable | Purpose |
 |----------|---------|
 | `ANALYST_PRIVATE_KEY` | Submits `executeWithTimeLock` for vendor payments — must match on-chain `ANALYST` role |
+| `APPROVER_PRIVATE_KEY` | Signs `approveTimeLockExecutionWithMetaTx` — must match on-chain `APPROVER` role with `SIGN_META_APPROVE` on payment selector |
 
-Owner approval uses the Dynamic embedded wallet in the browser (no server env var).
+Broadcaster submits the signed approval meta-tx via Dynamic server wallet (`DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`).
+
+**Legacy fallback:** Owner may approve via Dynamic embedded wallet in the browser (no server env var) — not the hackathon demo path.
 
 ---
 
@@ -98,10 +101,9 @@ ENS_NAME=treasury.acme.eth
 # DYNAMIC_API_TOKEN=
 # BROADCASTER_WALLET_ADDRESS=0x...
 
-# Phase 3
-# AGENT_POLICY_PRIVATE_KEY=0x...
-# REBALANCE_EXECUTION_TARGET=0x...
-# REBALANCE_EXECUTION_PARAMS=0x
+# Phase 5 (Lane B)
+# ANALYST_PRIVATE_KEY=0x...
+# APPROVER_PRIVATE_KEY=0x...
 ```
 
 ---
