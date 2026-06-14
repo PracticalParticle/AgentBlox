@@ -8,7 +8,7 @@ AgentBlox is the ETHGlobal New York 2026 hackathon application built by [Particl
 |-------|---------|------|
 | **Protocol** | [Bloxchain Protocol](https://github.com/PracticalParticle/Bloxchain-Protocol) | On-chain policy engine (timelock, RBAC, GuardController whitelists) |
 | **Provisioning** | [bloxchain.app](https://bloxchain.app/) | Create and configure AccountBlox clones (roles, whitelist, timelock) |
-| **Operations** | **AgentBlox** (this repo) | **Copilot** for day-to-day ops · **Console** for setup |
+| **Operations** | **AgentBlox** (this repo) | **Workspace** for day-to-day ops · **Setup** for provisioning |
 
 **One-line pitch:**  
 *AgentBlox is a conversational treasury platform — ask your Copilot to read balances, propose rebalances, or request payments, while Bloxchain AccountBlox constitutionally limits what can execute.*
@@ -41,7 +41,7 @@ Each treasury is an **AccountBlox clone** on Sepolia. Bloxchain enforces:
 
 1. **Two-party authorization** — meta-tx (signer ≠ executor) or timelock (request → wait → approve)
 2. **GuardController whitelists** — only pre-approved contracts (e.g. LI.FI Composer) can be called
-3. **RBAC** — scoped roles (`AGENT_POLICY` signs only; `ANALYST` requests only)
+3. **RBAC** — scoped roles (`ANALYST` signs B-fast; `APPROVER` signs B-timelock approve; `AGENT_POLICY` for rebalance)
 4. **Audit trail** — every operation is a `TxRecord` with explicit status history
 
 ---
@@ -50,10 +50,10 @@ Each treasury is an **AccountBlox clone** on Sepolia. Bloxchain enforces:
 
 | Surface | Route | Purpose |
 |---------|-------|---------|
-| **Copilot** | `/` | Primary — chat with treasury tools (LLM or slash commands) |
-| **Console** | `/console` | Setup — import treasury, roles, env checklist |
+| **Workspace** | `/` | Primary — Copilot chat, status rail, approvals, tool cards |
+| **Setup** | `/setup` | Broadcaster verify, ENS link wizard, env checklist |
 
-Day-to-day treasury operations happen in **Copilot**. Configuration happens in **Console** or on [bloxchain.app](https://bloxchain.app/).
+Legacy routes `/console`, `/copilot` redirect to Setup and Workspace respectively.
 
 ---
 
@@ -67,6 +67,7 @@ One AccountBlox clone, two authorization paths. See [docs/treasury-lifecycle.md]
 | **Vendor payment** | Timelock | `/pay` |
 | **Policy validation** | Blocked target | `/attack` |
 | **Monitor / identity** | Read-only | `/status`, `/ens`, `/pending`, `/whitelist` |
+| **Treasury funding** | Connected wallet | `/deposit`, `/withdraw` (0.01 ETH) |
 
 ### Policy execution (e.g. rebalance)
 
@@ -76,9 +77,14 @@ One AccountBlox clone, two authorization paths. See [docs/treasury-lifecycle.md]
 
 ### Timelock disbursement (e.g. vendor payment)
 
-1. `request_vendor_payment` → `PENDING` TxRecord
-2. Owner approves via Dynamic (Phase 5)
+1. `request_vendor_payment` → ANALYST `executeWithTimeLock` → `PENDING` TxRecord
+2. After `releaseTime` → **APPROVER** signs approve meta-tx → Broadcaster submits
 3. Full audit trail via `/pending`
+
+### Instant payment (B-fast, &lt; $10 USDC)
+
+1. `request_vendor_payment` → **ANALYST** signs meta-tx
+2. Broadcaster `requestAndApproveExecution` → immediate USDC transfer
 
 ---
 
@@ -91,8 +97,8 @@ flowchart TB
     end
 
     subgraph AgentBlox["AgentBlox — this repo"]
-        Copilot["Copilot chat (primary)"]
-        Console["Console (setup)"]
+        Workspace["Workspace (primary)"]
+        Setup["Setup wizard"]
         Tools["Treasury tools + policy gate"]
         DynamicBlock["Dynamic Owner + Broadcaster"]
     end

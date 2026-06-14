@@ -44,9 +44,11 @@ See [integrations/dynamic.md](./integrations/dynamic.md).
 - [ ] ANALYST **`SIGN_META_REQUEST_AND_APPROVE`** on **both**:
   - Handler `requestAndApproveExecution` → `0xde0df793`
   - Execution `transfer(address,uint256)` → `0xa9059cbb`
-- [ ] ANALYST **`EXECUTE_TIME_DELAY_REQUEST`** + **`SIGN_META_APPROVE`** on `0xa9059cbb` (B-timelock)
+- [ ] ANALYST **`EXECUTE_TIME_DELAY_REQUEST`** on `0xa9059cbb` (B-timelock request only)
+- [ ] Create **`APPROVER`** role; assign policy server wallet
+- [ ] APPROVER **`SIGN_META_APPROVE`** on `0xa9059cbb` (B-timelock approve meta-tx sign)
 - [ ] Broadcaster **`EXECUTE_META_REQUEST_AND_APPROVE`** + **`EXECUTE_META_APPROVE`** on the same selectors
-- [ ] Create **`ANALYST`**: `EXECUTE_TIME_DELAY_REQUEST` on USDC transfer (B-timelock — wallet needs Sepolia ETH)
+- [ ] Fund **`ANALYST`** wallet with Sepolia ETH (B-timelock request gas)
 
 ### A4. GuardController whitelist
 
@@ -80,6 +82,7 @@ Full detail: [guard-controller.md](./guard-controller.md).
 - [ ] Set `TREASURY_ADDRESS` in `.env`
 - [ ] Set `VITE_DYNAMIC_ENVIRONMENT_ID`
 - [ ] Set `ANALYST_PRIVATE_KEY` (must derive to `ANALYST_WALLET_ADDRESS`, default `0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700`)
+- [ ] Set `APPROVER_PRIVATE_KEY` (B-timelock approve sign — `SIGN_META_APPROVE` on USDC transfer)
 - [ ] Set `DYNAMIC_API_TOKEN` + `BROADCASTER_WALLET_ADDRESS` (Broadcaster execution)
 - [ ] *(Future Lane A)* `AGENT_POLICY_PRIVATE_KEY`, `REBALANCE_EXECUTION_TARGET`, `LIFI_EXECUTION_SELECTOR`
 - [ ] Optional: `ENS_NAME`

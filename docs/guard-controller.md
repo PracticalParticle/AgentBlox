@@ -85,12 +85,11 @@ For Copilot `/pay` on USDC `transfer(address,uint256)` — **two execution paths
 
 | Role | B-fast | B-timelock |
 |------|--------|------------|
-| Payment signer (e.g. APPROVER) | `SIGN_META_REQUEST_AND_APPROVE` | — |
-| Broadcaster | `EXECUTE_META_REQUEST_AND_APPROVE` (handler: `requestAndApproveExecution`) | `EXECUTE_META_APPROVE` (handler: `approveTimeLockExecutionWithMetaTx`) |
-| ANALYST | — | `EXECUTE_TIME_DELAY_REQUEST` |
-| APPROVER | Can hold both fast-sign and timelock-approve permissions | `SIGN_META_APPROVE` |
+| **ANALYST** | `SIGN_META_REQUEST_AND_APPROVE` (handler + execution) | `EXECUTE_TIME_DELAY_REQUEST` |
+| **APPROVER** | — | `SIGN_META_APPROVE` |
+| **Broadcaster** | `EXECUTE_META_REQUEST_AND_APPROVE` | `EXECUTE_META_APPROVE` |
 
-**Future AgentBlox policy:** off-chain amount threshold (e.g. **&lt; $10 USDC → B-fast**, **≥ $10 → B-timelock**). Both paths must be provisioned on-chain first.
+**AgentBlox amount routing (implemented):** **&lt; $10 USDC → B-fast**, **≥ $10 → B-timelock** via `resolvePaymentPath`. Both paths must be provisioned on-chain first.
 
 Owner direct approve via `approveTimeLockExecution` remains for governance — optional fallback only.
 

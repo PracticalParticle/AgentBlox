@@ -21,6 +21,13 @@ export default defineConfig({
   server: {
     port: 5173,
     host: isDocker ? '0.0.0.0' : true,
+    strictPort: true,
+    watch: isDocker
+      ? {
+          usePolling: true,
+          interval: 1000,
+        }
+      : undefined,
     proxy: {
       '/api': {
         target: apiProxyTarget,

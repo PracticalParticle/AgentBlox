@@ -29,7 +29,7 @@ describe('approveTimelockPaymentOnChain', () => {
     vi.clearAllMocks();
   });
 
-  it('signs with ANALYST and submits via Broadcaster', async () => {
+  it('signs with APPROVER and submits via Broadcaster', async () => {
     signPaymentTimelockApproveMetaTransaction.mockResolvedValue({
       ok: true,
       signedMetaTx: { txRecord: {}, params: {}, message: '0x', signature: '0x', data: '0x' },
@@ -55,15 +55,15 @@ describe('approveTimelockPaymentOnChain', () => {
   it('returns error when signing fails', async () => {
     signPaymentTimelockApproveMetaTransaction.mockResolvedValue({
       ok: false,
-      code: 'MISSING_ANALYST_KEY',
-      reason: 'Set ANALYST_PRIVATE_KEY',
+      code: 'MISSING_APPROVER_KEY',
+      reason: 'Set APPROVER_PRIVATE_KEY',
     });
 
     const result = await approveTimelockPaymentOnChain({ txId: 1n });
     expect(result).toEqual({
       ok: false,
-      reason: 'Set ANALYST_PRIVATE_KEY',
-      code: 'MISSING_ANALYST_KEY',
+      reason: 'Set APPROVER_PRIVATE_KEY',
+      code: 'MISSING_APPROVER_KEY',
     });
     expect(submitTimelockApproveWithBroadcaster).not.toHaveBeenCalled();
   });

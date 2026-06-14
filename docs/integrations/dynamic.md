@@ -157,7 +157,7 @@ When a tool returns a **signed meta-tx** (rebalance, B-fast payment) or a **rele
 Flow:
 
 1. User runs `/rebalance`, `/pay 5$`, or `/pay 20$` in Copilot.
-2. Server signs (AGENT_POLICY or APPROVER) or ANALYST submits timelock request — card shows status.
+2. Server signs (**ANALYST** B-fast, **APPROVER** B-timelock approve, or **AGENT_POLICY** rebalance) or **ANALYST** submits timelock request — card shows status.
 3. User clicks **Submit on-chain (Broadcaster)** → `POST /api/execute/*` → `getBroadcasterWalletClient()` submits via GuardController.
 4. Button disabled until `/api/health` reports `dynamicBroadcasterConfigured: true` and `matchesOnChainBroadcaster !== false`.
 

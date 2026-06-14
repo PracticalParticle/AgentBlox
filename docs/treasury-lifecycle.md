@@ -89,7 +89,7 @@ Day-to-day actions via **Copilot treasury tools** (`POST /api/chat`).
 |------|----------|-------------------|
 | **Policy execution** *(future)* | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
 | **Timelock (Lane B — large)** | Human-gated disbursements | ANALYST `executeWithTimeLock` → APPROVER sign → Broadcaster approve |
-| **Instant payment (Lane B — small, future)** | Sub-threshold USDC | Payment signer → `requestAndApproveExecution` |
+| **Instant payment (Lane B — small)** | Sub-threshold USDC | ANALYST sign → Broadcaster `requestAndApproveExecution` |
 
 ### Three policy layers
 

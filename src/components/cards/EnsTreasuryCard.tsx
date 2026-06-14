@@ -100,8 +100,8 @@ export default function EnsTreasuryCard({ result }: Props) {
           Manage on app.ens.domains
         </a>
         {' · '}
-        <a href="/console" className="primary-link">
-          Link ENS in Console
+        <a href="/setup" className="primary-link">
+          Link ENS in Setup
         </a>
       </p>
     </CardShell>

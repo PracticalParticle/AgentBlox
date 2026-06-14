@@ -8,6 +8,9 @@ import {
   analystWalletAddressMatches,
   ANALYST_WALLET_ADDRESS,
   getAnalystWalletAddressFromKey,
+  getApproverWalletAddressFromKey,
+  approverWalletAddressMatches,
+  APPROVER_WALLET_ADDRESS,
   isEnsConfigured,
   isLifiApiKeyConfigured,
   isLifiComposeConfigured,
@@ -74,6 +77,12 @@ const server = createServer(async (req, res) => {
         analystWalletAddressExpected: ANALYST_WALLET_ADDRESS,
         analystWalletAddressMatches: analystWalletAddressMatches(),
         approverConfigured: isApproverConfigured(),
+        approverWalletAddress: getApproverWalletAddressFromKey(),
+        approverWalletAddressExpected:
+          APPROVER_WALLET_ADDRESS && APPROVER_WALLET_ADDRESS.startsWith('0x')
+            ? APPROVER_WALLET_ADDRESS
+            : null,
+        approverWalletAddressMatches: approverWalletAddressMatches(),
         ensConfigured: isEnsConfigured(),
         lifiComposeConfigured: isLifiComposeConfigured(),
         lifiApiKeyConfigured: isLifiApiKeyConfigured(),
@@ -248,8 +257,11 @@ const server = createServer(async (req, res) => {
   res.end(JSON.stringify({ error: 'Not found' }));
 });
 
-server.listen(SERVER_PORT, () => {
-  console.log(`AgentBlox server listening on http://localhost:${SERVER_PORT}`);
+const listenHost = process.env.DOCKER === '1' ? '0.0.0.0' : undefined;
+
+server.listen(SERVER_PORT, listenHost, () => {
+  const bindLabel = listenHost ?? 'localhost';
+  console.log(`AgentBlox server listening on http://${bindLabel}:${SERVER_PORT}`);
   console.log(`  Mode: ${isLlmEnabled() ? 'LLM copilot' : 'Fallback slash-command copilot'}`);
   console.log(`  Treasury: ${isTreasuryConfigured() ? 'configured' : 'not configured'}`);
 });

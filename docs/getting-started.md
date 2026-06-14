@@ -30,11 +30,11 @@ LI.FI Composer (future)      →  Lane A rebalance execution (whitelisted)
 | **Owner** | Dynamic embedded wallet (human) | Governance, recovery — not Lane B demo approve |
 | **Broadcaster** | Dynamic server wallet | Submits signed meta-txs |
 | **Recovery** | Cold backup address | Emergency rotation |
-| **ANALYST** | Agent / ops server key | B-timelock only: `executeWithTimeLock` (**pays Sepolia gas**) |
-| **APPROVER** | Policy server key | B-fast: sign `requestAndApproveExecution` meta-tx; B-timelock: sign approve meta-tx |
+| **ANALYST** | Agent / ops server key | B-fast: sign `requestAndApproveExecution` meta-tx; B-timelock: `executeWithTimeLock` (**pays Sepolia gas**) |
+| **APPROVER** | Policy server key | B-timelock only: sign `approveTimeLockExecutionWithMetaTx` meta-tx |
 | **AGENT_POLICY** *(future LI.FI)* | Server private key | Lane A rebalance meta-tx sign |
 
-**Critical invariant:** signer ≠ executor on meta-tx paths. **B-fast:** payment signer signs, Broadcaster executes (no analyst gas). **B-timelock:** ANALYST requests on-chain (gas), APPROVER signs approve, Broadcaster submits.
+**Critical invariant:** signer ≠ executor on meta-tx paths. **B-fast:** ANALYST signs, Broadcaster executes (no analyst request gas). **B-timelock:** ANALYST requests on-chain (gas), APPROVER signs approve, Broadcaster submits.
 
 **Future off-chain policy:** USDC below ~$10 → B-fast; at or above → B-timelock.
 
@@ -122,8 +122,15 @@ SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 **Windows (recommended — Dynamic Broadcaster in Linux container):**
 
 ```bash
+# Foreground (logs in terminal):
 npm run docker:dev
+
+# Detached (manual browser testing):
+npm run docker:up
+npm run docker:logs    # optional — follow logs
 ```
+
+Rebuild after `package.json` or Dockerfile changes: `npm run docker:rebuild`
 
 **macOS / Linux (native):**
 
@@ -142,7 +149,7 @@ npm run dev:all
 curl.exe -s http://127.0.0.1:3001/api/health
 ```
 
-On Windows PowerShell, prefer `curl.exe` (not the `Invoke-WebRequest` alias) or call the API from inside Docker: `docker exec agentblox-server-1 curl -s http://127.0.0.1:3001/api/health`.
+On Windows PowerShell, prefer `curl.exe` (not the `Invoke-WebRequest` alias) or from inside the container: `docker exec agentblox-server node -e "fetch('http://127.0.0.1:3001/api/health').then(r=>r.json()).then(console.log)"`.
 
 With only `TREASURY_ADDRESS` set, expect `treasuryConfigured: true`. Other flags turn `true` as you complete Parts 2–5.
 
@@ -266,13 +273,13 @@ After Broadcaster env + on-chain role match, finish these in order for **Lane B 
 | 1 | `SEPOLIA_RPC_URL` (working RPC) | `/status` returns balance + roles |
 | 2 | On-chain **Broadcaster** = `BROADCASTER_WALLET_ADDRESS` | `npm run docker:ops:verify` → `matchesOnChainBroadcaster: true` |
 | 3 | Whitelist Sepolia USDC for `transfer(address,uint256)` | [Part 4.8](#48-lane-b--vendor-payments-phase-5) |
-| 4 | **`APPROVER`** + `SIGN_META_REQUEST_AND_APPROVE` on USDC transfer | B-fast: sign small payment meta-tx (no analyst gas) |
+| 4 | **`ANALYST`** + `SIGN_META_REQUEST_AND_APPROVE` on handler `0xde0df793` **and** execution `0xa9059cbb` | B-fast: sign instant payment meta-tx |
 | 5 | **`ANALYST`** + `EXECUTE_TIME_DELAY_REQUEST` + `ANALYST_PRIVATE_KEY` + Sepolia ETH on analyst wallet | B-timelock: `/pay` creates PENDING tx |
 | 6 | **`APPROVER`** + `SIGN_META_APPROVE` + `APPROVER_PRIVATE_KEY` | B-timelock: approve meta-tx after release |
 | 7 | Broadcaster submits (both paths) | Confirm in UI → Etherscan |
 | 8 | (Optional) `OPENAI_API_KEY` | Natural language Copilot (slash commands work without it) |
 
-**Full demo gate (Lane B):** whitelist USDC transfer + APPROVER/Broadcaster for B-fast **or** ANALYST+APPROVER+Broadcaster for B-timelock. Amount-based routing is **future** (~$10 threshold).
+**Full demo gate (Lane B):** whitelist USDC transfer + ANALYST + Broadcaster for B-fast **or** ANALYST + APPROVER + Broadcaster for B-timelock. Amount routing: **&lt; $10 USDC → B-fast**, **≥ $10 → B-timelock**.
 
 **Future (Lane A / LI.FI):** steps in [Part 3](#part-3--lifi-composer-setup-future) and [Part 4](#part-4--configure-accountblox-for-lifi-composer-phase-4--future).
 
@@ -667,16 +674,16 @@ See [demo-script.md](./demo-script.md).
 
 For **`/pay`** — provision **both** paths on USDC `transfer(address,uint256)` (`0xa9059cbb`):
 
-#### Path B-fast — instant (no ANALYST gas)
+#### Path B-fast — instant (ANALYST sign + Broadcaster, no request gas)
 
 | On-chain | Setting |
 |----------|---------|
 | Whitelist | Sepolia USDC for `transfer` selector |
-| RBAC | Payment signer (e.g. **`APPROVER`**) + `SIGN_META_REQUEST_AND_APPROVE` on transfer selector |
-| RBAC | Broadcaster + `EXECUTE_META_REQUEST_AND_APPROVE` (default on `requestAndApproveExecution`) |
-| Env | `APPROVER_PRIVATE_KEY` (or dedicated payment signer key) |
+| RBAC | **`ANALYST`** + `SIGN_META_REQUEST_AND_APPROVE` on handler `0xde0df793` and execution `0xa9059cbb` |
+| RBAC | Broadcaster + `EXECUTE_META_REQUEST_AND_APPROVE` |
+| Env | `ANALYST_PRIVATE_KEY` (must derive to `ANALYST_WALLET_ADDRESS`) |
 
-Flow: sign meta-tx off-chain → user confirms → Broadcaster `requestAndApproveExecution` → USDC transfers immediately.
+Flow: ANALYST signs meta-tx off-chain → user confirms → Broadcaster `requestAndApproveExecution` → USDC transfers immediately.
 
 #### Path B-timelock — delayed (ANALYST pays request gas)
 
@@ -689,12 +696,14 @@ Flow: sign meta-tx off-chain → user confirms → Broadcaster `requestAndApprov
 
 Flow: ANALYST `executeWithTimeLock` → wait `releaseTime` → APPROVER signs approve meta-tx → Broadcaster submits.
 
-#### Future off-chain routing
+#### Amount routing (implemented)
 
-AgentBlox will select path by amount (planned, not wired yet):
+AgentBlox selects path by amount via `resolvePaymentPath` in `server/policy-gate.ts`:
 
-- **&lt; $10 USDC** → B-fast (`requestAndApproveExecution`)
-- **≥ $10 USDC** → B-timelock (`executeWithTimeLock` + approve)
+- **&lt; $10 USDC** (`PAYMENT_INSTANT_MAX_USDC`) → B-fast
+- **≥ $10 USDC** → B-timelock
+
+Slash commands: `/pay 5$` (B-fast), `/pay 20$` (B-timelock).
 
 Details: [on-chain-execution-flow.md](./on-chain-execution-flow.md) · [guard-controller.md](./guard-controller.md).
 

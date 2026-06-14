@@ -16,13 +16,15 @@ RUN mkdir -p /app/data
 
 FROM base AS server
 EXPOSE 3001
+ENV DOCKER=1
 CMD ["npm", "run", "dev:server"]
 
 FROM base AS web
 EXPOSE 5173
 ENV DOCKER=1
 ENV API_PROXY_TARGET=http://server:3001
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--strictPort"]
 
 FROM base AS ci
+ENV DOCKER=1
 CMD ["npm", "run", "verify"]

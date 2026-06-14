@@ -83,8 +83,8 @@ There is **no** `src/lib/bloxchain.ts` in the current MVP — all SDK access is 
 | Broadcaster | Dynamic server | Meta-tx execution (Lane A + Lane B approve submit) |
 | Recovery | Cold backup | Emergency rotation |
 | AGENT_POLICY | Server key | Sign Lane A meta-tx *(future LI.FI)* |
-| ANALYST | Ops wallet | B-timelock: `executeWithTimeLock` (pays request gas) |
-| APPROVER | Policy server key | B-fast: `SIGN_META_REQUEST_AND_APPROVE`; B-timelock: `SIGN_META_APPROVE` |
+| ANALYST | Ops wallet | B-fast: `SIGN_META_REQUEST_AND_APPROVE`; B-timelock: `executeWithTimeLock` (pays request gas) |
+| APPROVER | Policy server key | B-timelock: `SIGN_META_APPROVE` only |
 
 Live changes: [governance.md](../governance.md).
 
@@ -99,7 +99,7 @@ Full sequences with diagrams: [on-chain-execution-flow.md](../on-chain-execution
 | Policy execution *(future)* | `/rebalance` | `requestAndApproveExecution` |
 | Timelock disbursement (Lane B) | `/pay` | B-fast: `requestAndApproveExecution` · B-timelock: `executeWithTimeLock` → approve meta-tx |
 
-**Key invariant:** signer ≠ executor on meta-tx. B-fast: payment signer signs, Broadcaster executes (no analyst gas). B-timelock: ANALYST pays request gas; APPROVER signs approve; Broadcaster submits.
+**Key invariant:** signer ≠ executor on meta-tx. B-fast: ANALYST signs, Broadcaster executes (no request gas). B-timelock: ANALYST pays request gas; APPROVER signs approve; Broadcaster submits.
 
 ---
 

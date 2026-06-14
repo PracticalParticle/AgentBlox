@@ -33,7 +33,9 @@ Grouped by intent:
 |---------|------|-----------|
 | `/rebalance` | `propose_rebalance` | Policy execution |
 | `/pay 5$` | `request_vendor_payment` | B-fast (instant — ANALYST sign → Broadcaster) |
-| `/pay 20$` | `request_vendor_payment` | B-timelock (ANALYST request → ANALYST sign → Broadcaster) |
+| `/pay 20$` | `request_vendor_payment` | B-timelock (ANALYST request → APPROVER sign → Broadcaster) |
+| `/deposit` | `prepare_wallet_transfer` | Connected Dynamic wallet → treasury (0.01 ETH) |
+| `/withdraw` | `prepare_wallet_transfer` | Connected Dynamic wallet ← treasury timelock (0.01 ETH) |
 
 ### Validate
 
@@ -98,7 +100,7 @@ See [env-configuration.md](./env-configuration.md).
 
 | Tool output | User action | Status |
 |-------------|-------------|--------|
-| `request_vendor_payment` | **Confirm release** (Broadcaster) after APPROVER signed | ⚠️ APPROVER path in progress; Owner fallback exists |
+| `request_vendor_payment` | **Submit on-chain (Broadcaster)** — B-fast after ANALYST sign; B-timelock after APPROVER approve sign + release |
 | `propose_rebalance` | **Confirm execution** in `ToolResultCard` → Broadcaster submits | ✅ *(future with LI.FI)* |
 
 Flow details: [on-chain-execution-flow.md](./on-chain-execution-flow.md). Hackathon MVP: **Lane B** (`/pay`). LI.FI rebalance is future implementation.

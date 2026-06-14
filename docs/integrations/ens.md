@@ -156,11 +156,10 @@ When on-chain policy changes, update ENS records to match — see [governance.md
 |------------|--------|----------|
 | Forward resolve + text records | ✅ Done | `resolve_ens_treasury` in `server/tools/read.ts` |
 | Match check vs `.env` | ✅ Done | `matchesConfiguredTreasury` |
+| Policy gate reads ENS | ✅ Done | `validateFlowIdWithEns` in `server/policy-gate.ts` |
 | Client read helpers | ✅ Done | `src/lib/ens.ts` |
-| Console display fields | ⚠️ Partial | `src/pages/ConsolePage.tsx` |
-| Policy gate reads ENS | ❌ Phase 6 | `server/policy-gate.ts` |
-| Write `setAddr` / `setText` | ❌ Phase 6 | `src/lib/ens.ts` |
-| Console link wizard + persistence | ❌ Phase 6 | `src/pages/ConsolePage.tsx` |
+| Write `setAddr` / `setText` | ✅ Done | `src/lib/ens-write.ts` |
+| Setup link wizard + persistence | ✅ Done | `EnsLinkWizard` + `src/lib/treasury-storage.ts` |
 | MCP bootstrap export | ❌ Future | `server/mcp/` — see [agent-bridge.md](../agent-bridge.md) |
 | Multi-treasury ENS picker | ❌ Future | — |
 

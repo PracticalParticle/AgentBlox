@@ -64,8 +64,9 @@ The server reads `VITE_DYNAMIC_ENVIRONMENT_ID` from `.env` via `dotenv` — **no
 
 | Variable | Purpose |
 |----------|---------|
-| `ANALYST_PRIVATE_KEY` | Submits `executeWithTimeLock` for vendor payments — must match on-chain `ANALYST` role |
-| `APPROVER_PRIVATE_KEY` | Signs `approveTimeLockExecutionWithMetaTx` — must match on-chain `APPROVER` role with `SIGN_META_APPROVE` on payment selector |
+| `ANALYST_PRIVATE_KEY` | B-fast: signs `requestAndApproveExecution` meta-tx; B-timelock: submits `executeWithTimeLock` — must match on-chain `ANALYST` role |
+| `APPROVER_PRIVATE_KEY` | B-timelock only: signs `approveTimeLockExecutionWithMetaTx` — must match on-chain `APPROVER` with `SIGN_META_APPROVE` |
+| `APPROVER_WALLET_ADDRESS` | Optional — health check verifies key derives to this address |
 
 Broadcaster submits the signed approval meta-tx via Dynamic server wallet (`DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`).
 

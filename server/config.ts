@@ -111,7 +111,7 @@ export function isAgentPolicySigningConfigured(): boolean {
   return AGENT_POLICY_PRIVATE_KEY.startsWith('0x') && AGENT_POLICY_PRIVATE_KEY.length >= 66;
 }
 
-/** ANALYST server key — signs payment meta-txs (B-fast + B-timelock approve) and submits timelock requests. */
+/** ANALYST server key — B-fast `requestAndApprove` meta-tx sign + B-timelock `executeWithTimeLock` request. */
 export const ANALYST_PRIVATE_KEY = (process.env.ANALYST_PRIVATE_KEY || '') as Hex;
 
 /** On-chain ANALYST wallet — must match ANALYST_PRIVATE_KEY. */
@@ -137,11 +137,32 @@ export function analystWalletAddressMatches(): boolean | null {
   return derived.toLowerCase() === ANALYST_WALLET_ADDRESS.toLowerCase();
 }
 
-/** @deprecated Lane B payments use ANALYST only — kept for legacy env checks. */
+/** APPROVER server key — B-timelock `approveTimeLockExecutionWithMetaTx` meta-tx sign only. */
 export const APPROVER_PRIVATE_KEY = (process.env.APPROVER_PRIVATE_KEY || '') as Hex;
+
+/** Optional on-chain APPROVER wallet — when set, health checks key derivation match. */
+export const APPROVER_WALLET_ADDRESS = (process.env.APPROVER_WALLET_ADDRESS || '') as Address;
 
 export function isApproverConfigured(): boolean {
   return APPROVER_PRIVATE_KEY.startsWith('0x') && APPROVER_PRIVATE_KEY.length >= 66;
+}
+
+export function getApproverWalletAddressFromKey(): Address | null {
+  if (!isApproverConfigured()) {
+    return null;
+  }
+  return privateKeyToAccount(APPROVER_PRIVATE_KEY).address;
+}
+
+export function approverWalletAddressMatches(): boolean | null {
+  if (!APPROVER_WALLET_ADDRESS || !APPROVER_WALLET_ADDRESS.startsWith('0x')) {
+    return null;
+  }
+  const derived = getApproverWalletAddressFromKey();
+  if (!derived) {
+    return null;
+  }
+  return derived.toLowerCase() === APPROVER_WALLET_ADDRESS.toLowerCase();
 }
 
 /** Instant payment threshold — amounts below this use B-fast (default 10 USDC, 6 decimals). */

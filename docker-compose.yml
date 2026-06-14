@@ -1,7 +1,32 @@
 # AgentBlox dev stack — Linux containers for Dynamic Node SDK (Broadcaster).
-# Full stack:  npm run docker:dev
-# API only:    npm run docker:dev:server  (+ npm run dev on host for Vite)
-# Ops:         npm run docker:ops:create-wallet | docker:ops:verify
+#
+# Manual test (browser):
+#   npm run docker:up          # build + start detached
+#   open http://localhost:5173
+#   curl http://localhost:3001/api/health
+#   npm run docker:logs        # follow logs
+#
+# Foreground (see logs in terminal):
+#   npm run docker:dev
+#
+# Rebuild after dependency / Dockerfile changes:
+#   npm run docker:rebuild
+#
+# Ops:
+#   npm run docker:ops:create-wallet | docker:ops:verify
+
+x-server-healthcheck: &server-healthcheck
+  test:
+    [
+      'CMD',
+      'node',
+      '-e',
+      "fetch('http://127.0.0.1:3001/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+    ]
+  interval: 10s
+  timeout: 5s
+  retries: 6
+  start_period: 25s
 
 services:
   server:
@@ -10,16 +35,19 @@ services:
       dockerfile: docker/Dockerfile.server
       target: server
     platform: linux/amd64
+    container_name: agentblox-server
     ports:
-      - "3001:3001"
+      - '3001:3001'
     env_file:
       - .env
     environment:
-      PORT: "3001"
+      DOCKER: '1'
+      PORT: '3001'
     volumes:
       - ./server:/app/server
       - ./scripts:/app/scripts
       - ./data:/app/data
+    healthcheck: *server-healthcheck
     restart: unless-stopped
 
   web:
@@ -28,13 +56,15 @@ services:
       dockerfile: docker/Dockerfile.server
       target: web
     platform: linux/amd64
+    container_name: agentblox-web
     ports:
-      - "5173:5173"
+      - '5173:5173'
     env_file:
       - .env
     environment:
-      DOCKER: "1"
+      DOCKER: '1'
       API_PROXY_TARGET: http://server:3001
+      CHOKIDAR_USEPOLLING: 'true'
     volumes:
       - ./src:/app/src
       - ./index.html:/app/index.html
@@ -42,8 +72,11 @@ services:
       - ./vite.config.ts:/app/vite.config.ts
       - ./tsconfig.json:/app/tsconfig.json
       - ./tsconfig.app.json:/app/tsconfig.app.json
+      - ./tsconfig.node.json:/app/tsconfig.node.json
     depends_on:
-      - server
+      server:
+        condition: service_healthy
+    restart: unless-stopped
 
   ops-create-wallet:
     profiles: [tools]
@@ -54,10 +87,12 @@ services:
     platform: linux/amd64
     env_file:
       - .env
+    environment:
+      DOCKER: '1'
     volumes:
       - ./scripts:/app/scripts
       - ./data:/app/data
-    entrypoint: ["npm", "run", "create:broadcaster-wallet"]
+    entrypoint: ['npm', 'run', 'create:broadcaster-wallet']
 
   ops-verify-broadcaster:
     profiles: [tools]
@@ -68,11 +103,13 @@ services:
     platform: linux/amd64
     env_file:
       - .env
+    environment:
+      DOCKER: '1'
     volumes:
       - ./scripts:/app/scripts
       - ./server:/app/server
       - ./data:/app/data
-    entrypoint: ["npm", "run", "verify:broadcaster"]
+    entrypoint: ['npm', 'run', 'verify:broadcaster']
 
   ci-verify:
     profiles: [ci]
@@ -83,3 +120,5 @@ services:
     platform: linux/amd64
     env_file:
       - .env
+    environment:
+      DOCKER: '1'

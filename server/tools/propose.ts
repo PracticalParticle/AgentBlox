@@ -259,7 +259,7 @@ export async function requestVendorPayment(params: {
     nextSteps: onChain.ok
       ? [
           `Timelock active — release after ${onChain.releaseTimeIso ?? 'releaseTime'}`,
-          'Click Confirm release — ANALYST signs + Broadcaster submits approve meta-tx',
+          'Click Confirm release — APPROVER signs approve meta-tx + Broadcaster submits',
           'Verify COMPLETED via /pending or Sepolia Etherscan',
         ]
       : [

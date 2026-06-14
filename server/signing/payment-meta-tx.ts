@@ -5,12 +5,15 @@ import {
   type Address,
   type Hex,
 } from '@bloxchain/sdk';
-import { privateKeyToAccount } from 'viem/accounts';
+import { privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
 import {
   ANALYST_PRIVATE_KEY,
   ANALYST_WALLET_ADDRESS,
+  APPROVER_PRIVATE_KEY,
+  APPROVER_WALLET_ADDRESS,
   ERC20_TRANSFER_SELECTOR,
   isAnalystConfigured,
+  isApproverConfigured,
   SEPOLIA_USDC,
   TREASURY_ADDRESS,
 } from '../config.js';
@@ -32,6 +35,8 @@ export type PaymentExecutionIntent = {
   gasLimit: bigint;
 };
 
+type PaymentSignerRole = 'ANALYST' | 'APPROVER';
+
 export type SignPaymentMetaTxResult =
   | {
       ok: true;
@@ -42,7 +47,12 @@ export type SignPaymentMetaTxResult =
   | {
       ok: false;
       reason: string;
-      code: 'MISSING_ANALYST_KEY' | 'ANALYST_ADDRESS_MISMATCH' | 'SIGNING_FAILED';
+      code:
+        | 'MISSING_ANALYST_KEY'
+        | 'ANALYST_ADDRESS_MISMATCH'
+        | 'MISSING_APPROVER_KEY'
+        | 'APPROVER_ADDRESS_MISMATCH'
+        | 'SIGNING_FAILED';
     };
 
 function buildPaymentIntent(recipient: Address, amount: bigint): PaymentExecutionIntent {
@@ -55,31 +65,60 @@ function buildPaymentIntent(recipient: Address, amount: bigint): PaymentExecutio
   };
 }
 
-function validateAnalystSigner(): SignPaymentMetaTxResult | null {
-  if (!isAnalystConfigured()) {
+function validateRoleSigner(role: PaymentSignerRole): SignPaymentMetaTxResult | null {
+  if (role === 'ANALYST') {
+    if (!isAnalystConfigured()) {
+      return {
+        ok: false,
+        code: 'MISSING_ANALYST_KEY',
+        reason:
+          `Set ANALYST_PRIVATE_KEY in .env — must match on-chain ANALYST role wallet ${ANALYST_WALLET_ADDRESS}.`,
+      };
+    }
+
+    const account = privateKeyToAccount(ANALYST_PRIVATE_KEY);
+    if (account.address.toLowerCase() !== ANALYST_WALLET_ADDRESS.toLowerCase()) {
+      return {
+        ok: false,
+        code: 'ANALYST_ADDRESS_MISMATCH',
+        reason:
+          `ANALYST_PRIVATE_KEY derives to ${account.address}, expected ${ANALYST_WALLET_ADDRESS}. ` +
+          'Update .env or on-chain ANALYST role wallet.',
+      };
+    }
+
+    return null;
+  }
+
+  if (!isApproverConfigured()) {
     return {
       ok: false,
-      code: 'MISSING_ANALYST_KEY',
+      code: 'MISSING_APPROVER_KEY',
       reason:
-        `Set ANALYST_PRIVATE_KEY in .env — must match on-chain ANALYST role wallet ${ANALYST_WALLET_ADDRESS}.`,
+        APPROVER_WALLET_ADDRESS && APPROVER_WALLET_ADDRESS.startsWith('0x')
+          ? `Set APPROVER_PRIVATE_KEY in .env — must match on-chain APPROVER role wallet ${APPROVER_WALLET_ADDRESS}.`
+          : 'Set APPROVER_PRIVATE_KEY in .env — must match on-chain APPROVER role with SIGN_META_APPROVE.',
     };
   }
 
-  const account = privateKeyToAccount(ANALYST_PRIVATE_KEY);
-  if (account.address.toLowerCase() !== ANALYST_WALLET_ADDRESS.toLowerCase()) {
-    return {
-      ok: false,
-      code: 'ANALYST_ADDRESS_MISMATCH',
-      reason:
-        `ANALYST_PRIVATE_KEY derives to ${account.address}, expected ${ANALYST_WALLET_ADDRESS}. ` +
-        'Update .env or on-chain ANALYST role wallet.',
-    };
+  if (APPROVER_WALLET_ADDRESS && APPROVER_WALLET_ADDRESS.startsWith('0x')) {
+    const account = privateKeyToAccount(APPROVER_PRIVATE_KEY);
+    if (account.address.toLowerCase() !== APPROVER_WALLET_ADDRESS.toLowerCase()) {
+      return {
+        ok: false,
+        code: 'APPROVER_ADDRESS_MISMATCH',
+        reason:
+          `APPROVER_PRIVATE_KEY derives to ${account.address}, expected ${APPROVER_WALLET_ADDRESS}. ` +
+          'Update .env or on-chain APPROVER role wallet.',
+      };
+    }
   }
 
   return null;
 }
 
-async function signWithAnalyst(params: {
+async function signWithRole(params: {
+  role: PaymentSignerRole;
   handlerSelector: Hex;
   txAction: TxAction;
   txParams: {
@@ -93,13 +132,15 @@ async function signWithAnalyst(params: {
   };
   existingTxId?: bigint;
 }): Promise<SignPaymentMetaTxResult> {
-  const validation = validateAnalystSigner();
+  const validation = validateRoleSigner(params.role);
   if (validation) {
     return validation;
   }
 
+  const privateKey = params.role === 'ANALYST' ? ANALYST_PRIVATE_KEY : APPROVER_PRIVATE_KEY;
+
   try {
-    const account = privateKeyToAccount(ANALYST_PRIVATE_KEY);
+    const account: PrivateKeyAccount = privateKeyToAccount(privateKey);
     const signerAddress = account.address;
     const guardController = createGuardController();
     const metaTxSigner = new MetaTransactionSigner(
@@ -132,7 +173,7 @@ async function signWithAnalyst(params: {
     const signedMetaTx = await metaTxSigner.signMetaTransaction(
       unsignedMetaTx,
       signerAddress,
-      ANALYST_PRIVATE_KEY,
+      privateKey,
     );
 
     return {
@@ -163,7 +204,8 @@ export async function signPaymentInstantMetaTransaction(params: {
 }): Promise<SignPaymentMetaTxResult> {
   const intent = buildPaymentIntent(params.recipient, params.amount);
 
-  return signWithAnalyst({
+  return signWithRole({
+    role: 'ANALYST',
     handlerSelector: GUARD_CONTROLLER_FUNCTION_SELECTORS.REQUEST_AND_APPROVE_EXECUTION_SELECTOR,
     txAction: TxAction.SIGN_META_REQUEST_AND_APPROVE,
     txParams: {
@@ -178,23 +220,26 @@ export async function signPaymentInstantMetaTransaction(params: {
   });
 }
 
-/** B-timelock: ANALYST signs approveTimeLockExecutionWithMetaTx for an existing PENDING tx. */
+/** B-timelock: APPROVER signs approveTimeLockExecutionWithMetaTx for an existing PENDING tx. */
 export async function signPaymentTimelockApproveMetaTransaction(params: {
   txId: bigint;
 }): Promise<SignPaymentMetaTxResult> {
-  const validation = validateAnalystSigner();
-  if (validation) {
-    return validation;
+  const approverValidation = validateRoleSigner('APPROVER');
+  const approverAddress = approverValidation
+    ? null
+    : privateKeyToAccount(APPROVER_PRIVATE_KEY).address;
+
+  if (!approverAddress) {
+    return approverValidation!;
   }
 
-  const account = privateKeyToAccount(ANALYST_PRIVATE_KEY);
-
-  return signWithAnalyst({
+  return signWithRole({
+    role: 'APPROVER',
     handlerSelector: GUARD_CONTROLLER_FUNCTION_SELECTORS.APPROVE_TIMELOCK_EXECUTION_META_SELECTOR,
     txAction: TxAction.SIGN_META_APPROVE,
     existingTxId: params.txId,
     txParams: {
-      requester: account.address,
+      requester: approverAddress,
       target: SEPOLIA_USDC,
       value: 0n,
       gasLimit: 200_000n,

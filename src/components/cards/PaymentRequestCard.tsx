@@ -46,7 +46,7 @@ export default function PaymentRequestCard({ result }: Props) {
   const whoLine =
     request?.paymentPath === 'B-fast'
       ? 'Analyst signs · Broadcaster executes'
-      : 'Analyst requests · Analyst signs approve · Broadcaster releases';
+      : 'Analyst requests · Approver signs · Broadcaster releases';
 
   return (
     <CardShell

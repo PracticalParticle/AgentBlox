@@ -41,8 +41,8 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 Legend: ✅ working · ⚠️ env-dependent / future · ❌ not implemented
 
 **`/pay` paths:**
-- **B-fast** (&lt; 10 USDC): ANALYST signs → `POST /api/execute/payment` → Broadcaster
-- **B-timelock** (≥ 10 USDC): ANALYST `executeWithTimeLock` → ANALYST sign approve → `POST /api/execute/payment-approve` → Broadcaster
+- **B-fast** (&lt; 10 USDC): **ANALYST** signs → `POST /api/execute/payment` → Broadcaster
+- **B-timelock** (≥ 10 USDC): **ANALYST** `executeWithTimeLock` → **APPROVER** sign approve → `POST /api/execute/payment-approve` → Broadcaster
 
 ---
 
@@ -88,7 +88,7 @@ See [implementation-plan.md](./implementation-plan.md) · [ROADMAP-PLAN.md](./RO
 |------|--------|-------|
 | `server/bloxchain.ts` | Done | SDK factory + role reads |
 | `server/policy-gate.ts` | Done | `resolvePaymentPath` |
-| `server/signing/payment-meta-tx.ts` | Done | ANALYST B-fast + timelock approve sign |
+| `server/signing/payment-meta-tx.ts` | Done | ANALYST B-fast sign; APPROVER B-timelock approve sign |
 | `server/execution/payment.ts` | Done | ANALYST `executeWithTimeLock` |
 | `server/execution/payment-approve.ts` | Done | Approve + instant execute |
 | `server/execution/meta-tx-broadcaster.ts` | Done | Shared Broadcaster submit |

@@ -92,24 +92,26 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 
 ---
 
-## Phase 5 — Timelock payments (Lane B)
+## Phase 5 — Lane B payments ✅ (code + tests)
 
-**Goal:** `/pay` → timelock → **APPROVER** signs → **Broadcaster** submits.
+**Goal:** `/pay` dual path — B-fast (ANALYST sign) and B-timelock (ANALYST request → APPROVER approve sign).
 
-- [x] `request_vendor_payment` calls `executeWithTimeLock` via ANALYST key
-- [ ] APPROVER signs `approveTimeLockExecutionWithMetaTx` (server)
-- [ ] Broadcaster submits signed approval meta-tx
-- [x] Timelock countdown on confirm button
-- [x] Owner direct approve fallback — `approveTimeLockExecution` in `owner-guard.ts`
-- [ ] Operator: `ANALYST_PRIVATE_KEY`, **`APPROVER_PRIVATE_KEY`**, RBAC + USDC whitelist
+- [x] `request_vendor_payment` — B-fast + B-timelock routing via `resolvePaymentPath`
+- [x] ANALYST signs B-fast `requestAndApproveExecution` meta-tx
+- [x] ANALYST submits B-timelock `executeWithTimeLock`
+- [x] APPROVER signs B-timelock `approveTimeLockExecutionWithMetaTx`
+- [x] Broadcaster submit via `/api/execute/payment` and `/api/execute/payment-approve`
+- [x] `PaymentRequestCard` + timelock countdown
+- [ ] Operator: on-chain RBAC + USDC whitelist + env keys
 
 ---
 
-## Phase 6 — ENS integration
+## Phase 6 — ENS integration ✅
 
 - [x] Read ENS in `resolve_ens_treasury`
-- [ ] Write helpers, Console persistence
-- [ ] `propose_rebalance` reads `bloxchain.allowedFlows`
+- [x] Write helpers + `EnsLinkWizard` (Setup)
+- [x] Policy gate reads `bloxchain.allowedFlows`
+- [x] localStorage treasury reference persistence
 
 **Docs:** [integrations/ens.md](./integrations/ens.md)
 
@@ -118,7 +120,7 @@ Setup: [provisioning-checklist.md](./provisioning-checklist.md) · Lifecycle: [t
 ## Phase 7 — Polish
 
 - [x] Documentation pass — align `docs/` with implementation (June 2026)
-- [x] Vitest coverage — `npm run verify` (55 tests; Phases 2–5 paths)
+- [x] Vitest coverage — `npm run verify` (93 tests)
 - [ ] Update [implementation-status.md](./implementation-status.md) per phase completion
 - [ ] Deploy to Vercel (optional)
 
@@ -132,10 +134,10 @@ Frontend work tracked in [ui-ux-guidelines.md](./ui-ux-guidelines.md). Pair with
 |-------|-------|-------|--------------|--------|
 | UI-0 | Workspace shell (3-column layout, status rail, activity) | 2–3h | Phase 0 | **Done** |
 | UI-1 | Typed read cards (`ToolCardRouter` + monitor cards) | 2h | Phase 1 | **Done** |
-| UI-2 | Setup wizard (`/setup`, Workspace gate) | 2h | Phase 2 Dynamic | **Partial** |
-| UI-3 | Intent Preview + Approvals (`RebalanceProposalCard`, Confirm) | 3h | Phase 3 | **Done** |
-| UI-4 | LI.FI quote + `PolicyBlockedCard` + Etherscan | 2h | Phase 4 *(future)* | **Partial** |
-| UI-5 | Timelock payment card + APPROVER/Broadcaster + countdown | 2h | Phase 5 | **Partial** |
+| UI-2 | Setup wizard (`/setup`, Broadcaster + ENS) | 2h | Phase 2 Dynamic | **Partial** (Owner verify pending) |
+| UI-3 | Intent Preview + Approvals | 3h | Phase 3 | **Done** |
+| UI-4 | LI.FI quote + `PolicyBlockedCard` | 2h | Phase 4 *(future)* | **Partial** |
+| UI-5 | Timelock payment card + countdown | 2h | Phase 5 | **Done** |
 | UI-6 | Demo polish (`?demo=1`, loading states, keyboard focus) | 2h | Phase 7 | **Done** |
 
 **Total UI:** ~15h

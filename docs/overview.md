@@ -26,38 +26,40 @@ AgentBlox is Particle CS’s **treasury operations platform** for [ETHGlobal New
 
 **One line (with LI.FI — future):** *Dynamic holds the keys. LI.FI runs the flows. ENS names the actors. Bloxchain decides what anyone is allowed to trigger.*
 
-**Product surfaces today:** Copilot chat at `/` with slash commands; Console checklist at `/console`. Target UX is a three-column **Workspace** — see [ui-ux-guidelines.md](./ui-ux-guidelines.md).
+**Product surfaces today:** three-column **Workspace** at `/` (Copilot + status rail + approvals); **Setup** at `/setup` (Broadcaster verify, ENS link wizard). Legacy `/console` redirects to Setup.
 
 ---
 
-## Build snapshot (~50% complete)
+## Build snapshot (~85% code · E2E operator-dependent)
 
 ```text
-Phase 0  Scaffold + Copilot + Console     ✅ Done
-Phase 1  Bloxchain SDK reads             ✅ Done
-Phase 2  Dynamic Broadcaster             ⚠️  Scaffold done — env pending
-Phase 3  Meta-tx sign + Confirm          ✅ Done
-Phase 4  LI.FI compose + whitelist demo  ⏸ Future — not hackathon MVP
-Phase 5  Timelock payments (Lane B)      ⚠️ ANALYST ✅; APPROVER + Broadcaster path in progress
-Phase 6  ENS write                       ⚠️  Read only
-Phase 7  Demo + submission               ❌ Not started
+Phase 0  Scaffold + Workspace + Setup       ✅ Done
+Phase 1  Bloxchain SDK reads                 ✅ Done
+Phase 2  Dynamic Broadcaster                 ⚠️  Scaffold done — operator env pending
+Phase 3  Meta-tx sign + Confirm              ✅ Done
+Phase 4  LI.FI compose + whitelist demo      ⏸ Future — not hackathon MVP
+Phase 5  Lane B dual-path /pay               ✅ Code + tests; E2E needs on-chain RBAC
+Phase 6  ENS read + write + policy gate      ✅ Done
+Phase 7  Demo + submission                   ❌ Not started
 ```
 
 ### Working now
 
-- Copilot with 8 treasury tools (LLM or slash-command fallback)
+- Workspace UI with 9 treasury tools (LLM or slash-command fallback)
+- `/deposit`, `/withdraw` — connected Dynamic wallet (0.01 ETH)
 - Real Sepolia reads: balance, roles, pending txs, whitelist
-- Mainnet ENS resolution
-- Off-chain policy gate
-- AGENT_POLICY meta-tx signing + `POST /api/execute/rebalance`
-- Copilot **Confirm execution** button in tool cards
-- Vitest unit tests (`npm run test`)
+- Mainnet ENS resolution + write wizard (`EnsLinkWizard`)
+- Off-chain policy gate + ENS `allowedFlows` cross-check
+- Lane B payment paths: ANALYST B-fast sign; ANALYST request + APPROVER approve sign
+- AGENT_POLICY rebalance meta-tx + Broadcaster submit APIs
+- Typed tool cards + timelock countdown
+- Vitest: `npm run verify` (93 tests)
 
 ### Not demo-complete yet
 
-- Lane B `/pay` E2E: APPROVER sign + Broadcaster submit (ANALYST request ✅)
-- On-chain `/attack` revert proof
-- **LI.FI (future):** on-chain rebalance, real quote preview
+- Lane B `/pay` E2E on Sepolia (operator RBAC + whitelist + funded ANALYST)
+- On-chain `/attack` revert proof (optional)
+- **LI.FI (future):** on-chain rebalance E2E
 
 ---
 
@@ -69,7 +71,7 @@ Minimum sequence for a judge-ready story:
 flowchart TD
     PROV[Provisioning: clone + roles + whitelist] --> ENV[Fill .env execution vars]
     ENV --> P5[Phase 5: Lane B /pay]
-    P5 --> E2E["/pay → APPROVER sign → Broadcaster → Etherscan"]
+    P5 --> E2E["/pay B-fast or B-timelock → Etherscan"]
     P5 --> P7[Phase 7: video + submission]
     P6[Phase 6 ENS] --> P7
     ENV -.-> P4[Phase 4: LI.FI future]
@@ -105,8 +107,8 @@ Verify: `curl http://localhost:3001/api/health` — all `*Configured` flags shou
 
 | Deliverable | Purpose |
 |-------------|---------|
-| `request_vendor_payment` on-chain | ANALYST → `executeWithTimeLock` ✅ |
-| APPROVER sign + Broadcaster submit | `approveTimeLockExecutionWithMetaTx` |
+| `request_vendor_payment` on-chain | ANALYST → `executeWithTimeLock` (B-timelock) or ANALYST sign (B-fast) ✅ |
+| APPROVER timelock approve sign | `approveTimeLockExecutionWithMetaTx` ✅ |
 | On-chain APPROVER role | `SIGN_META_APPROVE` on USDC transfer selector |
 | UI-5 card | Payment request + countdown + Confirm release |
 
@@ -132,7 +134,7 @@ Blocked on `LIFI_API_KEY` + on-chain whitelist. See [integrations/lifi.md](./int
 | P2 | UI-4 | LI.FI quote + policy-blocked cards *(future)* |
 | P1 | UI-2 | Setup wizard replaces Console checklist |
 
-UI-3 Confirm is **partial** — basic button in `ToolResultCard`; typed `RebalanceProposalCard` deferred.
+| UI-3 Confirm | **Done** — `RebalanceProposalCard`, `PaymentRequestCard`, `BroadcasterSubmitBlock` |
 
 ### 5. Phase 7 — Submission
 
@@ -163,8 +165,8 @@ UI-3 Confirm is **partial** — basic button in `ToolResultCard`; typed `Rebalan
 | No Workspace UI (UI-0) | JSON tool cards look unfinished | Ship shell + 2–3 typed cards minimum |
 | ENS name unset | `/ens` less compelling at booth | Register + link name early |
 | No on-chain attack revert | `/attack` is off-chain only | Phase 4 optional Broadcaster submit |
-| README says Copilot + Console | Naming drift vs docs | Update when UI-0 lands |
-| Orphan pages in repo | Confusing for contributors | Delete or fold in UI-0 |
+| README says Copilot + Console | Naming drift vs docs | Update README (Workspace + Setup) |
+| Orphan pages in repo | Confusing for contributors | Delete `ConsolePage`, `DashboardPage`, etc. |
 | No LLM key | Natural language disabled | Slash commands sufficient for demo |
 
 ### Risks to watch
@@ -183,10 +185,9 @@ From [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) §7:
 | Criterion | Status |
 |-----------|--------|
 | Treasury provisioned on Sepolia | ⬜ Operator |
-| `/pay` → timelock → APPROVER sign → Broadcaster executes | ⚠️ ANALYST ✅; APPROVER path in progress |
-| `/attack` → off-chain block + optional on-chain revert | ⚠️ Off-chain only |
-| `/rebalance` → signed meta-tx → LI.FI executes on-chain | ⏸ Future (Phase 4) |
-| `/ens` resolves treasury + text records | ⚠️ Read works; ENS optional |
+| `/pay` B-fast (&lt; $10 USDC) → ANALYST sign → Broadcaster | ⚠️ Code ✅; E2E operator |
+| `/pay` B-timelock → ANALYST request → APPROVER sign → Broadcaster | ⚠️ Code ✅; E2E operator |
+| `/ens` resolves treasury + text records | ✅ (write via Setup wizard) |
 | Demo video + submission | ❌ Phase 7 |
 
 ---
@@ -196,11 +197,11 @@ From [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) §7:
 **Lane B (hackathon MVP) — two paths:**
 
 ```text
-B-fast (< $10 USDC, future routing):
-  Payment signer → sign USDC transfer meta-tx → Broadcaster requestAndApproveExecution
+B-fast (< $10 USDC):
+  ANALYST → sign USDC transfer meta-tx → Broadcaster requestAndApproveExecution
 
-B-timelock (≥ $10 or demo default today):
-  ANALYST → executeWithTimeLock (pays gas) → APPROVER sign → Broadcaster approve meta-tx
+B-timelock (≥ $10 USDC):
+  ANALYST → executeWithTimeLock (pays gas) → APPROVER sign approve → Broadcaster approve meta-tx
 ```
 
 **Lane A (future — LI.FI):**

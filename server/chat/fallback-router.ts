@@ -174,8 +174,8 @@ Slash commands (works without LLM API key):
 - \`/status\` — treasury status
 - \`/deposit\` — send 0.01 ETH to treasury (your Dynamic wallet)
 - \`/withdraw\` — request 0.01 ETH from treasury to your wallet (timelock)
-- \`/pay 5$\` — instant vendor payment (B-fast, ANALYST sign → Broadcaster)
-- \`/pay 20$\` — timelock vendor payment (B-timelock, ANALYST request → ANALYST sign → Broadcaster)
+- \`/pay 5$\` — instant vendor payment (B-fast: ANALYST sign → Broadcaster)
+- \`/pay 20$\` — timelock vendor payment (ANALYST request → APPROVER sign → Broadcaster)
 - \`/rebalance\` — propose LI.FI rebalance
 - \`/ens\` — resolve ENS name
 - \`/attack\` — demo blocked unauthorized transfer
