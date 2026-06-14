@@ -12,6 +12,7 @@ import {
   requestVendorPayment,
   simulatePolicyViolation,
 } from './propose.js';
+import { prepareWalletTransfer } from './wallet-transfer.js';
 
 export const treasuryTools = {
   get_treasury_status: tool({
@@ -77,6 +78,15 @@ export const treasuryTools = {
       target: z.string().optional().describe('Non-whitelisted target address'),
     }),
     execute: async ({ target }) => simulatePolicyViolation({ target }),
+  }),
+
+  prepare_wallet_transfer: tool({
+    description:
+      'Prepare a 0.01 ETH deposit or withdraw using the user connected Dynamic wallet (not agent server keys).',
+    inputSchema: z.object({
+      direction: z.enum(['deposit', 'withdraw']),
+    }),
+    execute: async ({ direction }) => prepareWalletTransfer(direction),
   }),
 };
 

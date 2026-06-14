@@ -40,6 +40,8 @@ export const DEMO_HEALTH: ServerHealth = {
 
 export const DEMO_SAMPLE_COMMANDS = [
   { label: 'Treasury status', command: '/status' },
+  { label: 'Deposit 0.01 ETH', command: '/deposit' },
+  { label: 'Withdraw 0.01 ETH', command: '/withdraw' },
   { label: 'Instant pay $5', command: '/pay 5$' },
   { label: 'Timelock pay $20', command: '/pay 20$' },
   { label: 'Policy block demo', command: '/attack' },

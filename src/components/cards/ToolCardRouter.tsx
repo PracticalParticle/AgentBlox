@@ -8,6 +8,7 @@ import PendingApprovalsCard from './PendingApprovalsCard';
 import PolicyBlockedCard from './PolicyBlockedCard';
 import RebalanceProposalCard from './RebalanceProposalCard';
 import TreasuryStatusCard from './TreasuryStatusCard';
+import WalletTransferCard from './WalletTransferCard';
 import WhitelistCard from './WhitelistCard';
 
 type Props = {
@@ -42,6 +43,8 @@ export default function ToolCardRouter({ payload }: Props) {
       return <RebalanceProposalCard result={result} />;
     case 'request_vendor_payment':
       return <PaymentRequestCard result={result} />;
+    case 'prepare_wallet_transfer':
+      return <WalletTransferCard result={result} />;
     case 'simulate_policy_violation':
       return <PolicyBlockedCard result={result} />;
     default:

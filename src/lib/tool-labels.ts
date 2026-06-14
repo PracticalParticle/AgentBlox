@@ -6,6 +6,7 @@ export const TOOL_DISPLAY_NAMES: Record<string, string> = {
   get_lifi_quote_preview: 'LI.FI quote',
   propose_rebalance: 'Rebalance proposal',
   request_vendor_payment: 'Vendor payment',
+  prepare_wallet_transfer: 'Wallet transfer',
   simulate_policy_violation: 'Policy check',
 };
 
@@ -17,6 +18,7 @@ export const TOOL_TIERS: Record<string, 'read' | 'propose' | 'execute' | 'valida
   get_lifi_quote_preview: 'read',
   propose_rebalance: 'propose',
   request_vendor_payment: 'propose',
+  prepare_wallet_transfer: 'execute',
   simulate_policy_violation: 'validate',
 };
 

@@ -42,6 +42,8 @@ import { DEMO_TREASURY_STATUS } from '../lib/demo-data';
 
 import { isDemoMode } from '../lib/demo-mode';
 
+import { CHAT_SLASH_PLACEHOLDER_FALLBACK } from '../lib/slash-commands';
+
 import { parseToolBlocks } from '../lib/tool-parser';
 
 
@@ -178,7 +180,13 @@ export default function WorkspacePage() {
 
     void sendMessage({ text });
 
-    if (text.startsWith('/pending') || text.startsWith('/pay') || text.startsWith('/rebalance')) {
+    if (
+      text.startsWith('/pending') ||
+      text.startsWith('/pay') ||
+      text.startsWith('/rebalance') ||
+      text.startsWith('/deposit') ||
+      text.startsWith('/withdraw')
+    ) {
 
       void refreshPending();
 
@@ -229,8 +237,9 @@ export default function WorkspacePage() {
                   <div className="chat-empty">
                     <p>
                       Your treasury is connected. Try <strong>/status</strong> for balances,{' '}
-                      <strong>/rebalance</strong> to propose a swap, <strong>/pay 5$</strong> for
-                      instant payment, or <strong>/pay 20$</strong> for timelock.
+                      <strong>/deposit</strong> or <strong>/withdraw</strong> with your Dynamic wallet,{' '}
+                      <strong>/pay 5$</strong> for instant payment, <strong>/pay 20$</strong> for
+                      timelock, or <strong>/rebalance</strong> to propose a swap.
                     </p>
                     {!health?.llmEnabled ? (
                       <p className="chat-hint">
@@ -251,7 +260,7 @@ export default function WorkspacePage() {
               placeholder={
                 health?.llmEnabled
                   ? 'Ask about balances, rebalances, payments, or policy…'
-                  : 'Use /status, /rebalance, /pay 5$, /pay 20$, /attack, or /help'
+                  : CHAT_SLASH_PLACEHOLDER_FALLBACK
               }
             />
           </div>

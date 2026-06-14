@@ -3,6 +3,7 @@ import { DefaultChatTransport } from 'ai';
 import ChatInput from '../components/chat/ChatInput';
 import ChatMessageView from '../components/chat/ChatMessageView';
 import { useServerHealth } from '../hooks/useServerHealth';
+import { CHAT_SLASH_PLACEHOLDER_FALLBACK } from '../lib/slash-commands';
 
 export default function CopilotPage() {
   const { health } = useServerHealth();
@@ -37,9 +38,10 @@ export default function CopilotPage() {
           {messages.length === 0 ? (
             <div className="chat-empty">
               <p>
-                Try <code>/status</code> for treasury state, <code>/rebalance</code> for a treasury
-                operation, <code>/pay 5$</code> for instant payment, or <code>/pay 20$</code> for
-                timelock.
+                Try <code>/status</code> for treasury state, <code>/deposit</code> or{' '}
+                <code>/withdraw</code> with your Dynamic wallet, <code>/pay 5$</code> for instant
+                payment, <code>/pay 20$</code> for timelock, or <code>/rebalance</code> for a treasury
+                operation.
               </p>
               {!health?.llmEnabled ? (
                 <p className="chat-hint">
@@ -58,7 +60,7 @@ export default function CopilotPage() {
           placeholder={
             health?.llmEnabled
               ? 'Ask about balances, rebalances, payments, or policy...'
-              : 'Use /status, /rebalance, /pay 5$, /pay 20$, /attack, or /help'
+              : CHAT_SLASH_PLACEHOLDER_FALLBACK
           }
         />
       </div>

@@ -12,6 +12,14 @@ describe('routeUserMessage', () => {
     expect(routeUserMessage('/attack')?.tool).toBe('simulate_policy_violation');
   });
 
+  it('routes /deposit and /withdraw to wallet transfer prep', () => {
+    expect(routeUserMessage('/deposit')?.tool).toBe('prepare_wallet_transfer');
+    expect(routeUserMessage('/deposit')?.args.direction).toBe('deposit');
+    expect(routeUserMessage('/withdraw')?.tool).toBe('prepare_wallet_transfer');
+    expect(routeUserMessage('/withdraw')?.args.direction).toBe('withdraw');
+    expect(routeUserMessage('/withdrawal')?.args.direction).toBe('withdraw');
+  });
+
   it('routes /pay 5$ and /pay 20$ to vendor payment with distinct amounts', () => {
     const fast = routeUserMessage(PAY_DEMO_COMMANDS.fast);
     const timelock = routeUserMessage(PAY_DEMO_COMMANDS.timelock);

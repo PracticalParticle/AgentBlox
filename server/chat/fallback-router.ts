@@ -4,6 +4,7 @@ import {
   requestVendorPayment,
   simulatePolicyViolation,
 } from '../tools/propose.js';
+import { prepareWalletTransfer } from '../tools/wallet-transfer.js';
 import {
   getLifiQuotePreview,
   getTreasuryStatus,
@@ -12,6 +13,7 @@ import {
   resolveEnsTreasury,
 } from '../tools/read.js';
 import { parsePaySlashCommand, PAY_DEMO_COMMANDS } from './pay-command.js';
+import { parseWalletTransferCommand } from './wallet-transfer-command.js';
 
 type RoutedCommand = {
   tool: TreasuryToolName;
@@ -52,12 +54,13 @@ export function routeUserMessage(text: string): RoutedCommand | null {
     return { tool: 'get_whitelisted_targets', args: {}, label: 'Whitelist' };
   }
 
-  if (
-    msg.startsWith('/rebalance') ||
-    msg.includes('rebalance') ||
-    msg.includes('rebalancing')
-  ) {
-    return { tool: 'propose_rebalance', args: {}, label: 'Propose rebalance' };
+  const walletTransfer = parseWalletTransferCommand(text);
+  if (walletTransfer) {
+    return {
+      tool: 'prepare_wallet_transfer',
+      args: { direction: walletTransfer },
+      label: walletTransfer === 'deposit' ? 'Deposit 0.01 ETH' : 'Withdraw 0.01 ETH',
+    };
   }
 
   if (msg.startsWith('/quote') || msg.includes('lifi quote')) {
@@ -109,6 +112,14 @@ export function routeUserMessage(text: string): RoutedCommand | null {
   }
 
   if (
+    msg.startsWith('/rebalance') ||
+    msg.includes('rebalance') ||
+    msg.includes('rebalancing')
+  ) {
+    return { tool: 'propose_rebalance', args: {}, label: 'Propose rebalance' };
+  }
+
+  if (
     msg.startsWith('/attack') ||
     msg.includes('drain') ||
     msg.includes('steal') ||
@@ -144,6 +155,10 @@ export async function executeRoutedTool(command: RoutedCommand) {
       );
     case 'simulate_policy_violation':
       return simulatePolicyViolation(command.args as { target?: string });
+    case 'prepare_wallet_transfer':
+      return prepareWalletTransfer(
+        command.args.direction as 'deposit' | 'withdraw',
+      );
     default:
       return { error: 'Unknown tool' };
   }
@@ -157,10 +172,12 @@ export const HELP_MESSAGE = `**AgentBlox Copilot commands**
 
 Slash commands (works without LLM API key):
 - \`/status\` — treasury status
-- \`/ens\` — resolve ENS name
-- \`/rebalance\` — propose LI.FI rebalance
+- \`/deposit\` — send 0.01 ETH to treasury (your Dynamic wallet)
+- \`/withdraw\` — request 0.01 ETH from treasury to your wallet (timelock)
 - \`/pay 5$\` — instant vendor payment (B-fast, ANALYST sign → Broadcaster)
 - \`/pay 20$\` — timelock vendor payment (B-timelock, ANALYST request → ANALYST sign → Broadcaster)
+- \`/rebalance\` — propose LI.FI rebalance
+- \`/ens\` — resolve ENS name
 - \`/attack\` — demo blocked unauthorized transfer
 - \`/pending\` — pending approvals
 - \`/whitelist\` — GuardController whitelist

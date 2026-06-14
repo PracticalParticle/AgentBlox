@@ -1,4 +1,5 @@
 import { FormEvent, forwardRef, useImperativeHandle, useRef, useState } from 'react';
+import { CHAT_SLASH_SUGGESTIONS } from '../../lib/slash-commands';
 
 export type ChatInputHandle = {
   focus: () => void;
@@ -10,15 +11,7 @@ type Props = {
   placeholder?: string;
 };
 
-const SUGGESTIONS = [
-  '/status',
-  '/rebalance',
-  '/pay 5$',
-  '/pay 20$',
-  '/attack',
-  '/ens',
-  '/help',
-];
+const SUGGESTIONS = [...CHAT_SLASH_SUGGESTIONS];
 
 const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput(
   { onSend, disabled, placeholder },
