@@ -13,8 +13,8 @@ Same treasury, same TxRecord model — two paths:
 | Path | Best for | Key methods |
 |------|----------|-------------|
 | **Policy execution (Lane A — future)** | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
-| **Timelock (Lane B — large / demo default)** | Human-gated disbursements | ANALYST `executeWithTimeLock` → APPROVER sign → Broadcaster approve |
-| **Instant payment (Lane B — small)** | Sub-threshold USDC payouts (&lt; $10) | APPROVER sign → `requestAndApproveExecution` → Broadcaster execute |
+| **Instant payment (Lane B — small)** | Sub-threshold USDC payouts (&lt; $10) | ANALYST sign → `requestAndApproveExecution` → Broadcaster execute |
+| **Timelock (Lane B — large / demo default)** | Human-gated disbursements | ANALYST `executeWithTimeLock` → ANALYST sign approve → Broadcaster submit |
 
 ---
 
@@ -109,13 +109,13 @@ USDC `transfer(address,uint256)` on Sepolia USDC uses **two whitelisted paths**.
 sequenceDiagram
     participant User as User / Copilot
     participant Tool as request_vendor_payment
-    participant Sign as Payment signer
+    participant Analyst as ANALYST (sign)
     participant BC as Broadcaster
     participant AB as AccountBlox
     participant USDC as Sepolia USDC
 
     User->>Tool: /pay (small amount)
-    Tool->>Sign: build + sign meta-tx (USDC transfer)
+    Tool->>Analyst: build + sign meta-tx (USDC transfer)
     Tool-->>User: payment card (awaiting confirm)
     User->>BC: Submit on-chain (Broadcaster)
     BC->>AB: requestAndApproveExecution(signedMetaTx)
@@ -125,7 +125,7 @@ sequenceDiagram
 
 **Gas:** Broadcaster pays submission gas only. Signer does not send an on-chain request tx.
 
-**RBAC:** `SIGN_META_REQUEST_AND_APPROVE` + `EXECUTE_META_REQUEST_AND_APPROVE` on ERC20 transfer selector (`0xa9059cbb`).
+**RBAC:** ANALYST `SIGN_META_REQUEST_AND_APPROVE` + Broadcaster `EXECUTE_META_REQUEST_AND_APPROVE` on ERC20 transfer selector (`0xa9059cbb`).
 
 ### Path B-timelock — delayed (ANALYST pays request gas)
 
@@ -135,7 +135,7 @@ sequenceDiagram
     participant Tool as request_vendor_payment
     participant Analyst as ANALYST (server)
     participant AB as AccountBlox
-    participant Approver as APPROVER (sign)
+    participant Approver as ANALYST (sign approve)
     participant BC as Broadcaster
 
     User->>Tool: /pay (large amount)
@@ -152,7 +152,7 @@ sequenceDiagram
 
 **Gas:** ANALYST wallet must hold Sepolia ETH for the timelock **request** transaction.
 
-**RBAC:** ANALYST `EXECUTE_TIME_DELAY_REQUEST`; APPROVER `SIGN_META_APPROVE`; Broadcaster `EXECUTE_META_APPROVE`.
+**RBAC:** ANALYST `EXECUTE_TIME_DELAY_REQUEST` + `SIGN_META_APPROVE`; Broadcaster `EXECUTE_META_APPROVE`.
 
 ### Off-chain routing (implemented)
 

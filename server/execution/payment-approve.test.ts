@@ -29,15 +29,15 @@ describe('approveTimelockPaymentOnChain', () => {
     vi.clearAllMocks();
   });
 
-  it('signs with APPROVER and submits via Broadcaster', async () => {
+  it('signs with ANALYST and submits via Broadcaster', async () => {
     signPaymentTimelockApproveMetaTransaction.mockResolvedValue({
       ok: true,
       signedMetaTx: { txRecord: {}, params: {}, message: '0x', signature: '0x', data: '0x' },
-      signerAddress: '0xApprover',
+      signerAddress: '0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700',
       intent: {},
     });
     deserializeMetaTransaction.mockReturnValue({
-      params: { signer: '0xApprover' },
+      params: { signer: '0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700' },
     });
     submitTimelockApproveWithBroadcaster.mockResolvedValue({ ok: true, hash: '0xabc' });
 
@@ -45,21 +45,25 @@ describe('approveTimelockPaymentOnChain', () => {
 
     expect(signPaymentTimelockApproveMetaTransaction).toHaveBeenCalledWith({ txId: 7n });
     expect(submitTimelockApproveWithBroadcaster).toHaveBeenCalledOnce();
-    expect(result).toEqual({ ok: true, hash: '0xabc', signerAddress: '0xApprover' });
+    expect(result).toEqual({
+      ok: true,
+      hash: '0xabc',
+      signerAddress: '0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700',
+    });
   });
 
   it('returns error when signing fails', async () => {
     signPaymentTimelockApproveMetaTransaction.mockResolvedValue({
       ok: false,
-      code: 'MISSING_APPROVER_KEY',
-      reason: 'Set APPROVER_PRIVATE_KEY',
+      code: 'MISSING_ANALYST_KEY',
+      reason: 'Set ANALYST_PRIVATE_KEY',
     });
 
     const result = await approveTimelockPaymentOnChain({ txId: 1n });
     expect(result).toEqual({
       ok: false,
-      reason: 'Set APPROVER_PRIVATE_KEY',
-      code: 'MISSING_APPROVER_KEY',
+      reason: 'Set ANALYST_PRIVATE_KEY',
+      code: 'MISSING_ANALYST_KEY',
     });
     expect(submitTimelockApproveWithBroadcaster).not.toHaveBeenCalled();
   });

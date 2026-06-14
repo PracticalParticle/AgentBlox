@@ -7,9 +7,10 @@ import {
 } from '@bloxchain/sdk';
 import { privateKeyToAccount } from 'viem/accounts';
 import {
-  APPROVER_PRIVATE_KEY,
+  ANALYST_PRIVATE_KEY,
+  ANALYST_WALLET_ADDRESS,
   ERC20_TRANSFER_SELECTOR,
-  isApproverConfigured,
+  isAnalystConfigured,
   SEPOLIA_USDC,
   TREASURY_ADDRESS,
 } from '../config.js';
@@ -41,7 +42,7 @@ export type SignPaymentMetaTxResult =
   | {
       ok: false;
       reason: string;
-      code: 'MISSING_APPROVER_KEY' | 'SIGNING_FAILED';
+      code: 'MISSING_ANALYST_KEY' | 'ANALYST_ADDRESS_MISMATCH' | 'SIGNING_FAILED';
     };
 
 function buildPaymentIntent(recipient: Address, amount: bigint): PaymentExecutionIntent {
@@ -54,7 +55,31 @@ function buildPaymentIntent(recipient: Address, amount: bigint): PaymentExecutio
   };
 }
 
-async function signWithApprover(params: {
+function validateAnalystSigner(): SignPaymentMetaTxResult | null {
+  if (!isAnalystConfigured()) {
+    return {
+      ok: false,
+      code: 'MISSING_ANALYST_KEY',
+      reason:
+        `Set ANALYST_PRIVATE_KEY in .env — must match on-chain ANALYST role wallet ${ANALYST_WALLET_ADDRESS}.`,
+    };
+  }
+
+  const account = privateKeyToAccount(ANALYST_PRIVATE_KEY);
+  if (account.address.toLowerCase() !== ANALYST_WALLET_ADDRESS.toLowerCase()) {
+    return {
+      ok: false,
+      code: 'ANALYST_ADDRESS_MISMATCH',
+      reason:
+        `ANALYST_PRIVATE_KEY derives to ${account.address}, expected ${ANALYST_WALLET_ADDRESS}. ` +
+        'Update .env or on-chain ANALYST role wallet.',
+    };
+  }
+
+  return null;
+}
+
+async function signWithAnalyst(params: {
   handlerSelector: Hex;
   txAction: TxAction;
   txParams: {
@@ -68,17 +93,13 @@ async function signWithApprover(params: {
   };
   existingTxId?: bigint;
 }): Promise<SignPaymentMetaTxResult> {
-  if (!isApproverConfigured()) {
-    return {
-      ok: false,
-      code: 'MISSING_APPROVER_KEY',
-      reason:
-        'Set APPROVER_PRIVATE_KEY in .env — must match on-chain APPROVER role on USDC transfer selector.',
-    };
+  const validation = validateAnalystSigner();
+  if (validation) {
+    return validation;
   }
 
   try {
-    const account = privateKeyToAccount(APPROVER_PRIVATE_KEY);
+    const account = privateKeyToAccount(ANALYST_PRIVATE_KEY);
     const signerAddress = account.address;
     const guardController = createGuardController();
     const metaTxSigner = new MetaTransactionSigner(
@@ -111,7 +132,7 @@ async function signWithApprover(params: {
     const signedMetaTx = await metaTxSigner.signMetaTransaction(
       unsignedMetaTx,
       signerAddress,
-      APPROVER_PRIVATE_KEY,
+      ANALYST_PRIVATE_KEY,
     );
 
     return {
@@ -135,14 +156,14 @@ async function signWithApprover(params: {
   }
 }
 
-/** B-fast: APPROVER signs requestAndApprove for USDC transfer (Broadcaster submits). */
+/** B-fast: ANALYST signs requestAndApprove for USDC transfer (Broadcaster submits). */
 export async function signPaymentInstantMetaTransaction(params: {
   recipient: Address;
   amount: bigint;
 }): Promise<SignPaymentMetaTxResult> {
   const intent = buildPaymentIntent(params.recipient, params.amount);
 
-  return signWithApprover({
+  return signWithAnalyst({
     handlerSelector: GUARD_CONTROLLER_FUNCTION_SELECTORS.REQUEST_AND_APPROVE_EXECUTION_SELECTOR,
     txAction: TxAction.SIGN_META_REQUEST_AND_APPROVE,
     txParams: {
@@ -157,22 +178,18 @@ export async function signPaymentInstantMetaTransaction(params: {
   });
 }
 
-/** B-timelock: APPROVER signs approveTimeLockExecutionWithMetaTx for an existing PENDING tx. */
+/** B-timelock: ANALYST signs approveTimeLockExecutionWithMetaTx for an existing PENDING tx. */
 export async function signPaymentTimelockApproveMetaTransaction(params: {
   txId: bigint;
 }): Promise<SignPaymentMetaTxResult> {
-  if (!isApproverConfigured()) {
-    return {
-      ok: false,
-      code: 'MISSING_APPROVER_KEY',
-      reason:
-        'Set APPROVER_PRIVATE_KEY in .env — must match on-chain APPROVER role on USDC transfer selector.',
-    };
+  const validation = validateAnalystSigner();
+  if (validation) {
+    return validation;
   }
 
-  const account = privateKeyToAccount(APPROVER_PRIVATE_KEY);
+  const account = privateKeyToAccount(ANALYST_PRIVATE_KEY);
 
-  return signWithApprover({
+  return signWithAnalyst({
     handlerSelector: GUARD_CONTROLLER_FUNCTION_SELECTORS.APPROVE_TIMELOCK_EXECUTION_META_SELECTOR,
     txAction: TxAction.SIGN_META_APPROVE,
     existingTxId: params.txId,

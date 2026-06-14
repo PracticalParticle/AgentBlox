@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import type { Address, Hex } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
 export const SERVER_PORT = Number(process.env.PORT || 3001);
 
@@ -110,14 +111,33 @@ export function isAgentPolicySigningConfigured(): boolean {
   return AGENT_POLICY_PRIVATE_KEY.startsWith('0x') && AGENT_POLICY_PRIVATE_KEY.length >= 66;
 }
 
-/** ANALYST server key — submits executeWithTimeLock for vendor payments (Phase 5). */
+/** ANALYST server key — signs payment meta-txs (B-fast + B-timelock approve) and submits timelock requests. */
 export const ANALYST_PRIVATE_KEY = (process.env.ANALYST_PRIVATE_KEY || '') as Hex;
+
+/** On-chain ANALYST wallet — must match ANALYST_PRIVATE_KEY. */
+export const ANALYST_WALLET_ADDRESS = (process.env.ANALYST_WALLET_ADDRESS ||
+  '0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700') as Address;
 
 export function isAnalystConfigured(): boolean {
   return ANALYST_PRIVATE_KEY.startsWith('0x') && ANALYST_PRIVATE_KEY.length >= 66;
 }
 
-/** APPROVER server key — signs payment meta-txs (B-fast + B-timelock approve). */
+export function getAnalystWalletAddressFromKey(): Address | null {
+  if (!isAnalystConfigured()) {
+    return null;
+  }
+  return privateKeyToAccount(ANALYST_PRIVATE_KEY).address;
+}
+
+export function analystWalletAddressMatches(): boolean | null {
+  const derived = getAnalystWalletAddressFromKey();
+  if (!derived) {
+    return null;
+  }
+  return derived.toLowerCase() === ANALYST_WALLET_ADDRESS.toLowerCase();
+}
+
+/** @deprecated Lane B payments use ANALYST only — kept for legacy env checks. */
 export const APPROVER_PRIVATE_KEY = (process.env.APPROVER_PRIVATE_KEY || '') as Hex;
 
 export function isApproverConfigured(): boolean {

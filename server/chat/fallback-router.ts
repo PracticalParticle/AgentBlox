@@ -159,8 +159,8 @@ Slash commands (works without LLM API key):
 - \`/status\` — treasury status
 - \`/ens\` — resolve ENS name
 - \`/rebalance\` — propose LI.FI rebalance
-- \`/pay 5$\` — instant vendor payment (B-fast, APPROVER sign → Broadcaster)
-- \`/pay 20$\` — timelock vendor payment (B-timelock, ANALYST → APPROVER → Broadcaster)
+- \`/pay 5$\` — instant vendor payment (B-fast, ANALYST sign → Broadcaster)
+- \`/pay 20$\` — timelock vendor payment (B-timelock, ANALYST request → ANALYST sign → Broadcaster)
 - \`/attack\` — demo blocked unauthorized transfer
 - \`/pending\` — pending approvals
 - \`/whitelist\` — GuardController whitelist

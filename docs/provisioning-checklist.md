@@ -39,7 +39,13 @@ See [integrations/dynamic.md](./integrations/dynamic.md).
 
 - [ ] Create `AGENT_POLICY` role *(future Lane A / LI.FI)*; assign server signing address
 - [ ] Grant `AGENT_POLICY`: `SIGN_META_REQUEST_AND_APPROVE` on Composer execution selector only
-- [ ] Create **`APPROVER`**: `SIGN_META_REQUEST_AND_APPROVE` (B-fast) + `SIGN_META_APPROVE` (B-timelock) on USDC transfer
+- [ ] Create **`ANALYST`** wallet `0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700` and assign to role
+- [ ] **`REGISTER_FUNCTION`** + whitelist Sepolia USDC for `transfer(address,uint256)` (`0xa9059cbb`)
+- [ ] ANALYST **`SIGN_META_REQUEST_AND_APPROVE`** on **both**:
+  - Handler `requestAndApproveExecution` → `0xde0df793`
+  - Execution `transfer(address,uint256)` → `0xa9059cbb`
+- [ ] ANALYST **`EXECUTE_TIME_DELAY_REQUEST`** + **`SIGN_META_APPROVE`** on `0xa9059cbb` (B-timelock)
+- [ ] Broadcaster **`EXECUTE_META_REQUEST_AND_APPROVE`** + **`EXECUTE_META_APPROVE`** on the same selectors
 - [ ] Create **`ANALYST`**: `EXECUTE_TIME_DELAY_REQUEST` on USDC transfer (B-timelock — wallet needs Sepolia ETH)
 
 ### A4. GuardController whitelist
@@ -73,7 +79,7 @@ Full detail: [guard-controller.md](./guard-controller.md).
 - [ ] Copy `.env.example` → `.env`
 - [ ] Set `TREASURY_ADDRESS` in `.env`
 - [ ] Set `VITE_DYNAMIC_ENVIRONMENT_ID`
-- [ ] Set `ANALYST_PRIVATE_KEY` + `APPROVER_PRIVATE_KEY` (must match on-chain roles)
+- [ ] Set `ANALYST_PRIVATE_KEY` (must derive to `ANALYST_WALLET_ADDRESS`, default `0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700`)
 - [ ] Set `DYNAMIC_API_TOKEN` + `BROADCASTER_WALLET_ADDRESS` (Broadcaster execution)
 - [ ] *(Future Lane A)* `AGENT_POLICY_PRIVATE_KEY`, `REBALANCE_EXECUTION_TARGET`, `LIFI_EXECUTION_SELECTOR`
 - [ ] Optional: `ENS_NAME`

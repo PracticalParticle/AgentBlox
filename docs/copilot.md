@@ -32,8 +32,8 @@ Grouped by intent:
 | Command | Tool | Auth path |
 |---------|------|-----------|
 | `/rebalance` | `propose_rebalance` | Policy execution |
-| `/pay 5$` | `request_vendor_payment` | B-fast (instant — APPROVER sign → Broadcaster) |
-| `/pay 20$` | `request_vendor_payment` | B-timelock (ANALYST request → APPROVER → Broadcaster) |
+| `/pay 5$` | `request_vendor_payment` | B-fast (instant — ANALYST sign → Broadcaster) |
+| `/pay 20$` | `request_vendor_payment` | B-timelock (ANALYST request → ANALYST sign → Broadcaster) |
 
 ### Validate
 

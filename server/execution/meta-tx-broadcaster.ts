@@ -11,6 +11,7 @@ import {
   TREASURY_ADDRESS,
 } from '../config.js';
 import { getBroadcasterWalletClient } from '../dynamic/broadcaster.js';
+import { formatExecutionError } from './format-execution-error.js';
 
 export type BroadcasterSubmitResult =
   | { ok: true; hash: string }
@@ -56,7 +57,7 @@ export async function submitRequestAndApproveWithBroadcaster(
   } catch (error) {
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : 'Broadcaster execution failed',
+      reason: formatExecutionError(error),
     };
   }
 }
@@ -91,7 +92,7 @@ export async function submitTimelockApproveWithBroadcaster(
   } catch (error) {
     return {
       ok: false,
-      reason: error instanceof Error ? error.message : 'Broadcaster timelock approve failed',
+      reason: formatExecutionError(error),
     };
   }
 }

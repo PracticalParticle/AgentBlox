@@ -53,6 +53,11 @@ describe('config helpers', () => {
     expect(cfg2.isApproverConfigured()).toBe(false);
   });
 
+  it('ANALYST_WALLET_ADDRESS defaults to operator analyst wallet', async () => {
+    const { ANALYST_WALLET_ADDRESS } = await loadConfig();
+    expect(ANALYST_WALLET_ADDRESS).toBe('0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700');
+  });
+
   it('PAYMENT_INSTANT_MAX_USDC defaults to 10 USDC units', async () => {
     const { PAYMENT_INSTANT_MAX_USDC } = await loadConfig();
     expect(PAYMENT_INSTANT_MAX_USDC).toBe(10_000_000n);

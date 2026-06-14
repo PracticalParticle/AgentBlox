@@ -1,12 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { requestVendorPaymentOnChain, signPaymentInstantMetaTransaction } = vi.hoisted(() => ({
-  requestVendorPaymentOnChain: vi.fn(),
-  signPaymentInstantMetaTransaction: vi.fn(),
-}));
+const { requestVendorPaymentOnChain, signPaymentInstantMetaTransaction, preflightRequestAndApproveExecution } =
+  vi.hoisted(() => ({
+    requestVendorPaymentOnChain: vi.fn(),
+    signPaymentInstantMetaTransaction: vi.fn(),
+    preflightRequestAndApproveExecution: vi.fn(),
+  }));
 
 vi.mock('../execution/payment.js', () => ({
   requestVendorPaymentOnChain,
+}));
+
+vi.mock('../execution/preflight-meta-tx.js', () => ({
+  preflightRequestAndApproveExecution,
 }));
 
 vi.mock('../signing/payment-meta-tx.js', () => ({
@@ -69,6 +75,7 @@ describe('requestVendorPayment', () => {
         gasLimit: 200_000n,
       },
     });
+    preflightRequestAndApproveExecution.mockResolvedValue({ ok: true });
 
     const result = await requestVendorPayment({
       recipient: '0x0000000000000000000000000000000000000001',

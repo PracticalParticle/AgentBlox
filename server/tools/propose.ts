@@ -1,11 +1,13 @@
 import {
   AGENT_POLICY,
+  ANALYST_WALLET_ADDRESS,
   isTreasuryConfigured,
   PAYMENT_INSTANT_MAX_USDC,
   SEPOLIA_USDC,
   TREASURY_ADDRESS,
 } from '../config.js';
 import { requestVendorPaymentOnChain } from '../execution/payment.js';
+import { preflightRequestAndApproveExecution } from '../execution/preflight-meta-tx.js';
 import { composeRebalanceFlow } from '../lifi/compose.js';
 import {
   resolvePaymentPath,
@@ -152,6 +154,10 @@ export async function requestVendorPayment(params: {
       amount,
     });
 
+    const preflight = signing.ok
+      ? await preflightRequestAndApproveExecution(signing.signedMetaTx)
+      : null;
+
     const request = {
       treasuryAddress: TREASURY_ADDRESS,
       recipient: params.recipient,
@@ -178,21 +184,35 @@ export async function requestVendorPayment(params: {
             code: signing.code,
             reason: signing.reason,
           },
-      onChain: {
-        status: signing.ok ? ('signed' as const) : ('not_configured' as const),
-        code: signing.ok ? undefined : signing.code,
-        reason: signing.ok ? undefined : signing.reason,
-      },
+      onChain: signing.ok
+        ? preflight?.ok
+          ? { status: 'signed' as const }
+          : {
+              status: 'preflight_failed' as const,
+              reason: preflight?.reason ?? 'Broadcaster preflight simulation failed',
+            }
+        : {
+            status: 'not_configured' as const,
+            code: signing.code,
+            reason: signing.reason,
+          },
       nextSteps: signing.ok
-        ? [
-            'APPROVER signed instant payment meta-tx (no ANALYST gas)',
-            'Click Confirm execution — Broadcaster submits requestAndApproveExecution',
-            'Verify COMPLETED via /status or Sepolia Etherscan',
-          ]
+        ? preflight?.ok
+          ? [
+              'ANALYST signed instant payment meta-tx (no request gas)',
+              'Click Submit on-chain (Broadcaster) — Dynamic server wallet submits',
+              'Verify COMPLETED via /status or Sepolia Etherscan',
+            ]
+          : [
+              preflight?.reason ?? 'On-chain preflight failed',
+              'Grant ANALYST SIGN_META_REQUEST_AND_APPROVE on handler 0xde0df793 AND execution 0xa9059cbb',
+              `Ensure ANALYST wallet is ${ANALYST_WALLET_ADDRESS}`,
+              'Register ERC-20 transfer + whitelist Sepolia USDC on GuardController',
+            ]
         : [
             signing.reason,
-            'Provision APPROVER role with SIGN_META_REQUEST_AND_APPROVE on USDC transfer',
-            'Set APPROVER_PRIVATE_KEY in .env',
+            'Provision ANALYST role with SIGN_META_REQUEST_AND_APPROVE on USDC transfer',
+            'Set ANALYST_PRIVATE_KEY in .env (must derive to ANALYST_WALLET_ADDRESS)',
           ],
       status: signing.ok ? 'awaiting_confirmation' : 'awaiting_configuration',
     };
@@ -239,7 +259,7 @@ export async function requestVendorPayment(params: {
     nextSteps: onChain.ok
       ? [
           `Timelock active — release after ${onChain.releaseTimeIso ?? 'releaseTime'}`,
-          'Click Confirm release — APPROVER signs + Broadcaster submits approve meta-tx',
+          'Click Confirm release — ANALYST signs + Broadcaster submits approve meta-tx',
           'Verify COMPLETED via /pending or Sepolia Etherscan',
         ]
       : [

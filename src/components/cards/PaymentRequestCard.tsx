@@ -45,8 +45,8 @@ export default function PaymentRequestCard({ result }: Props) {
   const pathLabel = String(request?.pathLabel ?? request?.paymentPath ?? '—');
   const whoLine =
     request?.paymentPath === 'B-fast'
-      ? 'Approver signs · Broadcaster executes'
-      : 'Analyst requests · Approver signs · Broadcaster releases';
+      ? 'Analyst signs · Broadcaster executes'
+      : 'Analyst requests · Analyst signs approve · Broadcaster releases';
 
   return (
     <CardShell
@@ -74,7 +74,8 @@ export default function PaymentRequestCard({ result }: Props) {
           ) : null}
           {result.status === 'requested_unsigned' ? (
             <p className="card-copy muted">
-              On-chain request or signing failed — check ANALYST/APPROVER keys and RBAC.
+              On-chain request or signing failed — check ANALYST_PRIVATE_KEY and on-chain ANALYST
+              RBAC (expected wallet 0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700).
             </p>
           ) : null}
           {demo && (isInstant || isTimelock) ? (
@@ -122,7 +123,9 @@ export default function PaymentRequestCard({ result }: Props) {
           </div>
         ) : null}
       </dl>
-      {onChain?.reason ? <p className="card-copy muted">{String(onChain.reason)}</p> : null}
+      {onChain?.reason ? (
+        <p className="card-copy muted tool-card-feedback error">{String(onChain.reason)}</p>
+      ) : null}
     </CardShell>
   );
 }

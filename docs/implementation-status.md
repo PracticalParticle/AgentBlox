@@ -35,14 +35,14 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | `get_whitelisted_targets` | Monitor | ✅ | ✅ SDK | — | — | — |
 | `get_lifi_quote_preview` | Monitor | ✅ | ⚠️ compose *(future)* | — | — | — |
 | `propose_rebalance` | Treasury op | ✅ policy | — | ✅ | ⚠️ env | ✅ |
-| `request_vendor_payment` | Disbursement | ✅ path route | ✅ B-timelock | ✅ APPROVER | ✅ API | ✅ |
+| `request_vendor_payment` | Disbursement | ✅ path route | ✅ B-timelock | ✅ ANALYST | ✅ API | ✅ |
 | `simulate_policy_violation` | Policy test | ✅ | ❌ | ❌ | ❌ | — |
 
 Legend: ✅ working · ⚠️ env-dependent / future · ❌ not implemented
 
 **`/pay` paths:**
-- **B-fast** (&lt; 10 USDC): APPROVER signs → `POST /api/execute/payment` → Broadcaster
-- **B-timelock** (≥ 10 USDC): ANALYST `executeWithTimeLock` → `POST /api/execute/payment-approve` → Broadcaster
+- **B-fast** (&lt; 10 USDC): ANALYST signs → `POST /api/execute/payment` → Broadcaster
+- **B-timelock** (≥ 10 USDC): ANALYST `executeWithTimeLock` → ANALYST sign approve → `POST /api/execute/payment-approve` → Broadcaster
 
 ---
 
@@ -86,7 +86,7 @@ See [implementation-plan.md](./implementation-plan.md) · [ROADMAP-PLAN.md](./RO
 |------|--------|-------|
 | `server/bloxchain.ts` | Done | SDK factory + role reads |
 | `server/policy-gate.ts` | Done | `resolvePaymentPath` |
-| `server/signing/payment-meta-tx.ts` | Done | APPROVER B-fast + timelock approve sign |
+| `server/signing/payment-meta-tx.ts` | Done | ANALYST B-fast + timelock approve sign |
 | `server/execution/payment.ts` | Done | ANALYST `executeWithTimeLock` |
 | `server/execution/payment-approve.ts` | Done | Approve + instant execute |
 | `server/execution/meta-tx-broadcaster.ts` | Done | Shared Broadcaster submit |
@@ -103,8 +103,8 @@ See [implementation-plan.md](./implementation-plan.md) · [ROADMAP-PLAN.md](./RO
 
 ## Next operator steps (E2E on Sepolia)
 
-1. Verify health: `approverConfigured: true`, `analystConfigured: true`, `dynamicBroadcasterConfigured: true`
-2. On-chain: APPROVER roles on USDC `transfer` (both meta-tx actions); ANALYST `EXECUTE_TIME_DELAY_REQUEST`
+1. Verify health: `analystConfigured: true`, `analystWalletAddressMatches: true`, `dynamicBroadcasterConfigured: true`
+2. On-chain: ANALYST wallet `0xbC9A7dc5f68a8F3629DC8D2a4D2605e2371a5700` with `SIGN_META_REQUEST_AND_APPROVE` + `SIGN_META_APPROVE` + `EXECUTE_TIME_DELAY_REQUEST` on USDC transfer
 3. Whitelist Sepolia USDC for `0xa9059cbb`
 4. Fund ANALYST wallet with Sepolia ETH (B-timelock only)
 5. Demo B-fast: `/pay` with amount &lt; 10_000_000 (e.g. `5000000` = 5 USDC)
