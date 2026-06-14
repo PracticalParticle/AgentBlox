@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
-import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
-import { isEthereumWallet } from '@dynamic-labs/ethereum';
-import type { Address } from 'viem';
 import type { AgentBloxToolPayload } from '../../lib/tool-parser';
 import { statusColor } from '../../lib/tool-parser';
-import { executeRebalance } from '../../lib/execute-api';
-import { approveTimelockPayment, secondsUntilRelease } from '../../lib/owner-guard';
 import {
-  canApprovePayment as shouldShowApprovePayment,
-  canConfirmRebalance as shouldShowConfirmRebalance,
+  approveTimelockPayment as approveTimelockViaBroadcaster,
+  executeInstantPayment,
+  executeRebalance,
+} from '../../lib/execute-api';
+import { secondsUntilRelease } from '../../lib/owner-guard';
+import {
+  canConfirmInstantPayment,
+  canConfirmRebalance,
+  canConfirmTimelockRelease,
   extractPaymentApproval,
+  extractPaymentSignedMetaTx,
   extractSignedMetaTx,
 } from '../../lib/tool-result-helpers';
 
@@ -18,7 +21,6 @@ type Props = {
 };
 
 export default function ToolResultCard({ payload }: Props) {
-  const { primaryWallet } = useDynamicContext();
   const result = payload.result as Record<string, unknown> | null;
   const [executing, setExecuting] = useState(false);
   const [executeResult, setExecuteResult] = useState<{ ok: boolean; message: string } | null>(
@@ -34,10 +36,12 @@ export default function ToolResultCard({ payload }: Props) {
         : 'ok';
 
   const signedMetaTx = result ? extractSignedMetaTx(result) : null;
+  const paymentSignedMetaTx = result ? extractPaymentSignedMetaTx(result) : null;
   const paymentApproval = result ? extractPaymentApproval(result) : null;
 
-  const showConfirmRebalance = shouldShowConfirmRebalance(payload.tool, result);
-  const showApprovePayment = shouldShowApprovePayment(payload.tool, result);
+  const showConfirmRebalance = canConfirmRebalance(payload.tool, result);
+  const showConfirmInstantPayment = canConfirmInstantPayment(payload.tool, result);
+  const showConfirmTimelockRelease = canConfirmTimelockRelease(payload.tool, result);
 
   useEffect(() => {
     if (!paymentApproval) {
@@ -52,11 +56,14 @@ export default function ToolResultCard({ payload }: Props) {
   }, [paymentApproval]);
 
   async function handleConfirmExecution() {
-    if (!signedMetaTx) return;
+    const metaTx = signedMetaTx ?? paymentSignedMetaTx;
+    if (!metaTx) return;
     setExecuting(true);
     setExecuteResult(null);
     try {
-      const response = await executeRebalance(signedMetaTx);
+      const response = paymentSignedMetaTx
+        ? await executeInstantPayment(metaTx)
+        : await executeRebalance(metaTx);
       if (response.ok) {
         setExecuteResult({ ok: true, message: `Submitted: ${response.hash}` });
       } else {
@@ -72,19 +79,12 @@ export default function ToolResultCard({ payload }: Props) {
     }
   }
 
-  async function handleApprovePayment() {
-    if (!paymentApproval || !primaryWallet || !isEthereumWallet(primaryWallet)) {
-      setExecuteResult({
-        ok: false,
-        message: 'Connect Dynamic Owner wallet in the header before approving.',
-      });
-      return;
-    }
-
+  async function handleConfirmRelease() {
+    if (!paymentApproval) return;
     if (countdown > 0) {
       setExecuteResult({
         ok: false,
-        message: `Timelock active — wait ${countdown}s before approving.`,
+        message: `Timelock active — wait ${countdown}s before release.`,
       });
       return;
     }
@@ -92,28 +92,23 @@ export default function ToolResultCard({ payload }: Props) {
     setExecuting(true);
     setExecuteResult(null);
     try {
-      const walletClient = await primaryWallet.getWalletClient();
-      const ownerAddress = primaryWallet.address as Address;
-      const response = await approveTimelockPayment({
-        txId: paymentApproval.txId,
-        treasuryAddress: paymentApproval.treasuryAddress,
-        walletClient,
-        ownerAddress,
-      });
+      const response = await approveTimelockViaBroadcaster(paymentApproval.txId);
       if (response.ok) {
-        setExecuteResult({ ok: true, message: `Approved: ${response.hash}` });
+        setExecuteResult({ ok: true, message: `Released: ${response.hash}` });
       } else {
         setExecuteResult({ ok: false, message: response.reason });
       }
     } catch (error) {
       setExecuteResult({
         ok: false,
-        message: error instanceof Error ? error.message : 'Owner approval failed',
+        message: error instanceof Error ? error.message : 'Timelock release failed',
       });
     } finally {
       setExecuting(false);
     }
   }
+
+  const showConfirmExecution = showConfirmRebalance || showConfirmInstantPayment;
 
   return (
     <div className={`tool-card status-${statusColor(status)}`}>
@@ -122,25 +117,21 @@ export default function ToolResultCard({ payload }: Props) {
         <span className={`status-badge ${statusColor(status)}`}>{status}</span>
       </div>
       <pre className="tool-card-body">{JSON.stringify(payload.result, null, 2)}</pre>
-      {showConfirmRebalance && (
+      {showConfirmExecution && (
         <div className="tool-card-actions">
           <button type="button" disabled={executing} onClick={handleConfirmExecution}>
             {executing ? 'Submitting…' : 'Confirm execution'}
           </button>
         </div>
       )}
-      {showApprovePayment && (
+      {showConfirmTimelockRelease && (
         <div className="tool-card-actions">
-          <button
-            type="button"
-            disabled={executing || countdown > 0}
-            onClick={handleApprovePayment}
-          >
+          <button type="button" disabled={executing || countdown > 0} onClick={handleConfirmRelease}>
             {executing
-              ? 'Approving…'
+              ? 'Releasing…'
               : countdown > 0
                 ? `Timelock ${countdown}s`
-                : 'Approve as Owner'}
+                : 'Confirm release'}
           </button>
         </div>
       )}

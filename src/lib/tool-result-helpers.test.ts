@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   canApprovePayment,
+  canConfirmInstantPayment,
   canConfirmRebalance,
+  canConfirmTimelockRelease,
   extractPaymentApproval,
+  extractPaymentSignedMetaTx,
   extractSignedMetaTx,
 } from './tool-result-helpers';
 
@@ -69,7 +72,23 @@ describe('canConfirmRebalance', () => {
   });
 });
 
-describe('canApprovePayment', () => {
+describe('canConfirmInstantPayment', () => {
+  it('is true for B-fast proposed payment with signed meta-tx', () => {
+    const result = {
+      status: 'proposed',
+      request: {
+        paymentPath: 'B-fast',
+        signing: { status: 'signed', signedMetaTx: { ok: true } },
+      },
+    };
+    expect(canConfirmInstantPayment('request_vendor_payment', result)).toBe(true);
+    expect(canConfirmInstantPayment('request_vendor_payment', { ...result, status: 'requested_on_chain' })).toBe(
+      false,
+    );
+  });
+});
+
+describe('canApprovePayment / canConfirmTimelockRelease', () => {
   it('is true only for requested_on_chain payment with txId', () => {
     const result = {
       status: 'requested_on_chain',
@@ -79,6 +98,18 @@ describe('canApprovePayment', () => {
       },
     };
     expect(canApprovePayment('request_vendor_payment', result)).toBe(true);
+    expect(canConfirmTimelockRelease('request_vendor_payment', result)).toBe(true);
     expect(canApprovePayment('propose_rebalance', result)).toBe(false);
+  });
+});
+
+describe('extractPaymentSignedMetaTx', () => {
+  it('returns signed meta-tx from payment request', () => {
+    const signed = { txRecord: { txId: '2' } };
+    expect(
+      extractPaymentSignedMetaTx({
+        request: { signing: { status: 'signed', signedMetaTx: signed } },
+      }),
+    ).toEqual(signed);
   });
 });

@@ -9,6 +9,10 @@ export const TREASURY_ADDRESS = (process.env.TREASURY_ADDRESS || '') as Address;
 
 export const ENS_NAME = process.env.ENS_NAME || '';
 
+export function isEnsConfigured(): boolean {
+  return ENS_NAME.trim().length > 0;
+}
+
 /** Sepolia testnet chain id. */
 export const SEPOLIA_CHAIN_ID = 11_155_111;
 
@@ -112,6 +116,16 @@ export const ANALYST_PRIVATE_KEY = (process.env.ANALYST_PRIVATE_KEY || '') as He
 export function isAnalystConfigured(): boolean {
   return ANALYST_PRIVATE_KEY.startsWith('0x') && ANALYST_PRIVATE_KEY.length >= 66;
 }
+
+/** APPROVER server key — signs payment meta-txs (B-fast + B-timelock approve). */
+export const APPROVER_PRIVATE_KEY = (process.env.APPROVER_PRIVATE_KEY || '') as Hex;
+
+export function isApproverConfigured(): boolean {
+  return APPROVER_PRIVATE_KEY.startsWith('0x') && APPROVER_PRIVATE_KEY.length >= 66;
+}
+
+/** Instant payment threshold — amounts below this use B-fast (default 10 USDC, 6 decimals). */
+export const PAYMENT_INSTANT_MAX_USDC = BigInt(process.env.PAYMENT_INSTANT_MAX_USDC || '10000000');
 
 /** External call target for rebalance meta-tx (e.g. LI.FI userProxy). Phase 4 fills via compose. */
 export const REBALANCE_EXECUTION_TARGET = (process.env.REBALANCE_EXECUTION_TARGET || '') as Address;

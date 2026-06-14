@@ -6,16 +6,28 @@ export function extractSignedMetaTx(
 ): SerializedMetaTransaction | null {
   const proposal = result.proposal as Record<string, unknown> | undefined;
   const signing = proposal?.signing as Record<string, unknown> | undefined;
-  if (signing?.status !== 'signed' || !signing.signedMetaTx) {
-    return null;
+  if (signing?.status === 'signed' && signing.signedMetaTx) {
+    return signing.signedMetaTx as SerializedMetaTransaction;
   }
-  return signing.signedMetaTx as SerializedMetaTransaction;
+  return null;
+}
+
+export function extractPaymentSignedMetaTx(
+  result: Record<string, unknown>,
+): SerializedMetaTransaction | null {
+  const request = result.request as Record<string, unknown> | undefined;
+  const signing = request?.signing as Record<string, unknown> | undefined;
+  if (signing?.status === 'signed' && signing.signedMetaTx) {
+    return signing.signedMetaTx as SerializedMetaTransaction;
+  }
+  return null;
 }
 
 export function extractPaymentApproval(result: Record<string, unknown>): {
   txId: string;
   treasuryAddress: Address;
   releaseTime: string;
+  paymentPath?: string;
 } | null {
   const request = result.request as Record<string, unknown> | undefined;
   const onChain = request?.onChain as Record<string, unknown> | undefined;
@@ -26,6 +38,7 @@ export function extractPaymentApproval(result: Record<string, unknown>): {
     txId: String(onChain.txId),
     treasuryAddress: request.treasuryAddress as Address,
     releaseTime: String(onChain.releaseTime ?? '0'),
+    paymentPath: typeof request.paymentPath === 'string' ? request.paymentPath : undefined,
   };
 }
 
@@ -39,7 +52,22 @@ export function canConfirmRebalance(
   return extractSignedMetaTx(result) !== null && result.status === 'proposed';
 }
 
-export function canApprovePayment(
+export function canConfirmInstantPayment(
+  tool: string,
+  result: Record<string, unknown> | null,
+): boolean {
+  if (!result || tool !== 'request_vendor_payment') {
+    return false;
+  }
+  const request = result.request as Record<string, unknown> | undefined;
+  return (
+    extractPaymentSignedMetaTx(result) !== null &&
+    result.status === 'proposed' &&
+    request?.paymentPath === 'B-fast'
+  );
+}
+
+export function canConfirmTimelockRelease(
   tool: string,
   result: Record<string, unknown> | null,
 ): boolean {
@@ -47,4 +75,12 @@ export function canApprovePayment(
     return false;
   }
   return extractPaymentApproval(result) !== null && result.status === 'requested_on_chain';
+}
+
+/** @deprecated Use canConfirmTimelockRelease — Owner fallback remains in card only. */
+export function canApprovePayment(
+  tool: string,
+  result: Record<string, unknown> | null,
+): boolean {
+  return canConfirmTimelockRelease(tool, result);
 }

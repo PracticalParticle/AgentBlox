@@ -9,6 +9,8 @@ export type ServerHealth = {
   dynamicBroadcasterConfigured?: boolean;
   agentPolicySigningConfigured?: boolean;
   analystConfigured?: boolean;
+  approverConfigured?: boolean;
+  ensConfigured?: boolean;
   lifiComposeConfigured?: boolean;
   lifiApiKeyConfigured?: boolean;
   broadcaster?: {

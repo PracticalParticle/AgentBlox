@@ -88,7 +88,8 @@ Day-to-day actions via **Copilot treasury tools** (`POST /api/chat`).
 | Path | Best for | Bloxchain methods |
 |------|----------|-------------------|
 | **Policy execution** *(future)* | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
-| **Timelock (Lane B)** | Human-gated disbursements | ANALYST request → APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx` |
+| **Timelock (Lane B — large)** | Human-gated disbursements | ANALYST `executeWithTimeLock` → APPROVER sign → Broadcaster approve |
+| **Instant payment (Lane B — small, future)** | Sub-threshold USDC | Payment signer → `requestAndApproveExecution` |
 
 ### Three policy layers
 

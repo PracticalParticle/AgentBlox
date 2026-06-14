@@ -13,16 +13,15 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | Copilot UI + slash commands | **Done** | `/api/chat`, fallback router, tool cards |
 | UI/UX Workspace (target) | **Done** | UI-0–UI-6: workspace, typed cards, demo mode, polish |
 | Treasury tools (read) | **Done** | ETH + ENS + SDK pending/whitelist/roles |
-| Treasury tools (propose) | **Partial** | Policy gate + meta-tx sign; on-chain execute needs env |
-| Policy gate (off-chain) | **Done** | Flow ID, amount, target validation |
-| `@bloxchain/sdk` | **Partial** | Reads + meta-tx signing; timelock writes Phase 5 |
-| `@lifi/sdk` | **Future** | Composer scaffold in repo; not hackathon MVP |
+| Treasury tools (propose) | **Done** | Policy gate + Lane B dual-path `/pay` + rebalance sign |
+| Policy gate (off-chain) | **Done** | Flow ID, amount, **`resolvePaymentPath`** ($10 threshold) |
+| `@bloxchain/sdk` | **Done** | Reads + meta-tx signing + payment approve paths |
+| `@lifi/sdk` | **Future** | Composer scaffold; not hackathon MVP |
 | Dynamic (Owner UI) | **Partial** | `DynamicWidget` only |
-| Dynamic (Broadcaster) | **Partial** | Docker + verify API; needs `DYNAMIC_API_TOKEN` + wallet in `.env` |
-| Docker dev stack | **Done** | `docker-compose.yml` — server + web + ops profiles (D0–D2) |
-| On-chain execution | **Partial** | Sign + `POST /api/execute/rebalance`; needs Broadcaster + execution target env |
-| Agent Bridge REST API | **Removed** | Superseded by Copilot tools |
-| Unit tests (Vitest) | **Done** | `npm run verify` — typecheck + vitest |
+| Dynamic (Broadcaster) | **Partial** | Needs `DYNAMIC_API_TOKEN` + wallet in `.env` |
+| Docker dev stack | **Done** | `docker-compose.yml` |
+| On-chain execution | **Partial** | Code complete; E2E needs operator provisioning |
+| Unit tests (Vitest) | **Done** | `npm run verify` — 59 tests |
 
 ---
 
@@ -34,12 +33,16 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | `resolve_ens_treasury` | Monitor | ✅ | ✅ ENS | — | — | — |
 | `list_pending_approvals` | Monitor | ✅ | ✅ SDK | — | — | — |
 | `get_whitelisted_targets` | Monitor | ✅ | ✅ SDK | — | — | — |
-| `get_lifi_quote_preview` | Monitor | ✅ | ⚠️ compose | — | — | — |
+| `get_lifi_quote_preview` | Monitor | ✅ | ⚠️ compose *(future)* | — | — | — |
 | `propose_rebalance` | Treasury op | ✅ policy | — | ✅ | ⚠️ env | ✅ |
-| `request_vendor_payment` | Disbursement | ✅ policy | ⚠️ timelock | ⚠️ ANALYST | ⚠️ APPROVER+BC | ✅ partial |
+| `request_vendor_payment` | Disbursement | ✅ path route | ✅ B-timelock | ✅ APPROVER | ✅ API | ✅ |
 | `simulate_policy_violation` | Policy test | ✅ | ❌ | ❌ | ❌ | — |
 
-Legend: ✅ working · ⚠️ env-dependent / stub · ❌ not implemented
+Legend: ✅ working · ⚠️ env-dependent / future · ❌ not implemented
+
+**`/pay` paths:**
+- **B-fast** (&lt; 10 USDC): APPROVER signs → `POST /api/execute/payment` → Broadcaster
+- **B-timelock** (≥ 10 USDC): ANALYST `executeWithTimeLock` → `POST /api/execute/payment-approve` → Broadcaster
 
 ---
 
@@ -49,14 +52,14 @@ Legend: ✅ working · ⚠️ env-dependent / stub · ❌ not implemented
 |-------|-------|--------|
 | 0 | Scaffold + Copilot + Console | **Done** |
 | 1 | Bloxchain SDK reads | **Done** |
-| 2 | Dynamic Owner + Broadcaster | **In progress** (scaffold done; env pending) |
-| 3 | Meta-tx sign + Copilot confirm | **Done** (end-to-end needs env + Phase 4 calldata) |
-| 4 | LI.FI + whitelist demo | **Future** (scaffold done; API key + whitelist pending) |
-| 5 | Timelock Lane B — ANALYST / APPROVER / Broadcaster | **In progress** (ANALYST request ✅; APPROVER meta-tx approve ⬜) |
+| 2 | Dynamic Owner + Broadcaster | **In progress** (scaffold ✅; operator env) |
+| 3 | Meta-tx sign + Copilot confirm | **Done** |
+| 4 | LI.FI + whitelist demo | **Future** (scaffold done) |
+| 5 | Lane B dual-path `/pay` | **Done** (code + tests; E2E needs on-chain) |
 | 6 | ENS write + Console persistence | **Partial** (read only) |
 | 7 | Polish + submission | **Not started** |
 
-See [implementation-plan.md](./implementation-plan.md).
+See [implementation-plan.md](./implementation-plan.md) · [ROADMAP-PLAN.md](./ROADMAP-PLAN.md).
 
 ---
 
@@ -64,14 +67,16 @@ See [implementation-plan.md](./implementation-plan.md).
 
 | Endpoint | Method | Status | Purpose |
 |----------|--------|--------|---------|
-| `/api/health` | GET | Done | Mode, treasury, Dynamic, Broadcaster, signing config |
+| `/api/health` | GET | Done | Includes `analystConfigured`, `approverConfigured` |
 | `/api/chat` | POST | Done | Copilot + treasury tools |
 | `/api/treasury/status` | GET | Done | Status rail poll |
 | `/api/treasury/pending` | GET | Done | Approvals panel poll |
 | `/api/treasury/whitelist` | GET | Done | Optional whitelist read |
 | `/api/broadcaster/verify` | GET | Done | Live Dynamic auth + on-chain match |
 | `/api/broadcaster/wallets` | GET | Done | List server wallets for Setup |
-| `/api/execute/rebalance` | POST | Done | Broadcaster submits signed meta-tx |
+| `/api/execute/rebalance` | POST | Done | Broadcaster `requestAndApproveExecution` |
+| `/api/execute/payment` | POST | Done | B-fast instant USDC payment |
+| `/api/execute/payment-approve` | POST | Done | B-timelock APPROVER sign + Broadcaster approve |
 
 ---
 
@@ -80,38 +85,24 @@ See [implementation-plan.md](./implementation-plan.md).
 | Path | Status | Notes |
 |------|--------|-------|
 | `server/bloxchain.ts` | Done | SDK factory + role reads |
-| `server/tools/read.ts` | Done | Monitor tools + SDK reads |
-| `server/tools/propose.ts` | Done | Policy gate + signed meta-tx in proposal |
-| `server/signing/meta-tx.ts` | Done | AGENT_POLICY sign + submit helper |
-| `server/signing/serialize.ts` | Done | JSON-safe meta-tx round-trip |
-| `server/execution/rebalance.ts` | Done | Broadcaster `requestAndApproveExecution` |
-| `server/dynamic/client.ts` | Done | Authenticated Dynamic client |
-| `server/dynamic/broadcaster.ts` | Done | Status + viem wallet client |
-| `server/lifi/compose.ts` | Done | Composer API + calldata split |
-| `server/lifi/flows.ts` | Done | rebalance-sepolia-v1 USDC→WETH |
-| `src/lib/execute-api.ts` | Done | Client → `POST /api/execute/rebalance` |
-| `src/lib/meta-tx-types.ts` | Done | Shared serialized meta-tx type |
-| `server/execution/payment.ts` | Done | ANALYST `executeWithTimeLock` for /pay |
-| `server/execution/payment-calldata.ts` | Done | USDC transfer params + operation type |
-| `server/execution/tx-id.ts` | Done | TransactionEvent txId decode |
-| `src/lib/owner-guard.ts` | Done | Dynamic Owner `approveTimeLockExecution` |
-| `src/pages/WorkspacePage.tsx` | Done | UI-0 three-column workspace |
-| `src/pages/SetupPage.tsx` | Done | Checklist + Broadcaster verify UI |
-| `src/components/cards/ToolCardRouter.tsx` | Done | UI-1 typed tool cards |
-| `src/components/workspace/*` | Done | StatusRail, Approvals, Activity |
+| `server/policy-gate.ts` | Done | `resolvePaymentPath` |
+| `server/signing/payment-meta-tx.ts` | Done | APPROVER B-fast + timelock approve sign |
+| `server/execution/payment.ts` | Done | ANALYST `executeWithTimeLock` |
+| `server/execution/payment-approve.ts` | Done | Approve + instant execute |
+| `server/execution/meta-tx-broadcaster.ts` | Done | Shared Broadcaster submit |
+| `server/signing/meta-tx.ts` | Done | AGENT_POLICY rebalance sign |
+| `server/execution/rebalance.ts` | Done | Delegates to meta-tx-broadcaster |
+| `src/lib/execute-api.ts` | Done | payment + payment-approve clients |
+| `src/components/cards/PaymentRequestCard.tsx` | Done | Dual-path Confirm UX |
+| `src/lib/tool-result-helpers.ts` | Done | B-fast / B-timelock detection |
 
 ---
 
-## Next implementation priorities
+## Next operator steps (E2E on Sepolia)
 
-1. Set Dynamic Broadcaster: `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`
-2. Set `ANALYST_PRIVATE_KEY` + on-chain ANALYST role for `/pay` request
-3. Set **`APPROVER_PRIVATE_KEY`** + on-chain APPROVER role with `SIGN_META_APPROVE` on USDC transfer selector
-4. Wire APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx` for timelock approve
-5. Whitelist Sepolia USDC for `transfer` selector (Lane B)
-6. Phase 7 — demo video + ETHGlobal submission
-
-**Future (Lane A / LI.FI):**
-
-7. Obtain `LIFI_API_KEY` + whitelist composed `userProxy` on treasury
-8. E2E `/rebalance` on Sepolia
+1. Verify health: `approverConfigured: true`, `analystConfigured: true`, `dynamicBroadcasterConfigured: true`
+2. On-chain: APPROVER roles on USDC `transfer` (both meta-tx actions); ANALYST `EXECUTE_TIME_DELAY_REQUEST`
+3. Whitelist Sepolia USDC for `0xa9059cbb`
+4. Fund ANALYST wallet with Sepolia ETH (B-timelock only)
+5. Demo B-fast: `/pay` with amount &lt; 10_000_000 (e.g. `5000000` = 5 USDC)
+6. Demo B-timelock: `/pay` with amount ≥ 10_000_000, wait release, Confirm release

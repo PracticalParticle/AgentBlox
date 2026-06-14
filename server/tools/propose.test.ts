@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { requestVendorPaymentOnChain } = vi.hoisted(() => ({
+const { requestVendorPaymentOnChain, signPaymentInstantMetaTransaction } = vi.hoisted(() => ({
   requestVendorPaymentOnChain: vi.fn(),
+  signPaymentInstantMetaTransaction: vi.fn(),
 }));
 
 vi.mock('../execution/payment.js', () => ({
   requestVendorPaymentOnChain,
+}));
+
+vi.mock('../signing/payment-meta-tx.js', () => ({
+  signPaymentInstantMetaTransaction,
 }));
 
 vi.mock('../config.js', () => ({
@@ -13,6 +18,7 @@ vi.mock('../config.js', () => ({
   TREASURY_ADDRESS: '0xA6568F40d89E5c72E8142339Ff85Ad6E308925F3',
   AGENT_POLICY: { allowedFlowIds: ['rebalance-sepolia-v1'] },
   SEPOLIA_USDC: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+  PAYMENT_INSTANT_MAX_USDC: 10_000_000n,
 }));
 
 vi.mock('../clients.js', () => ({
@@ -25,6 +31,10 @@ vi.mock('../lifi/compose.js', () => ({
 
 vi.mock('../signing/meta-tx.js', () => ({
   signRebalanceMetaTransaction: vi.fn(),
+}));
+
+vi.mock('../ens.js', () => ({
+  fetchEnsAllowedFlows: vi.fn().mockResolvedValue([]),
 }));
 
 import { requestVendorPayment } from './propose.js';
@@ -43,19 +53,36 @@ describe('requestVendorPayment', () => {
     expect(result.status).toBe('rejected');
     expect(result.request).toBeNull();
     expect(requestVendorPaymentOnChain).not.toHaveBeenCalled();
+    expect(signPaymentInstantMetaTransaction).not.toHaveBeenCalled();
   });
 
-  it('rejects non-numeric amountUsdc', async () => {
-    const result = await requestVendorPayment({
-      recipient: '0x0000000000000000000000000000000000000001',
-      amountUsdc: 'abc',
+  it('uses B-fast path below threshold', async () => {
+    signPaymentInstantMetaTransaction.mockResolvedValue({
+      ok: true,
+      signedMetaTx: { txRecord: {}, params: {}, message: '0x', signature: '0x', data: '0x' },
+      signerAddress: '0xApprover',
+      intent: {
+        target: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+        executionSelector: '0xa9059cbb',
+        executionParams: '0x',
+        operationType: '0xabc',
+        gasLimit: 200_000n,
+      },
     });
 
-    expect(result.status).toBe('rejected');
-    expect(result.request).toBeNull();
+    const result = await requestVendorPayment({
+      recipient: '0x0000000000000000000000000000000000000001',
+      amountUsdc: '5000000',
+    });
+
+    expect(signPaymentInstantMetaTransaction).toHaveBeenCalledOnce();
+    expect(requestVendorPaymentOnChain).not.toHaveBeenCalled();
+    expect(result.status).toBe('proposed');
+    expect(result.request?.paymentPath).toBe('B-fast');
+    expect(result.request?.status).toBe('awaiting_confirmation');
   });
 
-  it('returns requested_unsigned when on-chain submit is not configured', async () => {
+  it('uses B-timelock path at or above threshold', async () => {
     requestVendorPaymentOnChain.mockResolvedValue({
       ok: false,
       code: 'MISSING_ANALYST_KEY',
@@ -64,17 +91,16 @@ describe('requestVendorPayment', () => {
 
     const result = await requestVendorPayment({
       recipient: '0x0000000000000000000000000000000000000001',
-      amountUsdc: '500000',
-      memo: 'Test',
+      amountUsdc: '10000000',
     });
 
+    expect(requestVendorPaymentOnChain).toHaveBeenCalledOnce();
+    expect(signPaymentInstantMetaTransaction).not.toHaveBeenCalled();
     expect(result.status).toBe('requested_unsigned');
-    expect(result.request?.onChain.status).toBe('not_configured');
-    expect(result.request?.status).toBe('awaiting_configuration');
-    expect(result.request?.nextSteps).toContain('Set ANALYST_PRIVATE_KEY in .env');
+    expect(result.request?.paymentPath).toBe('B-timelock');
   });
 
-  it('returns requested_on_chain with txId when submit succeeds', async () => {
+  it('returns requested_on_chain with txId when timelock submit succeeds', async () => {
     requestVendorPaymentOnChain.mockResolvedValue({
       ok: true,
       txId: '9',
@@ -86,7 +112,7 @@ describe('requestVendorPayment', () => {
 
     const result = await requestVendorPayment({
       recipient: '0x0000000000000000000000000000000000000001',
-      amountUsdc: '500000',
+      amountUsdc: '50000000',
     });
 
     expect(result.status).toBe('requested_on_chain');
@@ -95,7 +121,6 @@ describe('requestVendorPayment', () => {
       txId: '9',
       hash: '0xpay',
     });
-    expect(result.request?.txRecordStatus).toBe('PENDING');
-    expect(result.request?.status).toBe('awaiting_owner_approval');
+    expect(result.request?.status).toBe('awaiting_release');
   });
 });

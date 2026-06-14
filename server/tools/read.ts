@@ -10,13 +10,8 @@ import {
   TREASURY_ADDRESS,
 } from '../config.js';
 import { composeRebalanceFlow, fetchLifiQuoteFallback } from '../lifi/compose.js';
+import { ENS_TEXT_KEYS } from '../ens.js';
 import { validateTreasuryConfigured } from '../policy-gate.js';
-
-const ENS_TEXT_KEYS = {
-  policyVersion: 'bloxchain.policyVersion',
-  allowedFlows: 'bloxchain.allowedFlows',
-  app: 'bloxchain.app',
-} as const;
 
 const TX_STATUS_LABEL: Record<number, string> = {
   [TxStatus.UNDEFINED]: 'UNDEFINED',

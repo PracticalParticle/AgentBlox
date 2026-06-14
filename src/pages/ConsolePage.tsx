@@ -1,11 +1,47 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BLOXCHAIN_SEPOLIA } from '../lib/config';
 import { useServerHealth } from '../hooks/useServerHealth';
+import { useEnsTreasury } from '../hooks/useEnsTreasury';
+
+const CONSOLE_STORAGE_KEY = 'agentblox.console.treasury';
+
+type StoredTreasury = {
+  treasuryAddress: string;
+  ensName: string;
+};
+
+function loadStoredTreasury(): StoredTreasury {
+  try {
+    const raw = localStorage.getItem(CONSOLE_STORAGE_KEY);
+    if (!raw) return { treasuryAddress: '', ensName: '' };
+    const parsed = JSON.parse(raw) as Partial<StoredTreasury>;
+    return {
+      treasuryAddress: parsed.treasuryAddress ?? '',
+      ensName: parsed.ensName ?? '',
+    };
+  } catch {
+    return { treasuryAddress: '', ensName: '' };
+  }
+}
 
 export default function ConsolePage() {
   const { health } = useServerHealth();
   const [treasuryAddress, setTreasuryAddress] = useState('');
   const [ensName, setEnsName] = useState('');
+  const lookupName = ensName.trim() || null;
+  const { data: ensData, loading: ensLoading, error: ensError, refresh: refreshEns } =
+    useEnsTreasury(lookupName);
+
+  useEffect(() => {
+    const stored = loadStoredTreasury();
+    setTreasuryAddress(stored.treasuryAddress);
+    setEnsName(stored.ensName);
+  }, []);
+
+  useEffect(() => {
+    const payload: StoredTreasury = { treasuryAddress, ensName };
+    localStorage.setItem(CONSOLE_STORAGE_KEY, JSON.stringify(payload));
+  }, [treasuryAddress, ensName]);
 
   return (
     <section className="page">
@@ -26,6 +62,7 @@ export default function ConsolePage() {
             <li>Mode: {health?.mode ?? '…'}</li>
             <li>LLM: {health?.llmEnabled ? 'enabled' : 'fallback slash commands'}</li>
             <li>Treasury: {health?.treasuryConfigured ? 'configured' : 'set TREASURY_ADDRESS in .env'}</li>
+            <li>ENS: {health?.ensConfigured ? 'configured' : 'set ENS_NAME in .env'}</li>
             <li>Dynamic env: {health?.dynamicEnvironmentConfigured ? 'configured' : 'set VITE_DYNAMIC_ENVIRONMENT_ID'}</li>
             <li>
               Analyst (/pay):{' '}
@@ -61,11 +98,10 @@ export default function ConsolePage() {
       </div>
 
       <div className="card" style={{ marginTop: '1.5rem' }}>
-        <h2>Treasury import (display)</h2>
+        <h2>Treasury import (local reference)</h2>
         <p>
-          Set <code>TREASURY_ADDRESS</code> and optional <code>ENS_NAME</code> in{' '}
-          <code>.env</code> for the server. Fields below are local-only until Setup persistence
-          (Phase 2).
+          Set <code>TREASURY_ADDRESS</code> and <code>ENS_NAME</code> in <code>.env</code> for the
+          server. Fields below persist in this browser for operator notes.
         </p>
         <label>
           Treasury address
@@ -78,7 +114,7 @@ export default function ConsolePage() {
           />
         </label>
         <label style={{ display: 'block', marginTop: '1rem' }}>
-          ENS name (configured in AgentBlox)
+          ENS name
           <input
             type="text"
             value={ensName}
@@ -87,6 +123,27 @@ export default function ConsolePage() {
             style={{ display: 'block', width: '100%', marginTop: '0.5rem', padding: '0.5rem' }}
           />
         </label>
+        <div style={{ marginTop: '1rem' }}>
+          <button type="button" className="suggestion-chip" disabled={!lookupName || ensLoading} onClick={() => void refreshEns()}>
+            {ensLoading ? 'Resolving…' : 'Resolve ENS'}
+          </button>
+        </div>
+        {ensError ? <p className="tool-card-feedback error">{ensError}</p> : null}
+        {ensData && !ensData.error ? (
+          <ul className="console-list mono" style={{ marginTop: '1rem' }}>
+            <li>Address: {ensData.address ?? 'not set'}</li>
+            <li>Policy: {ensData.textRecords?.policyVersion ?? '—'}</li>
+            <li>Flows: {ensData.textRecords?.allowedFlows ?? '—'}</li>
+            <li>
+              Matches .env treasury:{' '}
+              {ensData.matchesConfiguredTreasury === true
+                ? 'yes'
+                : ensData.matchesConfiguredTreasury === false
+                  ? 'no — fix addr record'
+                  : '—'}
+            </li>
+          </ul>
+        ) : null}
       </div>
 
       <div className="card" style={{ marginTop: '1rem' }}>
@@ -94,6 +151,7 @@ export default function ConsolePage() {
         <ul className="console-list">
           <li><code>VITE_DYNAMIC_ENVIRONMENT_ID</code> — Dynamic dashboard</li>
           <li><code>TREASURY_ADDRESS</code> — AccountBlox clone from bloxchain.app</li>
+          <li><code>ENS_NAME</code> — mainnet resolver + bloxchain.* text records</li>
           <li><code>OPENAI_API_KEY</code> — optional, enables natural language Copilot</li>
           <li><code>AGENT_POLICY_PRIVATE_KEY</code> — server signing (Phase 3)</li>
         </ul>

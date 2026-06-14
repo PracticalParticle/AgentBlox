@@ -1,8 +1,15 @@
-import { AGENT_POLICY, isTreasuryConfigured, SEPOLIA_USDC, TREASURY_ADDRESS } from '../config.js';
+import {
+  AGENT_POLICY,
+  isTreasuryConfigured,
+  PAYMENT_INSTANT_MAX_USDC,
+  SEPOLIA_USDC,
+  TREASURY_ADDRESS,
+} from '../config.js';
 import { requestVendorPaymentOnChain } from '../execution/payment.js';
 import { composeRebalanceFlow } from '../lifi/compose.js';
 import {
-  validateFlowId,
+  resolvePaymentPath,
+  validateFlowIdWithEns,
   validatePaymentAmount,
   validatePaymentRecipient,
   validateRebalanceAmount,
@@ -11,6 +18,7 @@ import {
 } from '../policy-gate.js';
 import { sepoliaClient } from '../clients.js';
 import { signRebalanceMetaTransaction } from '../signing/meta-tx.js';
+import { signPaymentInstantMetaTransaction } from '../signing/payment-meta-tx.js';
 
 export async function proposeRebalance(params: {
   flowId?: string;
@@ -22,7 +30,7 @@ export async function proposeRebalance(params: {
   }
 
   const flowId = params.flowId || 'rebalance-sepolia-v1';
-  const flowCheck = validateFlowId(flowId);
+  const flowCheck = await validateFlowIdWithEns(flowId);
   if (!flowCheck.allowed) {
     return { status: 'rejected', policy: flowCheck, proposal: null };
   }
@@ -135,6 +143,70 @@ export async function requestVendorPayment(params: {
     return { status: 'rejected', policy: amountCheck, request: null };
   }
 
+  const paymentPath = resolvePaymentPath(amount);
+  const pathLabel = paymentPath === 'B-fast' ? 'B-fast — instant meta-tx' : 'B-timelock — delayed release';
+
+  if (paymentPath === 'B-fast') {
+    const signing = await signPaymentInstantMetaTransaction({
+      recipient: params.recipient as `0x${string}`,
+      amount,
+    });
+
+    const request = {
+      treasuryAddress: TREASURY_ADDRESS,
+      recipient: params.recipient,
+      amountUsdc: params.amountUsdc,
+      memo: params.memo || 'Vendor payment',
+      token: 'USDC',
+      paymentPath,
+      pathLabel,
+      instantThresholdUsdc: PAYMENT_INSTANT_MAX_USDC.toString(),
+      txRecordStatus: signing.ok ? 'awaiting_execution' : 'not_submitted',
+      signing: signing.ok
+        ? {
+            status: 'signed' as const,
+            signerAddress: signing.signerAddress,
+            signedMetaTx: signing.signedMetaTx,
+            execution: {
+              target: signing.intent.target,
+              executionSelector: signing.intent.executionSelector,
+              operationType: signing.intent.operationType,
+            },
+          }
+        : {
+            status: 'unsigned' as const,
+            code: signing.code,
+            reason: signing.reason,
+          },
+      onChain: {
+        status: signing.ok ? ('signed' as const) : ('not_configured' as const),
+        code: signing.ok ? undefined : signing.code,
+        reason: signing.ok ? undefined : signing.reason,
+      },
+      nextSteps: signing.ok
+        ? [
+            'APPROVER signed instant payment meta-tx (no ANALYST gas)',
+            'Click Confirm execution — Broadcaster submits requestAndApproveExecution',
+            'Verify COMPLETED via /status or Sepolia Etherscan',
+          ]
+        : [
+            signing.reason,
+            'Provision APPROVER role with SIGN_META_REQUEST_AND_APPROVE on USDC transfer',
+            'Set APPROVER_PRIVATE_KEY in .env',
+          ],
+      status: signing.ok ? 'awaiting_confirmation' : 'awaiting_configuration',
+    };
+
+    return {
+      status: signing.ok ? 'proposed' : 'requested_unsigned',
+      policy: {
+        allowed: true,
+        reason: `Payment routed to ${pathLabel} (amount below ${PAYMENT_INSTANT_MAX_USDC} USDC units).`,
+      },
+      request,
+    };
+  }
+
   const onChain = await requestVendorPaymentOnChain({
     recipient: params.recipient as `0x${string}`,
     amount,
@@ -146,7 +218,9 @@ export async function requestVendorPayment(params: {
     amountUsdc: params.amountUsdc,
     memo: params.memo || 'Vendor payment',
     token: 'USDC',
-    lane: 'B — institutional timelock',
+    paymentPath,
+    pathLabel,
+    instantThresholdUsdc: PAYMENT_INSTANT_MAX_USDC.toString(),
     txRecordStatus: onChain.ok ? 'PENDING' : 'not_submitted',
     onChain: onChain.ok
       ? {
@@ -164,23 +238,25 @@ export async function requestVendorPayment(params: {
         },
     nextSteps: onChain.ok
       ? [
-          `Timelock active — approve after ${onChain.releaseTimeIso ?? 'releaseTime'}`,
-          'Connect Dynamic Owner wallet in the header',
-          'Click Approve as Owner in the payment card',
+          `Timelock active — release after ${onChain.releaseTimeIso ?? 'releaseTime'}`,
+          'Click Confirm release — APPROVER signs + Broadcaster submits approve meta-tx',
           'Verify COMPLETED via /pending or Sepolia Etherscan',
         ]
       : [
           onChain.reason,
-          'Provision ANALYST role on treasury (EXECUTE_TIME_DELAY_REQUEST on ERC20 transfer)',
-          'Whitelist Sepolia USDC for transfer(address,uint256)',
+          'Provision ANALYST role (EXECUTE_TIME_DELAY_REQUEST on ERC20 transfer)',
+          'Fund ANALYST wallet with Sepolia ETH for executeWithTimeLock gas',
           'Set ANALYST_PRIVATE_KEY in .env',
         ],
-    status: onChain.ok ? 'awaiting_owner_approval' : 'awaiting_configuration',
+    status: onChain.ok ? 'awaiting_release' : 'awaiting_configuration',
   };
 
   return {
     status: onChain.ok ? 'requested_on_chain' : 'requested_unsigned',
-    policy: { allowed: true, reason: 'Payment request passes off-chain policy gate.' },
+    policy: {
+      allowed: true,
+      reason: `Payment routed to ${pathLabel} (amount at/above ${PAYMENT_INSTANT_MAX_USDC} USDC units).`,
+    },
     request,
   };
 }

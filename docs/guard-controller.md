@@ -69,27 +69,30 @@ LI.FI-specific compose and tools: [integrations/lifi.md](./integrations/lifi.md)
 
 ## Timelock disbursement whitelist (vendor payments)
 
-For Copilot `/pay` → `executeWithTimeLock` on USDC `transfer(address,uint256)`:
+For Copilot `/pay` on USDC `transfer(address,uint256)` — **two execution paths** on the same whitelisted selector:
+
+| Path | GuardController entry | Typical use |
+|------|----------------------|-------------|
+| **B-fast** | `requestAndApproveExecution` | Small payouts — signer + Broadcaster; **no ANALYST gas** |
+| **B-timelock** | `executeWithTimeLock` → `approveTimeLockExecutionWithMetaTx` | Larger payouts — ANALYST pays request gas; delay before release |
 
 | Whitelist entry | Selector / target |
 |-----------------|-------------------|
 | Sepolia USDC contract | `transfer(address,uint256)` (`0xa9059cbb`) |
 | Recipient address | May need `ATTACHED_PAYMENT_RECIPIENT_SELECTOR` if using attached payouts |
 
-Bloxchain **attached payment** keys (register via same `guardConfigBatch` flow when using `executeWithPayment`):
+### RBAC on USDC transfer selector
 
-| Selector | Whitelist |
-|----------|-----------|
-| `ATTACHED_PAYMENT_RECIPIENT_SELECTOR` | Payment recipient address |
-| `ERC20_TRANSFER_SELECTOR` | ERC20 token contract for payout |
+| Role | B-fast | B-timelock |
+|------|--------|------------|
+| Payment signer (e.g. APPROVER) | `SIGN_META_REQUEST_AND_APPROVE` | — |
+| Broadcaster | `EXECUTE_META_REQUEST_AND_APPROVE` (handler: `requestAndApproveExecution`) | `EXECUTE_META_APPROVE` (handler: `approveTimeLockExecutionWithMetaTx`) |
+| ANALYST | — | `EXECUTE_TIME_DELAY_REQUEST` |
+| APPROVER | Can hold both fast-sign and timelock-approve permissions | `SIGN_META_APPROVE` |
 
-AgentBlox Phase 5 path uses **`executeWithTimeLock`** + USDC transfer selector unless you adopt `executeWithPayment`. Confirm selector setup matches your bloxchain.app template.
+**Future AgentBlox policy:** off-chain amount threshold (e.g. **&lt; $10 USDC → B-fast**, **≥ $10 → B-timelock**). Both paths must be provisioned on-chain first.
 
-Grant **ANALYST** role: `EXECUTE_TIME_DELAY_REQUEST` on the payment execution selector.
-
-Grant **APPROVER** role (custom RuntimeRBAC): `SIGN_META_APPROVE` on the same payment selector. **Broadcaster** submits `approveTimeLockExecutionWithMetaTx` (default schema grants `EXECUTE_META_APPROVE`).
-
-Owner direct approve via `approveTimeLockExecution` remains available for governance workflows — Lane B demo uses APPROVER + Broadcaster instead.
+Owner direct approve via `approveTimeLockExecution` remains for governance — optional fallback only.
 
 ---
 

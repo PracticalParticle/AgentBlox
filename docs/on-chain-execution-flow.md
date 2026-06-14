@@ -13,7 +13,8 @@ Same treasury, same TxRecord model — two paths:
 | Path | Best for | Key methods |
 |------|----------|-------------|
 | **Policy execution (Lane A — future)** | Agent-proposed ops (e.g. LI.FI rebalance) | AGENT_POLICY sign → `requestAndApproveExecution` |
-| **Timelock (Lane B — MVP)** | Human-gated disbursements | ANALYST request → APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx` |
+| **Timelock (Lane B — large / demo default)** | Human-gated disbursements | ANALYST `executeWithTimeLock` → APPROVER sign → Broadcaster approve |
+| **Instant payment (Lane B — small, future)** | Sub-threshold USDC payouts | Payment signer → `requestAndApproveExecution` → Broadcaster execute |
 
 ---
 
@@ -98,7 +99,35 @@ Off-chain tool returns `status: blocked`. Phase 4 adds optional Broadcaster subm
 
 ---
 
-## Controlled disbursement: Vendor payment — Lane B (timelock)
+## Controlled disbursement: Vendor payment — Lane B (dual path)
+
+USDC `transfer(address,uint256)` on Sepolia USDC can use **two whitelisted paths**. Provision **both** on-chain; AgentBlox will route by amount in a future policy gate (e.g. **&lt; $10 → B-fast**, **≥ $10 → B-timelock**).
+
+### Path B-fast — instant (signer + Broadcaster, no ANALYST gas)
+
+```mermaid
+sequenceDiagram
+    participant User as User / Copilot
+    participant Tool as request_vendor_payment
+    participant Sign as Payment signer
+    participant BC as Broadcaster
+    participant AB as AccountBlox
+    participant USDC as Sepolia USDC
+
+    User->>Tool: /pay (small amount)
+    Tool->>Sign: build + sign meta-tx (USDC transfer)
+    Tool-->>User: payment card (awaiting confirm)
+    User->>BC: Confirm execution
+    BC->>AB: requestAndApproveExecution(signedMetaTx)
+    AB->>USDC: transfer(recipient, amount)
+    AB-->>User: COMPLETED
+```
+
+**Gas:** Broadcaster pays submission gas only. Signer does not send an on-chain request tx.
+
+**RBAC:** `SIGN_META_REQUEST_AND_APPROVE` + `EXECUTE_META_REQUEST_AND_APPROVE` on ERC20 transfer selector (`0xa9059cbb`).
+
+### Path B-timelock — delayed (ANALYST pays request gas)
 
 ```mermaid
 sequenceDiagram
@@ -109,42 +138,51 @@ sequenceDiagram
     participant Approver as APPROVER (sign)
     participant BC as Broadcaster
 
-    User->>Tool: /pay
+    User->>Tool: /pay (large amount)
     Tool->>Analyst: executeWithTimeLock
-    Analyst->>AB: payment request
+    Analyst->>AB: payment request (ANALYST pays gas)
     AB->>AB: TxRecord PENDING + releaseTime
     Tool-->>User: request card (awaiting release)
     Note over AB: After releaseTime
     Approver->>Approver: sign approveTimeLockExecutionWithMetaTx
     User->>BC: Confirm release
     BC->>AB: approveTimeLockExecutionWithMetaTx(signedMetaTx)
-    AB->>AB: SIGN_META_APPROVE + EXECUTE_META_APPROVE + whitelist
-    AB-->>User: COMPLETED + audit trail
+    AB-->>User: COMPLETED
 ```
 
-**Role separation:** ANALYST initiates; APPROVER signs; Broadcaster executes — same signer ≠ executor pattern as Lane A.
+**Gas:** ANALYST wallet must hold Sepolia ETH for the timelock **request** transaction.
+
+**RBAC:** ANALYST `EXECUTE_TIME_DELAY_REQUEST`; APPROVER `SIGN_META_APPROVE`; Broadcaster `EXECUTE_META_APPROVE`.
+
+### Future off-chain routing
+
+```typescript
+// Planned in server/policy-gate.ts — not implemented yet
+if (amount < PAYMENT_INSTANT_MAX_USDC) {
+  // B-fast: sign meta-tx → Broadcaster requestAndApproveExecution
+} else {
+  // B-timelock: ANALYST executeWithTimeLock → approve after delay
+}
+```
+
+Suggested default threshold: **10 USDC** (`10_000_000` units, 6 decimals).
 
 ### Bloxchain methods
 
 ```typescript
-// Request (ANALYST — direct call)
+// B-fast (immediate)
+guardController.requestAndApproveExecution(signedMetaTx, { from: broadcasterAddress });
+
+// B-timelock — request (ANALYST direct call, pays gas)
 guardController.executeWithTimeLock(target, value, selector, params, gasLimit, operationType);
 
-// Approve (APPROVER sign + Broadcaster submit)
+// B-timelock — approve (APPROVER sign + Broadcaster submit)
 guardController.approveTimeLockExecutionWithMetaTx(signedMetaTx, { from: broadcasterAddress });
 ```
 
-**Legacy fallback:** Owner may still call `approveTimeLockExecution(txId)` directly via Dynamic embedded wallet (`src/lib/owner-guard.ts`) — not the hackathon demo path.
+**Legacy fallback:** Owner may call `approveTimeLockExecution(txId)` via Dynamic — not the primary demo path.
 
-**On-chain RBAC:**
-
-| Role | Permission | Selector |
-|------|------------|----------|
-| ANALYST | `EXECUTE_TIME_DELAY_REQUEST` | USDC `transfer(address,uint256)` |
-| APPROVER | `SIGN_META_APPROVE` | Same payment selector |
-| Broadcaster | `EXECUTE_META_APPROVE` | `approveTimeLockExecutionWithMetaTx` handler (default schema) |
-
-**Whitelist required:** Sepolia USDC contract + `transfer(address,uint256)` selector (and attached-payment keys if applicable). See [guard-controller.md](./guard-controller.md) § Timelock disbursement.
+**Whitelist required:** Sepolia USDC + `transfer(address,uint256)` selector. See [guard-controller.md](./guard-controller.md).
 
 ---
 

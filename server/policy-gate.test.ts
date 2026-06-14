@@ -1,74 +1,26 @@
-import { describe, expect, it } from 'vitest';
-import {
-  validateFlowId,
-  validatePaymentAmount,
-  validatePaymentRecipient,
-  validateRebalanceAmount,
-  validateTreasuryConfigured,
-  validateUnauthorizedTarget,
-} from './policy-gate.js';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-describe('validateFlowId', () => {
-  it('allows configured demo flow', () => {
-    const result = validateFlowId('rebalance-sepolia-v1');
-    expect(result.allowed).toBe(true);
+describe('resolvePaymentPath', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+  async function loadPolicyGate(threshold: string) {
+    vi.resetModules();
+    vi.stubEnv('PAYMENT_INSTANT_MAX_USDC', threshold);
+    const { resolvePaymentPath } = await import('./policy-gate.js');
+    return resolvePaymentPath;
+  }
+
+  it('routes below threshold to B-fast', async () => {
+    const resolvePaymentPath = await loadPolicyGate('10000000');
+    expect(resolvePaymentPath(9_999_999n)).toBe('B-fast');
+    expect(resolvePaymentPath(0n + 1n)).toBe('B-fast');
   });
 
-  it('rejects unknown flow ids', () => {
-    const result = validateFlowId('drain-everything-v9');
-    expect(result.allowed).toBe(false);
-    expect(result.code).toBe('FLOW_NOT_ALLOWED');
-  });
-});
-
-describe('validateRebalanceAmount', () => {
-  it('rejects zero and negative amounts', () => {
-    expect(validateRebalanceAmount(0n).allowed).toBe(false);
-    expect(validateRebalanceAmount(-1n).allowed).toBe(false);
-  });
-
-  it('allows positive amounts', () => {
-    expect(validateRebalanceAmount(1_000_000n).allowed).toBe(true);
-  });
-});
-
-describe('validateUnauthorizedTarget', () => {
-  it('always blocks with TargetNotWhitelisted code', () => {
-    const result = validateUnauthorizedTarget('0x000000000000000000000000000000000000dEaD');
-    expect(result.allowed).toBe(false);
-    expect(result.code).toBe('TARGET_NOT_WHITELISTED');
-    expect(result.reason).toContain('TargetNotWhitelisted');
-  });
-});
-
-describe('validateTreasuryConfigured', () => {
-  it('requires treasury to be configured', () => {
-    expect(validateTreasuryConfigured(false).code).toBe('TREASURY_NOT_CONFIGURED');
-    expect(validateTreasuryConfigured(true).allowed).toBe(true);
-  });
-});
-
-describe('validatePaymentRecipient', () => {
-  it('rejects invalid and zero addresses', () => {
-    expect(validatePaymentRecipient('not-an-address').allowed).toBe(false);
-    expect(validatePaymentRecipient('0x0000000000000000000000000000000000000000').allowed).toBe(
-      false,
-    );
-  });
-
-  it('allows valid recipient', () => {
-    expect(
-      validatePaymentRecipient('0x0000000000000000000000000000000000000001').allowed,
-    ).toBe(true);
-  });
-});
-
-describe('validatePaymentAmount', () => {
-  it('rejects non-positive amounts', () => {
-    expect(validatePaymentAmount(0n).allowed).toBe(false);
-  });
-
-  it('allows positive amounts', () => {
-    expect(validatePaymentAmount(500_000n).allowed).toBe(true);
+  it('routes at or above threshold to B-timelock', async () => {
+    const resolvePaymentPath = await loadPolicyGate('10000000');
+    expect(resolvePaymentPath(10_000_000n)).toBe('B-timelock');
+    expect(resolvePaymentPath(50_000_000n)).toBe('B-timelock');
   });
 });

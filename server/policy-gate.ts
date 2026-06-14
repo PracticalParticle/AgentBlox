@@ -1,18 +1,22 @@
 import { isAddress, zeroAddress } from 'viem';
-import { AGENT_POLICY } from './config.js';
+import { AGENT_POLICY, PAYMENT_INSTANT_MAX_USDC } from './config.js';
+
+export type PaymentPath = 'B-fast' | 'B-timelock';
 
 export type PolicyDecision = {
   allowed: boolean;
   reason: string;
   code?:
     | 'FLOW_NOT_ALLOWED'
+    | 'FLOW_NOT_IN_ENS'
     | 'TARGET_NOT_WHITELISTED'
     | 'TREASURY_NOT_CONFIGURED'
     | 'INVALID_RECIPIENT'
     | 'INVALID_AMOUNT';
 };
 
-export function validateFlowId(flowId: string): PolicyDecision {
+/** Server floor + optional ENS subset when `ensAllowedFlows` is non-empty. */
+export function validateFlowId(flowId: string, ensAllowedFlows?: string[]): PolicyDecision {
   if (!AGENT_POLICY.allowedFlowIds.includes(flowId as (typeof AGENT_POLICY.allowedFlowIds)[number])) {
     return {
       allowed: false,
@@ -20,7 +24,23 @@ export function validateFlowId(flowId: string): PolicyDecision {
       reason: `Flow "${flowId}" is not in the treasury policy allowlist.`,
     };
   }
+
+  if (ensAllowedFlows && ensAllowedFlows.length > 0 && !ensAllowedFlows.includes(flowId)) {
+    return {
+      allowed: false,
+      code: 'FLOW_NOT_IN_ENS',
+      reason: `Flow "${flowId}" is not listed in ENS bloxchain.allowedFlows (${ensAllowedFlows.join(', ')}).`,
+    };
+  }
+
   return { allowed: true, reason: 'Flow ID permitted by policy manifest.' };
+}
+
+/** Resolve ENS allowed flows then validate — used before rebalance compose/sign. */
+export async function validateFlowIdWithEns(flowId: string): Promise<PolicyDecision> {
+  const { fetchEnsAllowedFlows } = await import('./ens.js');
+  const ensFlows = await fetchEnsAllowedFlows();
+  return validateFlowId(flowId, ensFlows);
 }
 
 export function validateRebalanceAmount(amount: bigint): PolicyDecision {
@@ -78,4 +98,9 @@ export function validatePaymentAmount(amount: bigint): PolicyDecision {
     };
   }
   return { allowed: true, reason: 'Payment amount is valid.' };
+}
+
+/** Route vendor payments: sub-threshold → instant meta-tx; at/above → timelock. */
+export function resolvePaymentPath(amount: bigint): PaymentPath {
+  return amount < PAYMENT_INSTANT_MAX_USDC ? 'B-fast' : 'B-timelock';
 }

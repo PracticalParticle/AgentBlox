@@ -66,7 +66,7 @@ When a phase completes:
 
 ## 3. Current state assessment
 
-**Overall: ~50% implementation, ~50% specification** (Phases 0–1 and 3 complete; Phase 2 scaffold done; Phase 4–7 pending).
+**Overall: ~75% implementation** (Phases 0–3, 5 code complete; Phase 2 env + on-chain provisioning operator-dependent; Phase 4 LI.FI deferred).
 
 ### Working today
 
@@ -84,8 +84,8 @@ When a phase completes:
 
 | Capability | Blocker |
 |------------|---------|
-| Timelock payment E2E | Env: `ANALYST_PRIVATE_KEY`, `APPROVER_PRIVATE_KEY`, USDC whitelist, Broadcaster |
-| APPROVER meta-tx approve path | Wire `approveTimeLockExecutionWithMetaTx` (signer ≠ executor, same as Lane A) |
+| Lane B E2E on Sepolia | Operator: on-chain RBAC + whitelist + Broadcaster env |
+| ANALYST gas (B-timelock) | Fund ANALYST wallet with Sepolia ETH |
 | On-chain attack revert demo | Optional Broadcaster submit for `/attack` |
 | **LI.FI (future)** | `LIFI_API_KEY` + on-chain whitelist — not required for hackathon MVP |
 
@@ -102,7 +102,8 @@ When a phase completes:
 From [implementation-plan.md](./implementation-plan.md) and [event/ethglobal-2026.md](./event/ethglobal-2026.md):
 
 - [ ] Treasury provisioned on Sepolia via bloxchain.app
-- [ ] `/pay` → timelock → **APPROVER** signs → **Broadcaster** submits `approveTimeLockExecutionWithMetaTx`
+- [ ] `/pay` B-fast (&lt; $10 USDC) → APPROVER sign → Broadcaster `requestAndApproveExecution`
+- [ ] `/pay` B-timelock (≥ $10 USDC) → ANALYST request → APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx`
 - [ ] `/attack` → off-chain block + optional on-chain `TargetNotWhitelisted` revert
 - [ ] `/ens` resolves treasury + `bloxchain.*` text records
 - [ ] Demo video + submission; ENS booth presentation Sunday AM
@@ -119,9 +120,9 @@ From [implementation-plan.md](./implementation-plan.md) and [event/ethglobal-202
 **Must ship:**
 
 1. On-chain reads (Phase 1) ✅
-2. Dynamic Broadcaster (Phase 2) — scaffold done; env pending
+2. Dynamic Broadcaster (Phase 2) — scaffold ✅; operator env pending
 3. Meta-tx sign + execute (Phase 3) ✅ — powers Lane B APPROVER path + future Lane A
-4. **Lane B timelock payments (Phase 5)** — ANALYST request → APPROVER sign → Broadcaster submit
+4. **Lane B payments (Phase 5)** — dual path: B-fast (signer + Broadcaster) and/or B-timelock (ANALYST + APPROVER + Broadcaster)
 5. ENS read polish (Phase 6 partial) — read ✅
 6. Minimum viable Workspace UI (UI-0 + UI-1 + UI-5) ✅
 
@@ -139,7 +140,7 @@ From [implementation-plan.md](./implementation-plan.md) and [event/ethglobal-202
 
 - GuardController whitelist block demo (`/attack`)
 - Meta-tx two-party success path (signer ≠ executor) — **both lanes use this pattern**
-- Lane B: ANALYST → APPROVER → Broadcaster
+- Lane B: instant **or** timelock payment paths (amount routing future)
 - On-chain tx hashes in UI
 
 ### Horizon B — Post-hackathon product (Q3 2026)
@@ -218,7 +219,7 @@ Week 3 (full story)
 | `server/dynamic/client.ts` | API client | ✅ |
 | `server/dynamic/broadcaster.ts` | Submit helper | ✅ |
 | Owner address verify | Setup check | Pending (UI-2) |
-| Env configured | `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS` | ⬜ Operator |
+| Env configured | `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS` | ⬜ Operator (keys in `.env`) |
 
 **Depends on:** Dynamic dashboard (Sepolia, embedded wallets, CORS)  
 **Hours:** ~5h
@@ -266,32 +267,36 @@ See [integrations/lifi.md](./integrations/lifi.md) and [getting-started.md](./ge
 
 ---
 
-### Phase 5 — Timelock payments (Lane B) ✅ / APPROVER path in progress
+### Phase 5 — Lane B payments ✅ (code + tests)
 
-**Goal:** `/pay` → PENDING → **APPROVER** signs → **Broadcaster** submits → COMPLETED.
+**Goal:** `/pay` supports **two on-chain paths** for USDC `transfer` — provision both on the treasury.
 
-**Lane B role separation** (mirrors Lane A sign ≠ execute):
+| Path | When | Who pays gas for request | On-chain flow |
+|------|------|--------------------------|---------------|
+| **B-fast** | Amount **&lt; $10 USDC** (`PAYMENT_INSTANT_MAX_USDC`) | **Nobody on request** — APPROVER signs off-chain; Broadcaster submits | `requestAndApproveExecution` → **immediate** |
+| **B-timelock** | Amount **≥ $10 USDC** | **ANALYST** wallet (`executeWithTimeLock`) | ANALYST request → wait → APPROVER sign → Broadcaster approve meta-tx |
 
-| Role | Wallet | On-chain action |
-|------|--------|-----------------|
-| **ANALYST** | Agent / ops server key | `executeWithTimeLock` — submits payment request |
-| **APPROVER** | Policy server key | Signs `approveTimeLockExecutionWithMetaTx` (`SIGN_META_APPROVE` on payment selector) |
-| **Broadcaster** | Dynamic server wallet | Submits signed meta-tx (`EXECUTE_META_APPROVE`) |
-| **Owner** | Dynamic embedded | Governance / recovery — **not required** for demo payment approval |
+**On-chain RBAC (both paths on selector `0xa9059cbb`):**
+
+| Role | B-fast | B-timelock |
+|------|--------|------------|
+| **APPROVER** | `SIGN_META_REQUEST_AND_APPROVE` | `SIGN_META_APPROVE` |
+| **Broadcaster** | `EXECUTE_META_REQUEST_AND_APPROVE` | `EXECUTE_META_APPROVE` |
+| **ANALYST** | — | `EXECUTE_TIME_DELAY_REQUEST` |
 
 | Task | Deliverable | Status |
 |------|-------------|--------|
-| `request_vendor_payment` on-chain | `executeWithTimeLock` via ANALYST | ✅ |
-| `/pending` countdown | releaseTime display | ✅ |
-| APPROVER sign + Broadcaster submit | `approveTimeLockExecutionWithMetaTx` | ⬜ Wire server signing + execute API |
-| `APPROVER` RBAC on-chain | `SIGN_META_APPROVE` on USDC `transfer` selector | ⬜ Operator |
-| `PaymentRequestCard` | Confirm release (Broadcaster) | Partial |
-| Owner direct approve (legacy) | `approveTimeLockExecution` via Dynamic | ✅ Fallback in `owner-guard.ts` |
+| Amount routing | `resolvePaymentPath` in `server/policy-gate.ts` | ✅ |
+| B-timelock request | `executeWithTimeLock` via ANALYST | ✅ |
+| B-fast sign + execute | `signPaymentInstantMetaTransaction` + `POST /api/execute/payment` | ✅ |
+| APPROVER timelock approve | `approveTimelockPaymentOnChain` + `POST /api/execute/payment-approve` | ✅ |
+| UI | `PaymentRequestCard` + `ToolResultCard` Confirm / Confirm release | ✅ |
+| Owner direct approve (legacy) | `owner-guard.ts` | ✅ (unused in primary UX) |
+| Vitest | policy, propose, payment-approve, helpers | ✅ 59 tests |
 
-**Env to test E2E:** `ANALYST_PRIVATE_KEY`, `APPROVER_PRIVATE_KEY`, USDC whitelisted, Dynamic Broadcaster vars.
+**Env:** `ANALYST_PRIVATE_KEY`, `APPROVER_PRIVATE_KEY`, Broadcaster vars — user has analyst + approver keys set.
 
-**Depends on:** Phase 2, Phase 3 meta-tx infra, USDC whitelisted  
-**Hours:** ~4h backend + 2h UI
+**Operator remaining:** on-chain RBAC, USDC whitelist, fund ANALYST with Sepolia ETH for B-timelock demos.
 
 ---
 
@@ -335,7 +340,7 @@ See [ui-ux-guidelines.md](./ui-ux-guidelines.md) for full spec.
 | **UI-2** | Setup wizard `/setup` | Phase 2 | P1 |
 | **UI-3** | Intent Preview + Confirm | Phase 3 | P0 |
 | **UI-4** | LI.FI + PolicyBlocked cards | Phase 4 *(future)* | P2 |
-| **UI-5** | Timelock approve + countdown | Phase 5 | **Partial** — APPROVER + Broadcaster path; Owner fallback |
+| **UI-5** | Timelock approve + countdown | Phase 5 | ✅ APPROVER + Broadcaster path |
 | **UI-6** | Demo polish | Phase 7 | P2 |
 
 **UI strategy for hackathon:** Ship UI-0 + UI-1 early (legibility for judges), then UI-3/UI-4/UI-5 as backend phases complete. Copilot chat remains embedded in Action center — not removed.
@@ -414,10 +419,11 @@ flowchart LR
 
 **Sprint 3 (current focus — Lane B demo):**
 
-8. Phase 2 env: `DYNAMIC_API_TOKEN`, `BROADCASTER_WALLET_ADDRESS`
-9. Phase 5: `ANALYST_PRIVATE_KEY` + **`APPROVER_PRIVATE_KEY`** + on-chain APPROVER role
-10. Wire APPROVER sign → Broadcaster `approveTimeLockExecutionWithMetaTx`
-11. Phase 7 demo + submission
+8. ✅ Phase 5 code: dual-path `/pay`, APPROVER sign, Broadcaster execute
+9. ✅ `ANALYST_PRIVATE_KEY` + `APPROVER_PRIVATE_KEY` in `.env`
+10. Operator: on-chain RBAC + USDC whitelist + Broadcaster env
+11. Operator: fund ANALYST wallet (B-timelock) · E2E `/pay` on Sepolia
+12. Phase 7 demo + submission
 
 **Future sprint (Lane A / LI.FI):**
 
@@ -432,8 +438,10 @@ flowchart LR
 |------|-------------|---------|
 | `server/bloxchain.ts` | 1 | SDK factory (reads) |
 | `server/dynamic/*` | 2 | Broadcaster |
-| `server/signing/meta-tx.ts` | 3 | AGENT_POLICY / APPROVER EIP-712 |
-| `server/execution/payment-approve.ts` | 5 | APPROVER sign + Broadcaster timelock approve *(planned)* |
+| `server/signing/payment-meta-tx.ts` | 5 | APPROVER EIP-712 (B-fast + B-timelock approve) |
+| `server/execution/payment-approve.ts` | 5 | Sign + Broadcaster submit |
+| `server/execution/meta-tx-broadcaster.ts` | 3/5 | Shared Broadcaster meta-tx submit |
+| `src/lib/execute-api.ts` | 5 | `/api/execute/payment` + `payment-approve` |
 | `server/lifi/compose.ts` | 4 *(future)* | LI.FI compose |
 | `server/tools/read.ts` | 1 | Monitor tools |
 | `server/tools/propose.ts` | 3–5 | Propose tools |

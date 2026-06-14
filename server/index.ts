@@ -4,6 +4,8 @@ import {
   isDynamicEnvironmentConfigured,
   isAgentPolicySigningConfigured,
   isAnalystConfigured,
+  isApproverConfigured,
+  isEnsConfigured,
   isLifiApiKeyConfigured,
   isLifiComposeConfigured,
   isLlmEnabled,
@@ -18,9 +20,14 @@ import {
 } from './dynamic/broadcaster.js';
 import { submitSignedRebalanceMetaTransaction } from './signing/meta-tx.js';
 import {
+  approveTimelockPaymentOnChain,
+  executeInstantPaymentWithBroadcaster,
+} from './execution/payment-approve.js';
+import {
   getTreasuryStatus,
   getWhitelistedTargets,
   listPendingApprovals,
+  resolveEnsTreasury,
 } from './tools/read.js';
 import type { SerializedMetaTransaction } from './signing/serialize.js';
 
@@ -60,6 +67,8 @@ const server = createServer(async (req, res) => {
         dynamicBroadcasterConfigured: isDynamicBroadcasterConfigured(),
         agentPolicySigningConfigured: isAgentPolicySigningConfigured(),
         analystConfigured: isAnalystConfigured(),
+        approverConfigured: isApproverConfigured(),
+        ensConfigured: isEnsConfigured(),
         lifiComposeConfigured: isLifiComposeConfigured(),
         lifiApiKeyConfigured: isLifiApiKeyConfigured(),
         broadcaster,
@@ -85,6 +94,13 @@ const server = createServer(async (req, res) => {
       }
       if (url.pathname === '/api/treasury/whitelist') {
         const data = await getWhitelistedTargets();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(data));
+        return;
+      }
+      if (url.pathname === '/api/treasury/ens') {
+        const name = url.searchParams.get('name') || undefined;
+        const data = await resolveEnsTreasury(name);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(data));
         return;
@@ -161,6 +177,54 @@ const server = createServer(async (req, res) => {
         JSON.stringify({
           ok: false,
           reason: error instanceof Error ? error.message : 'Execute rebalance failed',
+        }),
+      );
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/execute/payment' && req.method === 'POST') {
+    try {
+      const body = await readJsonBody<{ signedMetaTx: SerializedMetaTransaction }>(req);
+      if (!body.signedMetaTx) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, reason: 'signedMetaTx is required' }));
+        return;
+      }
+
+      const result = await executeInstantPaymentWithBroadcaster(body.signedMetaTx);
+      res.writeHead(result.ok ? 200 : 400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          ok: false,
+          reason: error instanceof Error ? error.message : 'Execute payment failed',
+        }),
+      );
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/execute/payment-approve' && req.method === 'POST') {
+    try {
+      const body = await readJsonBody<{ txId: string }>(req);
+      if (!body.txId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, reason: 'txId is required' }));
+        return;
+      }
+
+      const result = await approveTimelockPaymentOnChain({ txId: BigInt(body.txId) });
+      res.writeHead(result.ok ? 200 : 400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(result));
+    } catch (error) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(
+        JSON.stringify({
+          ok: false,
+          reason: error instanceof Error ? error.message : 'Payment approve failed',
         }),
       );
     }

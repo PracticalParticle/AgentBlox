@@ -108,9 +108,13 @@ export default function SetupPage() {
         </li>
 
         <li className={health?.analystConfigured ? 'done' : ''}>
-
-          <strong>Analyst</strong> — <code>ANALYST_PRIVATE_KEY</code> for /pay
-
+          <strong>Analyst</strong> — <code>ANALYST_PRIVATE_KEY</code> for B-timelock /pay
+        </li>
+        <li className={health?.approverConfigured ? 'done' : ''}>
+          <strong>Approver</strong> — <code>APPROVER_PRIVATE_KEY</code> for B-fast + timelock approve
+        </li>
+        <li className={health?.ensConfigured ? 'done' : ''}>
+          <strong>ENS</strong> — <code>ENS_NAME</code> + mainnet <code>bloxchain.*</code> text records
         </li>
 
       </ol>

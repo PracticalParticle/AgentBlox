@@ -39,8 +39,8 @@ See [integrations/dynamic.md](./integrations/dynamic.md).
 
 - [ ] Create `AGENT_POLICY` role *(future Lane A / LI.FI)*; assign server signing address
 - [ ] Grant `AGENT_POLICY`: `SIGN_META_REQUEST_AND_APPROVE` on Composer execution selector only
-- [ ] Create **`ANALYST`** for timelock payment requests (`EXECUTE_TIME_DELAY_REQUEST`)
-- [ ] Create **`APPROVER`** for timelock approval signing (`SIGN_META_APPROVE` on USDC transfer selector)
+- [ ] Create **`APPROVER`**: `SIGN_META_REQUEST_AND_APPROVE` (B-fast) + `SIGN_META_APPROVE` (B-timelock) on USDC transfer
+- [ ] Create **`ANALYST`**: `EXECUTE_TIME_DELAY_REQUEST` on USDC transfer (B-timelock — wallet needs Sepolia ETH)
 
 ### A4. GuardController whitelist
 

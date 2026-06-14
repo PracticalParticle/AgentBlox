@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+const TEST_KEY =
+  '0xac0974beb39a17e36ba4a4ba40dad0ae22bd3a6d8bd3e804ae1e7e3a8e0b8f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9';
+
 describe('config helpers', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -35,18 +38,24 @@ describe('config helpers', () => {
     expect(isDynamicBroadcasterConfigured()).toBe(true);
   });
 
-  it('isAnalystConfigured requires 32-byte private key hex', async () => {
-    vi.stubEnv(
-      'ANALYST_PRIVATE_KEY',
-      '0xac0974beb39a17e36ba4a4ba40dad0ae22bd3a6d8bd3e804ae1e7e3a8e0b8f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9',
-    );
-    const { isAnalystConfigured } = await loadConfig();
-    expect(isAnalystConfigured()).toBe(true);
+  it('isAnalystConfigured and isApproverConfigured require private key hex', async () => {
+    vi.stubEnv('ANALYST_PRIVATE_KEY', TEST_KEY);
+    vi.stubEnv('APPROVER_PRIVATE_KEY', TEST_KEY);
+    const cfg = await loadConfig();
+    expect(cfg.isAnalystConfigured()).toBe(true);
+    expect(cfg.isApproverConfigured()).toBe(true);
 
     vi.resetModules();
     vi.stubEnv('ANALYST_PRIVATE_KEY', '');
+    vi.stubEnv('APPROVER_PRIVATE_KEY', '');
     const cfg2 = await loadConfig();
     expect(cfg2.isAnalystConfigured()).toBe(false);
+    expect(cfg2.isApproverConfigured()).toBe(false);
+  });
+
+  it('PAYMENT_INSTANT_MAX_USDC defaults to 10 USDC units', async () => {
+    const { PAYMENT_INSTANT_MAX_USDC } = await loadConfig();
+    expect(PAYMENT_INSTANT_MAX_USDC).toBe(10_000_000n);
   });
 
   it('isLifiComposeConfigured is always true; isLifiApiKeyConfigured tracks LIFI_API_KEY', async () => {

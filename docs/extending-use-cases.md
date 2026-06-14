@@ -35,7 +35,8 @@ flowchart LR
 | Path | When to use | Initiator | Approver / executor |
 |------|-------------|-----------|---------------------|
 | **Policy execution** (meta-tx) | Automated, whitelist-bounded ops | AGENT_POLICY signs | Broadcaster executes |
-| **Timelock (Lane B)** | Human review before funds move | ANALYST requests | APPROVER signs → Broadcaster submits after delay |
+| **Timelock (Lane B — large)** | Human review before funds move | ANALYST requests (gas) | APPROVER sign → Broadcaster submit after delay |
+| **Instant payment (Lane B — small, future)** | Sub-threshold USDC | Payment signer signs off-chain | Broadcaster `requestAndApproveExecution` |
 
 Both produce **TxRecords**. See [on-chain-execution-flow.md](./on-chain-execution-flow.md).
 

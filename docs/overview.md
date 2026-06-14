@@ -20,7 +20,7 @@ AgentBlox is Particle CS’s **treasury operations platform** for [ETHGlobal New
 | Authorization | Bloxchain GuardController | Whitelist, RBAC, TxRecord audit, signer ≠ executor |
 | Custody | Dynamic | Owner (embedded wallet) + Broadcaster (server wallet) |
 | Execution | LI.FI Composer *(future)* | Atomic rebalance flows via whitelisted proxy calls |
-| Lane B (MVP) | Bloxchain timelock + Dynamic | ANALYST request → APPROVER sign → Broadcaster execute |
+| Lane B (MVP) | Bloxchain timelock + Dynamic | Dual path: B-fast (signer+BC) or B-timelock (ANALYST gas) |
 
 **One line (hackathon MVP):** *Dynamic holds the keys. ENS names the actors. Bloxchain decides what anyone is allowed to trigger.*
 
@@ -193,16 +193,14 @@ From [ROADMAP-PLAN.md](./ROADMAP-PLAN.md) §7:
 
 ## Architecture at a glance
 
-**Lane B (hackathon MVP):**
+**Lane B (hackathon MVP) — two paths:**
 
 ```text
-User → Copilot (/api/chat) → request_vendor_payment
-                                    ↓
-              ANALYST → executeWithTimeLock → TxRecord PENDING
-                                    ↓
-              APPROVER signs → approveTimeLockExecutionWithMetaTx
-                                    ↓
-              Broadcaster submits → USDC transfer → COMPLETED
+B-fast (< $10 USDC, future routing):
+  Payment signer → sign USDC transfer meta-tx → Broadcaster requestAndApproveExecution
+
+B-timelock (≥ $10 or demo default today):
+  ANALYST → executeWithTimeLock (pays gas) → APPROVER sign → Broadcaster approve meta-tx
 ```
 
 **Lane A (future — LI.FI):**
