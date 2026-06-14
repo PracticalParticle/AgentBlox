@@ -17,11 +17,11 @@ Docs model: [treasury-lifecycle.md](./treasury-lifecycle.md)
 | Policy gate (off-chain) | **Done** | Flow ID, amount, **`resolvePaymentPath`** ($10 threshold) |
 | `@bloxchain/sdk` | **Done** | Reads + meta-tx signing + payment approve paths |
 | `@lifi/sdk` | **Future** | Composer scaffold; not hackathon MVP |
-| Dynamic (Owner UI) | **Partial** | `DynamicWidget` only |
+| Dynamic (Owner UI) | **Partial** | `DynamicWidget` + ENS link wizard |
 | Dynamic (Broadcaster) | **Done** | Server wallet submit + UI **Submit on-chain (Broadcaster)** button |
 | Docker dev stack | **Done** | `docker-compose.yml` |
 | On-chain execution | **Partial** | Code complete; E2E needs operator provisioning |
-| Unit tests (Vitest) | **Done** | `npm run verify` — 59 tests |
+| Unit tests (Vitest) | **Done** | `npm run verify` — 93 tests |
 
 ---
 
@@ -56,7 +56,7 @@ Legend: ✅ working · ⚠️ env-dependent / future · ❌ not implemented
 | 3 | Meta-tx sign + Copilot confirm | **Done** |
 | 4 | LI.FI + whitelist demo | **Future** (scaffold done) |
 | 5 | Lane B dual-path `/pay` | **Done** (code + tests; E2E needs on-chain) |
-| 6 | ENS write + Console persistence | **Partial** (read only) |
+| 6 | ENS write + Console persistence | **Done** (read + write helpers + wizard) |
 | 7 | Polish + submission | **Not started** |
 
 See [implementation-plan.md](./implementation-plan.md) · [ROADMAP-PLAN.md](./ROADMAP-PLAN.md).
@@ -72,6 +72,8 @@ See [implementation-plan.md](./implementation-plan.md) · [ROADMAP-PLAN.md](./RO
 | `/api/treasury/status` | GET | Done | Status rail poll |
 | `/api/treasury/pending` | GET | Done | Approvals panel poll |
 | `/api/treasury/whitelist` | GET | Done | Optional whitelist read |
+| `/api/treasury/ens` | GET | Done | ENS resolve + text records |
+| `/api/treasury/ens/flows` | GET | Done | Parsed `bloxchain.allowedFlows` |
 | `/api/broadcaster/verify` | GET | Done | Live Dynamic auth + on-chain match |
 | `/api/broadcaster/wallets` | GET | Done | List server wallets for Setup |
 | `/api/execute/rebalance` | POST | Done | Broadcaster `requestAndApproveExecution` |
@@ -98,6 +100,10 @@ See [implementation-plan.md](./implementation-plan.md) · [ROADMAP-PLAN.md](./RO
 | `src/components/broadcaster/BroadcasterSubmitBlock.tsx` | Done | Shared Dynamic Broadcaster submit button |
 | `src/lib/broadcaster-ready.ts` | Done | Health gating for submit button |
 | `src/lib/tool-result-helpers.ts` | Done | B-fast / B-timelock detection |
+| `src/lib/ens-write.ts` | Done | Owner `setAddr` / `setText` on mainnet |
+| `src/components/ens/EnsLinkWizard.tsx` | Done | Console + Setup publish UX |
+| `src/components/cards/EnsTreasuryCard.tsx` | Done | Flow chips + mismatch warnings |
+| `server/ens.ts` | Done | `parseEnsAllowedFlows`, policy cross-check |
 
 ---
 

@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+
+import EnsLinkWizard from '../components/ens/EnsLinkWizard';
 
 import { BLOXCHAIN_SEPOLIA } from '../lib/config';
 
@@ -10,13 +13,40 @@ import { isBroadcasterReady } from '../lib/broadcaster-ready';
 
 import { truncateAddress } from '../lib/format';
 
-
+import {
+  loadStoredTreasuryReference,
+  saveStoredTreasuryReference,
+} from '../lib/treasury-storage';
 
 export default function SetupPage() {
 
   const { health } = useServerHealth();
 
   const { verifyResult, wallets, loading, error, runVerify, loadWallets } = useBroadcasterVerify();
+
+  const [treasuryAddress, setTreasuryAddress] = useState('');
+
+  const [ensName, setEnsName] = useState('');
+
+
+
+  useEffect(() => {
+
+    const stored = loadStoredTreasuryReference();
+
+    setTreasuryAddress(stored.treasuryAddress);
+
+    setEnsName(stored.ensName);
+
+  }, []);
+
+
+
+  useEffect(() => {
+
+    saveStoredTreasuryReference({ treasuryAddress, ensName });
+
+  }, [treasuryAddress, ensName]);
 
 
 
@@ -243,6 +273,38 @@ export default function SetupPage() {
           CLI: <code>npm run docker:ops:create-wallet</code> ·{' '}
           <code>npm run docker:ops:verify</code>
         </p>
+
+      </article>
+
+
+
+      <article className="card ens-link-card">
+
+        <h2>ENS policy records</h2>
+
+        <p className="card-copy">
+
+          Link your treasury on Sepolia to an ENS name on mainnet. After publishing, set{' '}
+
+          <code>ENS_NAME</code> in <code>.env</code> so rebalance flow IDs are cross-checked against{' '}
+
+          <code>bloxchain.allowedFlows</code>.
+
+        </p>
+
+        <EnsLinkWizard
+
+          compact
+
+          ensName={ensName}
+
+          treasuryAddress={treasuryAddress}
+
+          onEnsNameChange={setEnsName}
+
+          onTreasuryAddressChange={setTreasuryAddress}
+
+        />
 
       </article>
 

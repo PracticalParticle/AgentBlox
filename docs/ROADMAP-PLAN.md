@@ -307,9 +307,9 @@ See [integrations/lifi.md](./integrations/lifi.md) and [getting-started.md](./ge
 | Task | Deliverable | Acceptance |
 |------|-------------|------------|
 | Read (done) | `resolve_ens_treasury` | `/ens` works |
-| Write helpers | `setAddr` + `setText` via Owner | Optional MVP |
-| Flow ID from ENS | `bloxchain.allowedFlows` | Policy alignment |
-| Setup persistence | localStorage + env | Import treasury + ENS |
+| Write helpers | `setAddr` + `setText` via Owner | ✅ `src/lib/ens-write.ts` |
+| Flow ID from ENS | `bloxchain.allowedFlows` | ✅ Policy gate + status rail |
+| Setup persistence | localStorage + env | ✅ Console + Setup wizard |
 
 **Hours:** ~3h
 

@@ -111,6 +111,13 @@ const server = createServer(async (req, res) => {
         res.end(JSON.stringify(data));
         return;
       }
+      if (url.pathname === '/api/treasury/ens/flows') {
+        const { fetchEnsAllowedFlows } = await import('./ens.js');
+        const flows = await fetchEnsAllowedFlows();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ flows, configured: isEnsConfigured() }));
+        return;
+      }
       if (url.pathname === '/api/broadcaster/verify') {
         const status = await getBroadcasterStatus();
         const connection = await verifyBroadcasterConnection();

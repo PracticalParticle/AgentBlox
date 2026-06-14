@@ -1,28 +1,12 @@
 import { useEffect, useState } from 'react';
+import EnsLinkWizard from '../components/ens/EnsLinkWizard';
 import { BLOXCHAIN_SEPOLIA } from '../lib/config';
 import { useServerHealth } from '../hooks/useServerHealth';
 import { useEnsTreasury } from '../hooks/useEnsTreasury';
-
-const CONSOLE_STORAGE_KEY = 'agentblox.console.treasury';
-
-type StoredTreasury = {
-  treasuryAddress: string;
-  ensName: string;
-};
-
-function loadStoredTreasury(): StoredTreasury {
-  try {
-    const raw = localStorage.getItem(CONSOLE_STORAGE_KEY);
-    if (!raw) return { treasuryAddress: '', ensName: '' };
-    const parsed = JSON.parse(raw) as Partial<StoredTreasury>;
-    return {
-      treasuryAddress: parsed.treasuryAddress ?? '',
-      ensName: parsed.ensName ?? '',
-    };
-  } catch {
-    return { treasuryAddress: '', ensName: '' };
-  }
-}
+import {
+  loadStoredTreasuryReference,
+  saveStoredTreasuryReference,
+} from '../lib/treasury-storage';
 
 export default function ConsolePage() {
   const { health } = useServerHealth();
@@ -33,14 +17,13 @@ export default function ConsolePage() {
     useEnsTreasury(lookupName);
 
   useEffect(() => {
-    const stored = loadStoredTreasury();
+    const stored = loadStoredTreasuryReference();
     setTreasuryAddress(stored.treasuryAddress);
     setEnsName(stored.ensName);
   }, []);
 
   useEffect(() => {
-    const payload: StoredTreasury = { treasuryAddress, ensName };
-    localStorage.setItem(CONSOLE_STORAGE_KEY, JSON.stringify(payload));
+    saveStoredTreasuryReference({ treasuryAddress, ensName });
   }, [treasuryAddress, ensName]);
 
   return (
@@ -110,7 +93,7 @@ export default function ConsolePage() {
             value={treasuryAddress}
             onChange={(e) => setTreasuryAddress(e.target.value)}
             placeholder="0x..."
-            style={{ display: 'block', width: '100%', marginTop: '0.5rem', padding: '0.5rem' }}
+            className="ens-wizard-input"
           />
         </label>
         <label style={{ display: 'block', marginTop: '1rem' }}>
@@ -120,7 +103,7 @@ export default function ConsolePage() {
             value={ensName}
             onChange={(e) => setEnsName(e.target.value)}
             placeholder="treasury.acme.eth"
-            style={{ display: 'block', width: '100%', marginTop: '0.5rem', padding: '0.5rem' }}
+            className="ens-wizard-input"
           />
         </label>
         <div style={{ marginTop: '1rem' }}>
@@ -145,6 +128,16 @@ export default function ConsolePage() {
           </ul>
         ) : null}
       </div>
+
+      <article className="card ens-link-card">
+        <h2>Link ENS (mainnet write)</h2>
+        <EnsLinkWizard
+          ensName={ensName}
+          treasuryAddress={treasuryAddress}
+          onEnsNameChange={setEnsName}
+          onTreasuryAddressChange={setTreasuryAddress}
+        />
+      </article>
 
       <div className="card" style={{ marginTop: '1rem' }}>
         <h2>Environment checklist</h2>

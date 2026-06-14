@@ -10,7 +10,7 @@ import {
   TREASURY_ADDRESS,
 } from '../config.js';
 import { composeRebalanceFlow, fetchLifiQuoteFallback } from '../lifi/compose.js';
-import { ENS_TEXT_KEYS } from '../ens.js';
+import { ENS_TEXT_KEYS, fetchEnsAllowedFlows, parseEnsAllowedFlows } from '../ens.js';
 import { validateTreasuryConfigured } from '../policy-gate.js';
 
 const TX_STATUS_LABEL: Record<number, string> = {
@@ -54,17 +54,32 @@ export async function getTreasuryStatus() {
     };
   }
 
-  const [ethBalance, ensName, onChainRoles] = await Promise.all([
+  const [ethBalance, ensName, onChainRoles, ensAllowedFlows] = await Promise.all([
     sepoliaClient.getBalance({ address: TREASURY_ADDRESS }),
     Promise.resolve(ENS_NAME || null),
     readTreasuryRoles().catch(() => null),
+    ENS_NAME ? fetchEnsAllowedFlows() : Promise.resolve([] as string[]),
   ]);
+
+  let ensAddrMatch: boolean | null = null;
+  if (ENS_NAME) {
+    try {
+      const resolved = await mainnetClient.getEnsAddress({ name: normalize(ENS_NAME) });
+      ensAddrMatch = resolved
+        ? resolved.toLowerCase() === TREASURY_ADDRESS.toLowerCase()
+        : false;
+    } catch {
+      ensAddrMatch = null;
+    }
+  }
 
   return {
     configured: true,
     network: 'sepolia',
     address: TREASURY_ADDRESS,
     ensName,
+    ensAllowedFlows,
+    ensAddrMatch,
     ethBalance: formatEther(ethBalance),
     ethBalanceWei: ethBalance.toString(),
     roles: onChainRoles
@@ -107,6 +122,7 @@ export async function resolveEnsTreasury(name?: string) {
     normalized,
     address,
     textRecords: { policyVersion, allowedFlows, app },
+    parsedAllowedFlows: parseEnsAllowedFlows(allowedFlows),
     matchesConfiguredTreasury:
       address && TREASURY_ADDRESS
         ? address.toLowerCase() === TREASURY_ADDRESS.toLowerCase()

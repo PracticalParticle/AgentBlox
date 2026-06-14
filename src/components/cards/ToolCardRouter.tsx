@@ -40,6 +40,9 @@ export default function ToolCardRouter({ payload }: Props) {
     case 'get_lifi_quote_preview':
       return <LifiQuoteCard result={result} />;
     case 'propose_rebalance':
+      if (result.status === 'rejected' && result.policy) {
+        return <PolicyBlockedCard result={result} />;
+      }
       return <RebalanceProposalCard result={result} />;
     case 'request_vendor_payment':
       return <PaymentRequestCard result={result} />;

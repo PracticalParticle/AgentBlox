@@ -144,7 +144,15 @@ export default function StatusRail({ health, treasury, treasuryLoading, demo }: 
 
             <span>ENS</span>
 
-            <span>{treasury?.ensName ?? 'not set'}</span>
+            <span>
+
+              {treasury?.ensName
+
+                ? `${treasury.ensName}${treasury.ensAddrMatch === false ? ' · mismatch' : treasury.ensAllowedFlows?.length ? ` · ${treasury.ensAllowedFlows.length} flow(s)` : ''}`
+
+                : 'not set'}
+
+            </span>
 
           </li>
 

@@ -4,6 +4,8 @@ export type TreasuryStatusResponse = {
   network?: string;
   address?: string;
   ensName?: string | null;
+  ensAllowedFlows?: string[];
+  ensAddrMatch?: boolean | null;
   ethBalance?: string;
   roles?: Record<string, unknown>;
   policy?: { engine: string; guard: string };

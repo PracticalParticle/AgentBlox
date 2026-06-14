@@ -9,6 +9,7 @@ export type EnsTreasuryResult = {
     allowedFlows?: string | null;
     app?: string | null;
   };
+  parsedAllowedFlows?: string[];
   matchesConfiguredTreasury?: boolean | null;
   error?: string;
 };

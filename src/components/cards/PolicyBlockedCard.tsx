@@ -7,6 +7,7 @@ type Props = {
 export default function PolicyBlockedCard({ result }: Props) {
   const policy = result.policy as { reason?: string; code?: string } | undefined;
   const demo = result.demonstration as Record<string, unknown> | undefined;
+  const isEnsBlock = policy?.code === 'FLOW_NOT_IN_ENS';
 
   return (
     <CardShell
@@ -18,6 +19,12 @@ export default function PolicyBlockedCard({ result }: Props) {
       <p className="card-copy">{policy?.reason ?? 'This action is not permitted.'}</p>
       {policy?.code ? (
         <p className="card-copy mono muted">Code: {policy.code}</p>
+      ) : null}
+      {isEnsBlock ? (
+        <p className="card-copy muted">
+          Update <code>bloxchain.allowedFlows</code> on your ENS name (Console → Link ENS) or align
+          the server <code>ENS_NAME</code> with your treasury policy.
+        </p>
       ) : null}
       {demo ? (
         <dl className="field-grid">
