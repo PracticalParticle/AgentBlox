@@ -5,25 +5,38 @@ import { BrowserRouter } from 'react-router-dom';
 import { DynamicContextProvider } from '@dynamic-labs/sdk-react-core';
 import { EthereumWalletConnectors } from '@dynamic-labs/ethereum';
 import App from './App';
+import { getDynamicEnvironmentId, isDynamicEnvironmentConfigured } from './lib/dynamic-config';
 import './index.css';
 
 const queryClient = new QueryClient();
+const environmentId = getDynamicEnvironmentId();
+const dynamicConfigured = isDynamicEnvironmentConfigured();
 
-const environmentId = import.meta.env.VITE_DYNAMIC_ENVIRONMENT_ID;
+function AppTree() {
+  return (
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  );
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <DynamicContextProvider
-        settings={{
-          environmentId: environmentId || 'REPLACE_WITH_DYNAMIC_ENV_ID',
-          walletConnectors: [EthereumWalletConnectors],
-        }}
-      >
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </DynamicContextProvider>
+      {dynamicConfigured ? (
+        <DynamicContextProvider
+          settings={{
+            environmentId,
+            walletConnectors: [EthereumWalletConnectors],
+            appName: 'AgentBlox',
+            logLevel: import.meta.env.DEV ? 'WARN' : 'ERROR',
+          }}
+        >
+          <AppTree />
+        </DynamicContextProvider>
+      ) : (
+        <AppTree />
+      )}
     </QueryClientProvider>
   </StrictMode>,
 );

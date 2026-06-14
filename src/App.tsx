@@ -1,5 +1,5 @@
 import { Routes, Route, Link, Navigate } from 'react-router-dom';
-import { DynamicWidget } from '@dynamic-labs/sdk-react-core';
+import DynamicAuthHeader from './components/DynamicAuthHeader';
 import WorkspacePage from './pages/WorkspacePage';
 import SetupPage from './pages/SetupPage';
 import './App.css';
@@ -16,7 +16,7 @@ export default function App() {
           <Link to="/">Workspace</Link>
           <Link to="/setup">Setup</Link>
         </nav>
-        <DynamicWidget />
+        <DynamicAuthHeader />
       </header>
       <main className="app-main app-main-wide">
         <Routes>
