@@ -7,6 +7,7 @@ import {
   executeInstantPayment,
 } from '../../lib/execute-api';
 import { secondsUntilRelease } from '../../lib/owner-guard';
+import { resolvePaymentDisplayLabel } from '../../lib/token-amount';
 import {
   canConfirmInstantPayment,
   canConfirmTimelockRelease,
@@ -47,13 +48,14 @@ export default function PaymentRequestCard({ result }: Props) {
     request?.paymentPath === 'B-fast'
       ? 'Analyst signs · Broadcaster executes'
       : 'Analyst requests · Approver signs · Broadcaster releases';
+  const amountLabel = resolvePaymentDisplayLabel(request);
 
   return (
     <CardShell
       title="Vendor payment"
       tier="propose"
       status={status}
-      summary={`Pay ${String(request?.amountUsdc ?? '—')} USDC · ${pathLabel} · ${whoLine}`}
+      summary={`Pay ${amountLabel} · ${pathLabel} · ${whoLine}`}
       footer={
         <>
           {canAct && isInstant && paymentSignedMetaTx ? (
@@ -87,7 +89,8 @@ export default function PaymentRequestCard({ result }: Props) {
       <section className="intent-section">
         <h4>What</h4>
         <p>
-          {request?.paymentPath === 'B-fast' ? 'Instant USDC transfer' : 'Timelock disbursement'} to{' '}
+          {request?.paymentPath === 'B-fast' ? 'Instant USDC transfer' : 'Timelock disbursement'} of{' '}
+          <strong>{amountLabel}</strong> to{' '}
           <span className="mono">{String(request?.recipient ?? '—')}</span>
         </p>
       </section>
@@ -95,6 +98,10 @@ export default function PaymentRequestCard({ result }: Props) {
         <div>
           <dt>Path</dt>
           <dd>{pathLabel}</dd>
+        </div>
+        <div>
+          <dt>Amount</dt>
+          <dd>{amountLabel}</dd>
         </div>
         <div>
           <dt>Memo</dt>

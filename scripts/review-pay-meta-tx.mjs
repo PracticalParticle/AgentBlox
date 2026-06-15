@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { keccak256, toBytes } from 'viem';
 import { GUARD_CONTROLLER_FUNCTION_SELECTORS, TxAction } from '@bloxchain/sdk';
-import { createGuardController } from '../server/bloxchain.js';
+import { createGuardController, readTreasuryRoles } from '../server/bloxchain.js';
 import { sepoliaClient } from '../server/clients.js';
 import {
   ANALYST_WALLET_ADDRESS,
@@ -142,7 +142,9 @@ const nonce = await safe('nonce', () => readAs(reader, 'getSignerNonce', [ANALYS
 console.log(nonce.ok ? nonce.value.toString() : nonce.message);
 
 console.log('\n=== Sign + inspect meta-tx ===');
-const recipient = '0x0000000000000000000000000000000000000001';
+const roles = await readTreasuryRoles();
+const recipient = roles.owner;
+console.log('recipient (treasury owner):', recipient);
 const amount = 5_000_000n;
 const signed = await signPaymentInstantMetaTransaction({ recipient, amount });
 if (!signed.ok) {

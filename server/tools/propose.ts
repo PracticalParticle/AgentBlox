@@ -1,3 +1,5 @@
+import { PAY_RECIPIENT_TREASURY_OWNER } from '../chat/pay-command.js';
+import { readTreasuryRoles } from '../bloxchain.js';
 import {
   AGENT_POLICY,
   ANALYST_WALLET_ADDRESS,
@@ -21,6 +23,12 @@ import {
 import { sepoliaClient } from '../clients.js';
 import { signRebalanceMetaTransaction } from '../signing/meta-tx.js';
 import { signPaymentInstantMetaTransaction } from '../signing/payment-meta-tx.js';
+import {
+  buildPaymentAmountDisplay,
+  displayAmountToBaseUnits,
+  getPaymentTokenDecimals,
+  TokenDecimalsReadError,
+} from '../lib/token-amount.js';
 
 export async function proposeRebalance(params: {
   flowId?: string;
@@ -112,7 +120,8 @@ export async function proposeRebalance(params: {
 
 export async function requestVendorPayment(params: {
   recipient: string;
-  amountUsdc: string;
+  amountUsdc?: string;
+  amountDollars?: string;
   memo?: string;
 }) {
   const treasuryCheck = validateTreasuryConfigured(isTreasuryConfigured());
@@ -120,21 +129,94 @@ export async function requestVendorPayment(params: {
     return { status: 'rejected', policy: treasuryCheck, request: null };
   }
 
-  const recipientCheck = validatePaymentRecipient(params.recipient);
+  if (params.amountUsdc && params.amountDollars) {
+    return {
+      status: 'rejected',
+      policy: {
+        allowed: false,
+        code: 'AMBIGUOUS_AMOUNT' as const,
+        reason: 'Provide either amountUsdc (base units) or amountDollars, not both.',
+      },
+      request: null,
+    };
+  }
+
+  if (!params.amountUsdc && !params.amountDollars) {
+    return {
+      status: 'rejected',
+      policy: {
+        allowed: false,
+        code: 'MISSING_AMOUNT' as const,
+        reason: 'Payment amount is required (amountUsdc or amountDollars).',
+      },
+      request: null,
+    };
+  }
+
+  let tokenDecimals: number;
+  try {
+    tokenDecimals = await getPaymentTokenDecimals();
+  } catch (error) {
+    const reason =
+      error instanceof TokenDecimalsReadError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : 'Could not read payment token decimals on-chain.';
+    return {
+      status: 'rejected',
+      policy: {
+        allowed: false,
+        code: 'TOKEN_DECIMALS_UNAVAILABLE' as const,
+        reason,
+      },
+      request: null,
+    };
+  }
+
+  let recipient = params.recipient;
+  if (recipient === PAY_RECIPIENT_TREASURY_OWNER) {
+    try {
+      const roles = await readTreasuryRoles();
+      recipient = roles.owner;
+    } catch (error) {
+      return {
+        status: 'rejected',
+        policy: {
+          allowed: false,
+          code: 'OWNER_RESOLVE_FAILED' as const,
+          reason:
+            error instanceof Error
+              ? `Could not read treasury owner on-chain: ${error.message}`
+              : 'Could not read treasury owner on-chain.',
+        },
+        request: null,
+      };
+    }
+  }
+
+  const recipientCheck = validatePaymentRecipient(recipient);
   if (!recipientCheck.allowed) {
     return { status: 'rejected', policy: recipientCheck, request: null };
   }
 
   let amount: bigint;
   try {
-    amount = BigInt(params.amountUsdc);
-  } catch {
+    amount = params.amountDollars
+      ? displayAmountToBaseUnits(params.amountDollars, tokenDecimals)
+      : BigInt(params.amountUsdc!);
+  } catch (error) {
     return {
       status: 'rejected',
       policy: {
         allowed: false,
         code: 'INVALID_AMOUNT' as const,
-        reason: `amountUsdc "${params.amountUsdc}" is not a valid integer.`,
+        reason:
+          error instanceof Error
+            ? error.message
+            : params.amountUsdc
+              ? `amountUsdc "${params.amountUsdc}" is not a valid integer.`
+              : 'Invalid payment amount.',
       },
       request: null,
     };
@@ -147,10 +229,12 @@ export async function requestVendorPayment(params: {
 
   const paymentPath = resolvePaymentPath(amount);
   const pathLabel = paymentPath === 'B-fast' ? 'B-fast — instant meta-tx' : 'B-timelock — delayed release';
+  const amountDisplay = buildPaymentAmountDisplay(amount, tokenDecimals, 'USDC');
+  const amountBaseUnits = amount.toString();
 
   if (paymentPath === 'B-fast') {
     const signing = await signPaymentInstantMetaTransaction({
-      recipient: params.recipient as `0x${string}`,
+      recipient: recipient as `0x${string}`,
       amount,
     });
 
@@ -160,10 +244,12 @@ export async function requestVendorPayment(params: {
 
     const request = {
       treasuryAddress: TREASURY_ADDRESS,
-      recipient: params.recipient,
-      amountUsdc: params.amountUsdc,
-      memo: params.memo || 'Vendor payment',
+      recipient,
+      amountUsdc: amountBaseUnits,
       token: 'USDC',
+      tokenAddress: SEPOLIA_USDC,
+      ...amountDisplay,
+      memo: params.memo || 'Vendor payment',
       paymentPath,
       pathLabel,
       instantThresholdUsdc: PAYMENT_INSTANT_MAX_USDC.toString(),
@@ -228,16 +314,18 @@ export async function requestVendorPayment(params: {
   }
 
   const onChain = await requestVendorPaymentOnChain({
-    recipient: params.recipient as `0x${string}`,
+    recipient: recipient as `0x${string}`,
     amount,
   });
 
   const request = {
     treasuryAddress: TREASURY_ADDRESS,
-    recipient: params.recipient,
-    amountUsdc: params.amountUsdc,
-    memo: params.memo || 'Vendor payment',
+    recipient,
+    amountUsdc: amountBaseUnits,
     token: 'USDC',
+    tokenAddress: SEPOLIA_USDC,
+    ...amountDisplay,
+    memo: params.memo || 'Vendor payment',
     paymentPath,
     pathLabel,
     instantThresholdUsdc: PAYMENT_INSTANT_MAX_USDC.toString(),

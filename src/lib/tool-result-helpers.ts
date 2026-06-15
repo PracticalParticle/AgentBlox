@@ -60,10 +60,12 @@ export function canConfirmInstantPayment(
     return false;
   }
   const request = result.request as Record<string, unknown> | undefined;
+  const onChain = request?.onChain as Record<string, unknown> | undefined;
   return (
     extractPaymentSignedMetaTx(result) !== null &&
     result.status === 'proposed' &&
-    request?.paymentPath === 'B-fast'
+    request?.paymentPath === 'B-fast' &&
+    onChain?.status === 'signed'
   );
 }
 

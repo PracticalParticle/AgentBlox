@@ -1,3 +1,4 @@
+import { resolvePaymentDisplayLabel } from './token-amount';
 import { getToolDisplayName } from './tool-labels';
 import { userStatusLabel } from './format';
 import { statusColor } from './tool-parser';
@@ -50,7 +51,7 @@ export function extractSessionApprovals(
         tool: block.tool,
         statusLabel: userStatusLabel(String(result.status)),
         statusColor: statusColor(String(result.status)),
-        summary: `Pay ${String(request?.amountUsdc ?? '')} to vendor`,
+        summary: `Pay ${resolvePaymentDisplayLabel(request)} to vendor`,
       });
     }
   }

@@ -25,4 +25,26 @@ describe('formatExecutionError', () => {
   it('falls back for unknown errors', () => {
     expect(formatExecutionError(null)).toBe('Broadcaster execution failed');
   });
+
+  it('decodes TargetNotWhitelisted revert data', () => {
+    const raw =
+      '0x1fe7e0ac0000000000000000000000001c7d4b196cb0c7b01d743fbc6116a902379c7238' +
+      '00000000000000000000000000000000000000000000000000000000a9059cbb';
+    expect(formatExecutionError({ errorData: raw })).toContain('TargetNotWhitelisted');
+  });
+
+  it('decodes InsufficientBalance revert data', () => {
+    const raw =
+      '0xcf4791810000000000000000000000000000000000000000000000000000000000000000' +
+      '0000000000000000000000000000000000000000000000000000000000004c4b40';
+    expect(formatExecutionError({ message: raw })).toContain('InsufficientBalance');
+  });
+
+  it('surfaces Dynamic wallet password errors', () => {
+    expect(
+      formatExecutionError({
+        message: 'Password is required for decryption but not provided.',
+      }),
+    ).toContain('DYNAMIC_WALLET_PASSWORD');
+  });
 });

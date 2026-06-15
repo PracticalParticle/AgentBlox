@@ -74,7 +74,7 @@ export function routeUserMessage(text: string): RoutedCommand | null {
         tool: 'request_vendor_payment',
         args: {
           recipient: parsed.recipient,
-          amountUsdc: parsed.amountUsdc,
+          amountDollars: parsed.amountDollars,
           memo: parsed.memo,
         },
         label: parsed.label,
@@ -90,7 +90,7 @@ export function routeUserMessage(text: string): RoutedCommand | null {
       tool: 'request_vendor_payment',
       args: {
         recipient: parsed.recipient,
-        amountUsdc: parsed.amountUsdc,
+        amountDollars: parsed.amountDollars,
         memo: parsed.memo,
       },
       label: parsed.label,
@@ -104,7 +104,7 @@ export function routeUserMessage(text: string): RoutedCommand | null {
       tool: 'request_vendor_payment',
       args: {
         recipient: parsed.recipient,
-        amountUsdc: parsed.amountUsdc,
+        amountDollars: parsed.amountDollars,
         memo: parsed.memo,
       },
       label: parsed.label,
@@ -151,7 +151,12 @@ export async function executeRoutedTool(command: RoutedCommand) {
       return proposeRebalance(command.args as { flowId?: string; amountUsdc?: string });
     case 'request_vendor_payment':
       return requestVendorPayment(
-        command.args as { recipient: string; amountUsdc: string; memo?: string },
+        command.args as {
+          recipient: string;
+          amountUsdc?: string;
+          amountDollars?: string;
+          memo?: string;
+        },
       );
     case 'simulate_policy_violation':
       return simulatePolicyViolation(command.args as { target?: string });

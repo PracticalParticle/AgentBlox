@@ -30,12 +30,21 @@ describe('config helpers', () => {
     expect(isDynamicEnvironmentConfigured()).toBe(true);
   });
 
-  it('isDynamicBroadcasterConfigured requires token, env id, and wallet address', async () => {
+  it('isDynamicBroadcasterConfigured requires token, env id, wallet password, and wallet address', async () => {
     vi.stubEnv('VITE_DYNAMIC_ENVIRONMENT_ID', '48a9cd89-4e6c-4fdf-ad53-e5461c5fd95c');
     vi.stubEnv('DYNAMIC_API_TOKEN', 'token');
+    vi.stubEnv('DYNAMIC_WALLET_PASSWORD', 'wallet-password');
     vi.stubEnv('BROADCASTER_WALLET_ADDRESS', '0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB');
     const { isDynamicBroadcasterConfigured } = await loadConfig();
     expect(isDynamicBroadcasterConfigured()).toBe(true);
+
+    vi.resetModules();
+    vi.stubEnv('VITE_DYNAMIC_ENVIRONMENT_ID', '48a9cd89-4e6c-4fdf-ad53-e5461c5fd95c');
+    vi.stubEnv('DYNAMIC_API_TOKEN', 'token');
+    vi.stubEnv('DYNAMIC_WALLET_PASSWORD', '');
+    vi.stubEnv('BROADCASTER_WALLET_ADDRESS', '0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB');
+    const cfg2 = await loadConfig();
+    expect(cfg2.isDynamicBroadcasterConfigured()).toBe(false);
   });
 
   it('isAnalystConfigured and isApproverConfigured require private key hex', async () => {

@@ -11,7 +11,7 @@ export function broadcasterNotReadyMessage(health: ServerHealth | null | undefin
   if (!health?.dynamicBroadcasterConfigured) {
     return (
       health?.broadcaster?.message ??
-      'Dynamic Broadcaster not configured — set DYNAMIC_API_TOKEN and BROADCASTER_WALLET_ADDRESS in .env.'
+      'Dynamic Broadcaster not configured — set DYNAMIC_API_TOKEN, DYNAMIC_WALLET_PASSWORD, and BROADCASTER_WALLET_ADDRESS in .env.'
     );
   }
   if (health.broadcaster?.matchesOnChainBroadcaster === false) {

@@ -1,19 +1,10 @@
-import { resolvePaymentPath } from '../policy-gate.js';
-
-const DEMO_VENDOR_RECIPIENT = '0x0000000000000000000000000000000000000001';
-
-/** Whole or fractional USDC dollars → 6-decimal base units. */
-export function dollarsToUsdcUnits(dollars: number): bigint {
-  if (!Number.isFinite(dollars) || dollars <= 0) {
-    throw new Error('Payment amount must be greater than zero.');
-  }
-  return BigInt(Math.round(dollars * 1_000_000));
-}
+/** Resolved to on-chain treasury Owner in requestVendorPayment (slash /pay* demo). */
+export const PAY_RECIPIENT_TREASURY_OWNER = '__treasury_owner__' as const;
 
 export type ParsedPayCommand = {
-  amountUsdc: string;
+  /** Human-readable dollar amount from the slash command (converted server-side using on-chain decimals). */
+  amountDollars: string;
   displayDollars: string;
-  paymentPath: ReturnType<typeof resolvePaymentPath>;
   recipient: string;
   memo: string;
   label: string;
@@ -21,7 +12,8 @@ export type ParsedPayCommand = {
 
 /**
  * Parse demo pay slash commands: `/pay 5$`, `/pay 20$`, `/pay $5`, `/pay 5 usdc`.
- * Amount selects B-fast (under $10) vs B-timelock ($10+) via policy gate threshold.
+ * Base-unit conversion and B-fast vs B-timelock routing happen in requestVendorPayment
+ * after ERC-20 decimals() is read on-chain.
  */
 export function parsePaySlashCommand(text: string): ParsedPayCommand | null {
   const trimmed = text.trim();
@@ -34,17 +26,12 @@ export function parsePaySlashCommand(text: string): ParsedPayCommand | null {
   const dollars = Number(displayDollars);
   if (!Number.isFinite(dollars) || dollars <= 0) return null;
 
-  const amount = dollarsToUsdcUnits(dollars);
-  const paymentPath = resolvePaymentPath(amount);
-  const pathLabel = paymentPath === 'B-fast' ? 'instant B-fast' : 'timelock B-timelock';
-
   return {
-    amountUsdc: amount.toString(),
+    amountDollars: displayDollars,
     displayDollars,
-    paymentPath,
-    recipient: DEMO_VENDOR_RECIPIENT,
-    memo: `Demo vendor payment $${displayDollars}`,
-    label: `Vendor payment $${displayDollars} (${pathLabel})`,
+    recipient: PAY_RECIPIENT_TREASURY_OWNER,
+    memo: `Demo vendor payment to treasury owner $${displayDollars}`,
+    label: `Vendor payment $${displayDollars}`,
   };
 }
 

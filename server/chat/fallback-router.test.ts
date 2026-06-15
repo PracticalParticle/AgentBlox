@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatToolResult, routeUserMessage } from './fallback-router.js';
-import { PAY_DEMO_COMMANDS } from './pay-command.js';
+import { PAY_DEMO_COMMANDS, PAY_RECIPIENT_TREASURY_OWNER } from './pay-command.js';
 
 describe('routeUserMessage', () => {
   it('routes slash commands to treasury tools', () => {
@@ -25,12 +25,12 @@ describe('routeUserMessage', () => {
     const timelock = routeUserMessage(PAY_DEMO_COMMANDS.timelock);
 
     expect(fast?.tool).toBe('request_vendor_payment');
-    expect(fast?.args.amountUsdc).toBe('5000000');
-    expect(fast?.label).toContain('B-fast');
+    expect(fast?.args.amountDollars).toBe('5');
+    expect(fast?.args.recipient).toBe(PAY_RECIPIENT_TREASURY_OWNER);
+    expect(fast?.label).toContain('$5');
 
     expect(timelock?.tool).toBe('request_vendor_payment');
-    expect(timelock?.args.amountUsdc).toBe('20000000');
-    expect(timelock?.label).toContain('B-timelock');
+    expect(timelock?.args.amountDollars).toBe('20');
   });
 
   it('returns null for bare /pay', () => {

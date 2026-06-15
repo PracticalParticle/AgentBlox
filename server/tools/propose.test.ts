@@ -7,6 +7,16 @@ const { requestVendorPaymentOnChain, signPaymentInstantMetaTransaction, prefligh
     preflightRequestAndApproveExecution: vi.fn(),
   }));
 
+const readTreasuryRoles = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    owner: '0x1111111111111111111111111111111111111111',
+    broadcasters: [],
+    recovery: '0x0000000000000000000000000000000000000000',
+    timeLockPeriodSec: '60',
+    initialized: true,
+  }),
+);
+
 vi.mock('../execution/payment.js', () => ({
   requestVendorPaymentOnChain,
 }));
@@ -43,7 +53,27 @@ vi.mock('../ens.js', () => ({
   fetchEnsAllowedFlows: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('../bloxchain.js', () => ({
+  readTreasuryRoles,
+}));
+
+vi.mock('../lib/token-amount.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/token-amount.js')>();
+  return {
+    ...actual,
+    getPaymentTokenDecimals: vi.fn().mockResolvedValue(6),
+    buildPaymentAmountDisplay: vi.fn((baseUnits: bigint, decimals: number, symbol: string) => ({
+      amountBaseUnits: baseUnits.toString(),
+      tokenDecimals: decimals,
+      displayAmount: (Number(baseUnits) / 10 ** decimals).toString(),
+      displayLabel: `$${Number(baseUnits) / 10 ** decimals} ${symbol}`,
+    })),
+  };
+});
+
+import { getPaymentTokenDecimals } from '../lib/token-amount.js';
 import { requestVendorPayment } from './propose.js';
+import { PAY_RECIPIENT_TREASURY_OWNER } from '../chat/pay-command.js';
 
 describe('requestVendorPayment', () => {
   beforeEach(() => {
@@ -59,6 +89,49 @@ describe('requestVendorPayment', () => {
     expect(result.status).toBe('rejected');
     expect(result.request).toBeNull();
     expect(requestVendorPaymentOnChain).not.toHaveBeenCalled();
+    expect(signPaymentInstantMetaTransaction).not.toHaveBeenCalled();
+  });
+
+  it('resolves treasury owner for slash /pay recipient sentinel', async () => {
+    signPaymentInstantMetaTransaction.mockResolvedValue({
+      ok: true,
+      signedMetaTx: { txRecord: {}, params: {}, message: '0x', signature: '0x', data: '0x' },
+      signerAddress: '0xApprover',
+      intent: {
+        target: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+        executionSelector: '0xa9059cbb',
+        executionParams: '0x',
+        operationType: '0xabc',
+        gasLimit: 200_000n,
+      },
+    });
+    preflightRequestAndApproveExecution.mockResolvedValue({ ok: true });
+
+    const result = await requestVendorPayment({
+      recipient: PAY_RECIPIENT_TREASURY_OWNER,
+      amountDollars: '5',
+    });
+
+    expect(readTreasuryRoles).toHaveBeenCalledOnce();
+    expect(signPaymentInstantMetaTransaction).toHaveBeenCalledWith({
+      recipient: '0x1111111111111111111111111111111111111111',
+      amount: 5_000_000n,
+    });
+    expect(result.request?.recipient).toBe('0x1111111111111111111111111111111111111111');
+  });
+
+  it('rejects payments when on-chain decimals cannot be read', async () => {
+    vi.mocked(getPaymentTokenDecimals).mockRejectedValueOnce(
+      new Error('ERC-20 decimals() call failed'),
+    );
+
+    const result = await requestVendorPayment({
+      recipient: '0x0000000000000000000000000000000000000001',
+      amountUsdc: '5000000',
+    });
+
+    expect(result.status).toBe('rejected');
+    expect(result.policy).toMatchObject({ code: 'TOKEN_DECIMALS_UNAVAILABLE' });
     expect(signPaymentInstantMetaTransaction).not.toHaveBeenCalled();
   });
 

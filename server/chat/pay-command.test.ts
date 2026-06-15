@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { parsePaySlashCommand, PAY_DEMO_COMMANDS } from './pay-command.js';
+import { parsePaySlashCommand, PAY_DEMO_COMMANDS, PAY_RECIPIENT_TREASURY_OWNER } from './pay-command.js';
 
 describe('parsePaySlashCommand', () => {
   afterEach(() => {
@@ -7,23 +7,23 @@ describe('parsePaySlashCommand', () => {
     vi.resetModules();
   });
 
-  it('parses /pay 5$ as B-fast amount', () => {
+  it('parses /pay 5$ as human dollar amount', () => {
     const parsed = parsePaySlashCommand('/pay 5$');
     expect(parsed).not.toBeNull();
-    expect(parsed?.amountUsdc).toBe('5000000');
-    expect(parsed?.paymentPath).toBe('B-fast');
+    expect(parsed?.amountDollars).toBe('5');
+    expect(parsed?.displayDollars).toBe('5');
+    expect(parsed?.recipient).toBe(PAY_RECIPIENT_TREASURY_OWNER);
   });
 
-  it('parses /pay 20$ as B-timelock amount', () => {
+  it('parses /pay 20$ as human dollar amount', () => {
     const parsed = parsePaySlashCommand('/pay 20$');
     expect(parsed).not.toBeNull();
-    expect(parsed?.amountUsdc).toBe('20000000');
-    expect(parsed?.paymentPath).toBe('B-timelock');
+    expect(parsed?.amountDollars).toBe('20');
   });
 
   it('accepts $ prefix and usdc suffix', () => {
-    expect(parsePaySlashCommand('/pay $5')?.amountUsdc).toBe('5000000');
-    expect(parsePaySlashCommand('/pay 20 usdc')?.amountUsdc).toBe('20000000');
+    expect(parsePaySlashCommand('/pay $5')?.amountDollars).toBe('5');
+    expect(parsePaySlashCommand('/pay 20 usdc')?.amountDollars).toBe('20');
   });
 
   it('returns null for bare /pay', () => {

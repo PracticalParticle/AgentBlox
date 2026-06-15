@@ -73,11 +73,12 @@ describe('canConfirmRebalance', () => {
 });
 
 describe('canConfirmInstantPayment', () => {
-  it('is true for B-fast proposed payment with signed meta-tx', () => {
+  it('is true for B-fast proposed payment with signed meta-tx and passing preflight', () => {
     const result = {
       status: 'proposed',
       request: {
         paymentPath: 'B-fast',
+        onChain: { status: 'signed' },
         signing: { status: 'signed', signedMetaTx: { ok: true } },
       },
     };
@@ -85,6 +86,18 @@ describe('canConfirmInstantPayment', () => {
     expect(canConfirmInstantPayment('request_vendor_payment', { ...result, status: 'requested_on_chain' })).toBe(
       false,
     );
+  });
+
+  it('is false when preflight failed', () => {
+    const result = {
+      status: 'proposed',
+      request: {
+        paymentPath: 'B-fast',
+        onChain: { status: 'preflight_failed', reason: 'SignerNotAuthorized' },
+        signing: { status: 'signed', signedMetaTx: { ok: true } },
+      },
+    };
+    expect(canConfirmInstantPayment('request_vendor_payment', result)).toBe(false);
   });
 });
 

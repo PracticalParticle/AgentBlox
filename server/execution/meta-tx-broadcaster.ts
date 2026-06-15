@@ -55,6 +55,7 @@ export async function submitRequestAndApproveWithBroadcaster(
 
     return { ok: true, hash: result.hash };
   } catch (error) {
+    console.error('[Broadcaster] requestAndApproveExecution failed:', error);
     return {
       ok: false,
       reason: formatExecutionError(error),
@@ -90,6 +91,7 @@ export async function submitTimelockApproveWithBroadcaster(
 
     return { ok: true, hash: result.hash };
   } catch (error) {
+    console.error('[Broadcaster] requestAndApproveExecution failed:', error);
     return {
       ok: false,
       reason: formatExecutionError(error),

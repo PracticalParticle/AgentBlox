@@ -88,6 +88,13 @@ export const DYNAMIC_ENVIRONMENT_ID = process.env.VITE_DYNAMIC_ENVIRONMENT_ID ||
 
 export const DYNAMIC_API_TOKEN = process.env.DYNAMIC_API_TOKEN || '';
 
+/** Decrypts Dynamic server wallet key shares when backUpToDynamic was used at wallet creation. Server-only. */
+export const DYNAMIC_WALLET_PASSWORD = process.env.DYNAMIC_WALLET_PASSWORD || '';
+
+export function isDynamicWalletPasswordConfigured(): boolean {
+  return DYNAMIC_WALLET_PASSWORD.length > 0;
+}
+
 /** On-chain Broadcaster address (Dynamic server wallet) — must match AccountBlox at provisioning. */
 export const BROADCASTER_WALLET_ADDRESS = (process.env.BROADCASTER_WALLET_ADDRESS || '') as Address;
 
@@ -99,6 +106,7 @@ export function isDynamicBroadcasterConfigured(): boolean {
   return (
     DYNAMIC_API_TOKEN.length > 0 &&
     isDynamicEnvironmentConfigured() &&
+    isDynamicWalletPasswordConfigured() &&
     BROADCASTER_WALLET_ADDRESS.startsWith('0x') &&
     BROADCASTER_WALLET_ADDRESS.length === 42
   );

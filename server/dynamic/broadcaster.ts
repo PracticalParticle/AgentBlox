@@ -5,8 +5,10 @@ import { readTreasuryRoles } from '../bloxchain.js';
 import {
   BROADCASTER_WALLET_ADDRESS,
   DYNAMIC_API_TOKEN,
+  DYNAMIC_WALLET_PASSWORD,
   isDynamicBroadcasterConfigured,
   isDynamicEnvironmentConfigured,
+  isDynamicWalletPasswordConfigured,
   isTreasuryConfigured,
   SEPOLIA_RPC_URL,
 } from '../config.js';
@@ -32,6 +34,7 @@ export type BroadcasterStatus = {
   configured: boolean;
   environmentIdConfigured: boolean;
   apiTokenConfigured: boolean;
+  walletPasswordConfigured: boolean;
   walletAddressConfigured: boolean;
   walletAddress: Address | null;
   onChainBroadcasters: Address[];
@@ -42,6 +45,7 @@ export type BroadcasterStatus = {
 export async function getBroadcasterStatus(): Promise<BroadcasterStatus> {
   const environmentIdConfigured = isDynamicEnvironmentConfigured();
   const apiTokenConfigured = DYNAMIC_API_TOKEN.length > 0;
+  const walletPasswordConfigured = isDynamicWalletPasswordConfigured();
   const walletAddressConfigured =
     BROADCASTER_WALLET_ADDRESS.startsWith('0x') && BROADCASTER_WALLET_ADDRESS.length === 42;
   const configured = isDynamicBroadcasterConfigured();
@@ -70,6 +74,9 @@ export async function getBroadcasterStatus(): Promise<BroadcasterStatus> {
     message = 'Set DYNAMIC_API_TOKEN (Dynamic dashboard API token, server only).';
   } else if (!walletAddressConfigured) {
     message = 'Set BROADCASTER_WALLET_ADDRESS to your Dynamic server wallet address.';
+  } else if (!walletPasswordConfigured) {
+    message =
+      'Set DYNAMIC_WALLET_PASSWORD in .env — required to decrypt and sign with the Dynamic server wallet (same password used at wallet creation).';
   } else if (matchesOnChainBroadcaster === false) {
     message =
       'BROADCASTER_WALLET_ADDRESS does not match on-chain Broadcaster — update provisioning or env.';
@@ -79,6 +86,7 @@ export async function getBroadcasterStatus(): Promise<BroadcasterStatus> {
     configured,
     environmentIdConfigured,
     apiTokenConfigured,
+    walletPasswordConfigured,
     walletAddressConfigured,
     walletAddress: walletAddressConfigured ? BROADCASTER_WALLET_ADDRESS : null,
     onChainBroadcasters,
@@ -96,6 +104,7 @@ export async function getBroadcasterWalletClient(): Promise<WalletClient> {
   const walletMetadata = await resolveBroadcasterWalletMetadata();
   return dynamicClient.getWalletClient({
     walletMetadata,
+    password: DYNAMIC_WALLET_PASSWORD,
     chain: sepolia,
     rpcUrl: SEPOLIA_RPC_URL,
   });
